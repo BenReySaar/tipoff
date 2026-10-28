@@ -4,6 +4,8 @@ import { fetchSeason, buildPack, diffPacks, attachChangeLog, ymd } from './ibba.
 import { sendPush } from './push.js';
 import { icsFor } from './ics.js';
 import { statsPage } from './stats.js';
+import { ensureSchema } from './schema.js';
+import { b64u } from './push.js';
 
 const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const DEVICE = /^[a-f0-9-]{36}$/;
@@ -13,9 +15,21 @@ const ilDay = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: '
 const ilHour = (d = new Date()) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hourCycle: 'h23' }).format(d);
 const json = (obj, status = 200, headers = {}) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...headers } });
 
-function vapidOf(env) {
-  if (!env.VAPID_PUBLIC || !env.VAPID_PRIVATE_JWK) return null;
-  return { publicKey: env.VAPID_PUBLIC, privateJwk: JSON.parse(env.VAPID_PRIVATE_JWK), subject: env.VAPID_SUBJECT || 'mailto:admin@example.com' };
+// Push signing keys: taken from settings if given, otherwise created once by the server and kept in KV.
+let vapidCache = null;
+async function vapidOf(env) {
+  const subject = env.VAPID_SUBJECT || 'https://github.com/BenReySaar/tipoff';
+  if (env.VAPID_PUBLIC && env.VAPID_PRIVATE_JWK) return { publicKey: env.VAPID_PUBLIC, privateJwk: JSON.parse(env.VAPID_PRIVATE_JWK), subject };
+  if (vapidCache) return { ...vapidCache, subject };
+  let stored = JSON.parse(await env.KV.get('vapid') || 'null');
+  if (!stored) {
+    const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const { key_ops, ext, ...privateJwk } = await crypto.subtle.exportKey('jwk', kp.privateKey);
+    stored = { publicKey: b64u(await crypto.subtle.exportKey('raw', kp.publicKey)), privateJwk };
+    await env.KV.put('vapid', JSON.stringify(stored));
+  }
+  vapidCache = stored;
+  return { ...stored, subject };
 }
 async function getPack(env) { const t = await env.KV.get('pack'); return t ? JSON.parse(t) : null; }
 async function track(env, device, type) {
@@ -95,7 +109,7 @@ async function devicesFollowing(env, teamKeys) {
 }
 
 async function deliver(env, perDevice, kind) {
-  const vapid = vapidOf(env); if (!vapid) return 0;
+  const vapid = await vapidOf(env);
   let sent = 0, failed = 0;
   const list = [...perDevice.values()];
   for (let i = 0; i < list.length; i += 20) {
@@ -199,12 +213,13 @@ export default {
     const url = new URL(req.url);
     const p = url.pathname;
     try {
+      if (p.startsWith('/api/') || p.startsWith('/cal/') || p === '/stats') await ensureSchema(env);
       if (p === '/api/data' && req.method === 'GET') {
         const t = await env.KV.get('pack');
         if (!t) return json({ error: 'no data yet' }, 503);
         return new Response(t, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300' } });
       }
-      if (p === '/api/config') return json({ vapid: env.VAPID_PUBLIC || null });
+      if (p === '/api/config') return json({ vapid: (await vapidOf(env)).publicKey });
       if (p === '/api/state' && req.method === 'POST') return saveState(env, await readJSON(req));
       if (p === '/api/event' && req.method === 'POST') {
         const b = await readJSON(req);
@@ -228,8 +243,8 @@ export default {
         if (await env.KV.get('test:' + b.device)) return json({ error: 'wait a minute' }, 429);
         await env.KV.put('test:' + b.device, '1', { expirationTtl: 60 });
         const row = await env.DB.prepare('SELECT push FROM devices WHERE id=?').bind(b.device).first();
-        const vapid = vapidOf(env);
-        if (!row?.push || !vapid) return json({ error: 'push not enabled' }, 400);
+        const vapid = await vapidOf(env);
+        if (!row?.push) return json({ error: 'push not enabled' }, 400);
         const r = await sendPush(JSON.parse(row.push), { title: 'טיפ-אוף ✓', body: 'ההתראות עובדות. נעדכן כשמשהו משתנה במשחקים שלכם.', url: '/', tag: 'test' }, vapid);
         await logPush(env, 'test', r.ok ? 1 : 0, r.ok ? 0 : 1);
         if (r.gone) await env.DB.prepare('UPDATE devices SET push=NULL WHERE id=?').bind(b.device).run();
@@ -268,6 +283,7 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    await ensureSchema(env);
     if (event.cron === env.EVENING_CRON || event.cron === '0 17,18 * * *') {
       if (ilHour() === 20) await eveningReminders(env);
       return;

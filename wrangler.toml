@@ -1,5 +1,5 @@
 # טיפ-אוף — Cloudflare Worker configuration.
-# Fill in the three values marked FILL (the guide explains where each one comes from).
+# Two values marked FILL: the database id and the KV id, from the Cloudflare dashboard.
 
 name = "tipoff"
 main = "src/worker.js"
@@ -24,8 +24,6 @@ id = "FILL-kv-namespace-id"
 crons = ["7 * * * *", "0 17,18 * * *"]
 
 [vars]
-SEASON = "2026"                       # 2026 = season 2026/27. Change once a year.
-APP_URL = "https://FILL-your-domain"  # the app's address, used in shared links
-VAPID_PUBLIC = "FILL-from-npm-run-vapid"
-VAPID_SUBJECT = "mailto:FILL-your-email"
-# Secrets (not in this file): VAPID_PRIVATE_JWK, ADMIN_KEY — set with `npx wrangler secret put <NAME>`
+SEASON = "2026"   # 2026 = season 2026/27. Change once a year.
+# One secret is set in the Cloudflare dashboard (not in this file): ADMIN_KEY, the password for /stats.
+# Push keys are created by the server on first run and kept in KV.
