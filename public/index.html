@@ -335,27 +335,12 @@ body.locked{overflow:hidden}
 .shr{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--bg);color:var(--ink);border-radius:10px;padding:8px 14px;font-size:14px;font-weight:600;text-decoration:none}
 .shr.main{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .shr svg{width:15px;height:15px}
-/* season calendar */
-.cal{gap:14px}
-.cal-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.cal-t{display:flex;flex-direction:column;align-items:center;text-align:center}
-.cal-t h2{font-size:19px}
-.wk-nav:disabled{opacity:.35;cursor:default}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.cal-dw{font-size:12px;color:var(--muted);text-align:center;padding-bottom:2px}
-.cc{aspect-ratio:1/1.1;border-radius:12px;border:0;background:none;padding:0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--muted);font-size:15px;line-height:1.15}
-.cc .ct{font-size:11px;font-weight:600;color:var(--accent);letter-spacing:-.01em}
-.cc.has{background:var(--fill);color:var(--ink);font-weight:600}
-.cc.has.past{background:none;color:var(--muted);font-weight:500}
-.cc.has.past .ct{color:var(--muted)}
-.cc.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
-.cc.today .cd{color:var(--accent);font-weight:700}
-.cc[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.cc[aria-pressed="true"] .ct,.cc[aria-pressed="true"] .cd{color:var(--bg)}
-.cdots{display:flex;gap:2px;height:5px}
-.cdots i{width:5px;height:5px;border-radius:50%}
-.cal-sel{border-top:1px solid var(--line)}
-@media (max-width:360px){.cc{font-size:14px}.cc .ct{font-size:10px}}
+/* coming month + season */
+.season-btn{display:flex;align-items:center;gap:10px;width:100%;background:var(--fill);border:0;border-radius:12px;padding:13px 14px;font-weight:600;font-size:15px;text-align:start;margin-top:2px}
+.season-btn span{flex:1}
+.season-btn svg{width:18px;height:18px;color:var(--muted)}
+.month{scroll-margin-top:16px}
+.month.past .sec-h h2{color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:380px){.h-time{font-size:54px}.ages{grid-template-columns:repeat(2,1fr)}.day .dn{width:34px;height:34px;font-size:16px}.actions{grid-template-columns:1fr 1fr 1fr}.act span{font-size:13px}}
 </style>
@@ -684,39 +669,34 @@ function checklist(){
     <ol class="setup-steps"><li class="ok"><b>בחרתם קבוצה</b></li>${stepHome}${stepPush}</ol></section>`}
 function overlay(){return S.invite?inviteSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
 
-/* ---------- season calendar (month grid) ---------- */
+/* ---------- coming month + full season ---------- */
 const MONTHS=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-S.cm=null;S.cDay=null;
-function seasonCal(ts){
-  const all=[];ts.forEach(t=>t.games.forEach(g=>all.push({g,t})));all.sort((a,b)=>a.g.date-b.g.date);
-  if(!all.length)return '';
-  const multi=ts.length>1,mk=d=>d.getFullYear()*12+d.getMonth();
-  const minM=mk(all[0].g.date),maxM=mk(all[all.length-1].g.date);
-  const nextUp=all.find(x=>!isPast(x.g));
-  if(S.cm==null)S.cm=mk(nextUp?nextUp.g.date:NOW);
-  S.cm=Math.max(minM,Math.min(maxM,S.cm));
-  const y=Math.floor(S.cm/12),m=S.cm%12,nDays=new Date(y,m+1,0).getDate(),lead=new Date(y,m,1).getDay();
-  const inMonth=all.filter(x=>mk(x.g.date)===S.cm);
-  const byDay={};inMonth.forEach(x=>{(byDay[x.g.date.getDate()]=byDay[x.g.date.getDate()]||[]).push(x)});
-  if(!S.cDay||!inMonth.some(x=>dkey(x.g.date)===S.cDay)){const pick=inMonth.find(x=>!isPast(x.g))||inMonth[0];S.cDay=pick?dkey(pick.g.date):null}
-  const today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
-  let cells=DSHORT.map(d=>`<span class="cal-dw" aria-hidden="true">${d}</span>`).join('')+'<span class="cc-x" aria-hidden="true"></span>'.repeat(lead);
-  for(let d=1;d<=nDays;d++){
-    const date=new Date(y,m,d),gs=byDay[d]||[],past=date<today,isToday=sameDay(date,NOW);
-    const cls=['cc',past?'past':'',isToday?'today':'',gs.length?'has':''].join(' ');
-    if(!gs.length){cells+=`<span class="${cls}" aria-hidden="true"><span class="cd">${d}</span></span>`;continue}
-    const sel=S.cDay===dkey(date);
-    const label=`${DAYS[date.getDay()]} ${d}.${m+1}: `+gs.map(x=>`${multi?x.t.name+' ':''}${hm(x.g.date)} נגד ${TEAMS[x.g.h===x.t.i?x.g.a:x.g.h].name}`).join(', ');
-    cells+=`<button class="${cls}" data-cday="${dkey(date)}" aria-pressed="${sel}" aria-label="${esc(label)}"><span class="cd">${d}</span><span class="ct">${hm(gs[0].g.date)}</span>${multi?`<span class="cdots">${gs.map(x=>`<i style="background:${tcolor(x.t.key)}"></i>`).join('')}</span>`:''}</button>`}
-  const sel=inMonth.filter(x=>dkey(x.g.date)===S.cDay);
-  const n=inMonth.length,left=inMonth.filter(x=>!isPast(x.g)).length;
-  return `<section class="sec cal" aria-label="לוח העונה"><div class="cal-h">
-     <button class="wk-nav" data-cm="-1" aria-label="החודש הקודם" ${S.cm<=minM?'disabled':''}>${ic.prev}</button>
-     <div class="cal-t"><h2>${MONTHS[m]} ${y}</h2><span class="sub">${n===0?'אין משחקים החודש':n===1?'משחק אחד':n+' משחקים'}${left&&left<n?`, עוד ${left} לשחק`:''}</span></div>
-     <button class="wk-nav" data-cm="1" aria-label="החודש הבא" ${S.cm>=maxM?'disabled':''}>${ic.next}</button></div>
-   <div class="cal-grid">${cells}</div>
-   ${sel.length?`<div class="cal-sel" aria-live="polite">${sel.map(x=>row(x.g,x.t,multi)).join('')}</div>`:''}
-  </section>`}
+function comingMonth(ts,skip){
+  const multi=ts.length>1,allUp=upcomingOf(ts),until=addDays(NOW,30);
+  const soonAll=allUp.filter(x=>x.g.date<until),later=allUp.filter(x=>x.g.date>=until&&!skip.has(x.g.i));
+  const wk=d=>dkey(weekStart(d)),busy=new Set(soonAll.map(x=>wk(x.g.date)));
+  const out=[];const thisW=weekStart(NOW);
+  for(let s=thisW;s<until;s=addDays(s,7)){
+    const items=soonAll.filter(x=>wk(x.g.date)===dkey(s)&&!skip.has(x.g.i));
+    if(!busy.has(dkey(s))){const e=addDays(s,6);out.push(`<span class="gap">${s.getTime()===thisW.getTime()?'השבוע':'שבוע'} ${dm(s)}–${dm(e)} · אין משחק</span>`)}
+    else items.forEach(x=>out.push(row(x.g,x.t,multi)))}
+  const total=allUp.length;
+  let body=out.length?`<div class="list">${out.join('')}</div>`:'';
+  if(!soonAll.some(x=>!skip.has(x.g.i))&&later.length)body+=`<p class="sub">המשחק הבא אחרי החודש הקרוב:</p><div class="list">${row(later[0].g,later[0].t,multi)}</div>`;
+  if(!total)body=`<p class="sub">אין עוד משחקים בלוח העונה.</p>`;
+  return `<section class="sec"><div class="sec-h"><h2>בחודש הקרוב</h2><span class="sub">${total?`עוד ${total} ${total===1?'משחק':'משחקים'} עד סוף העונה`:''}</span></div>
+    ${body}<button class="season-btn" data-go="season">${ic.cal}<span>כל משחקי העונה</span>${ic.next}</button></section>`}
+function viewSeason(){
+  const keys=S.filter==='all'?S.follows:[S.filter];const ts=keys.map(k=>TEAMS[KEY[k]]).filter(Boolean);
+  const back=`<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button>`;
+  if(!ts.length)return back+'<div class="empty"><p>עוד לא בחרתם קבוצה.</p></div>';
+  const multi=ts.length>1,all=[];ts.forEach(t=>t.games.forEach(g=>all.push({g,t})));all.sort((a,b)=>a.g.date-b.g.date);
+  const left=all.filter(x=>!isPast(x.g)).length,nowM=NOW.getFullYear()*12+NOW.getMonth();
+  const groups=[];all.forEach(x=>{const k=x.g.date.getFullYear()*12+x.g.date.getMonth();let gr=groups[groups.length-1];if(!gr||gr.k!==k){gr={k,items:[]};groups.push(gr)}gr.items.push(x)});
+  const chips=S.follows.length>1?`<div class="chips" role="group" aria-label="סינון לפי קבוצה"><button class="chip" data-f="all" aria-pressed="${S.filter==='all'}">כל הקבוצות</button>${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
+  return `${back}<section class="sec"><h1>כל משחקי העונה</h1><p class="sub">${multi?ts.length+' קבוצות':esc(ts[0].name)+', '+esc(LEAGUES[ts[0].lg].full)}. ${all.length} משחקים, עוד ${left} לשחק.</p></section>${chips}
+   ${groups.map(gr=>`<section class="sec month${gr.k<nowM?' past':''}" id="m-${gr.k}"><div class="sec-h"><h2>${MONTHS[gr.k%12]} ${Math.floor(gr.k/12)}</h2><span class="sub">${gr.items.length} ${gr.items.length===1?'משחק':'משחקים'}</span></div>
+     <div class="list">${gr.items.map(x=>row(x.g,x.t,multi)).join('')}</div></section>`).join('')}`}
 
 function viewMy(){
   const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><button class="addbtn" data-go="find">+ קבוצה</button></div>`;
@@ -736,13 +716,13 @@ function viewMy(){
     return `${head}
      <section class="sec"><h2>המשחק הבא של כל קבוצה</h2>${nexts.map(x=>nextCard(x.g,x.t)).join('')||'<p class="sub">אין משחקים קרובים.</p>'}</section>
      ${touched?inviteBlock(ts):''}
-     ${seasonCal(ts)}
+     ${comingMonth(ts,new Set(nexts.map(x=>x.g.i)))}
      ${pastBlock}${resultsBlock()}${ideaBox()}${footer()}`}
   const t=ts[0],next=up[0],rest=up.slice(1);
   return `${head}
    ${next?hero(next.g,next.t):'<div class="empty"><p>אין משחקים קרובים בלוח.</p></div>'}
    ${touched?inviteBlock(ts):''}
-   ${seasonCal(ts)}
+   ${comingMonth(ts,new Set(next?[next.g.i]:[]))}
    ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
 
 /* ---------- find a team: gender → age → league → team ---------- */
@@ -924,9 +904,9 @@ function render(){
   const app=document.getElementById('app');
   const ovEl=document.getElementById('ov'),ovHTML=overlay();
   ovEl.innerHTML=ovHTML;
-  app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():viewAlerts())+
+  app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():S.view==='season'?viewSeason():viewAlerts())+
    `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
-  const tab=S.view==='find'?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  const tab=(S.view==='find'||S.view==='season')?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   const open=!!ovHTML;document.body.classList.toggle('locked',open);
   app.inert=open;document.querySelector('nav.tabs').inert=open;
   if(open&&!ovEl.contains(document.activeElement)){const f=ovEl.querySelector('.btn');if(f)f.focus()}
@@ -939,18 +919,16 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';render();scrollTo(0,0);return}
   const d=b.dataset;
-  if(d.go){S.view=d.go;S.findMode='full';if(d.go==='my')S.justAdded=null;render();scrollTo(0,0)}
+  if(d.go){S.view=d.go;S.findMode='full';if(d.go==='my')S.justAdded=null;render();scrollTo(0,0);if(d.go==='season'){track('season');const el=document.getElementById('m-'+(NOW.getFullYear()*12+NOW.getMonth()));if(el&&el.previousElementSibling)el.scrollIntoView({block:'start'})}}
   else if(d.addres){S.view='find';S.findMode='res';S.q='';render();scrollTo(0,0)}
   else if(d.res)toggleRes(d.res);
   else if(d.rres)toggleRes(d.rres);
   else if(d.mode){S.findMode=d.mode;render()}
   else if(d.wk){S.weekOff+=+d.wk;S.dayWeek=null;render()}
   else if(d.day){S.day=d.day;S.dayWeek=S.weekOff;render()}
-  else if(d.cday){S.cDay=d.cday;render()}
-  else if(d.cm){S.cm+=+d.cm;S.cDay=null;render()}
   else if(d.closeshare){S.justAdded=null;render()}
   else if(d.soon)toast('החשבון ב'+d.soon+' יתווסף בקרוב')
-  else if(d.f){S.filter=d.f;S.showUp=6;S.dayWeek=null;S.cm=null;S.cDay=null;render()}
+  else if(d.f){S.filter=d.f;S.showUp=6;S.dayWeek=null;render()}
   else if(d.more){S.showUp+=10;render()}
   else if(d.t)toggleFollow(d.t);
   else if(d.gender){S.gender=d.gender;render()}
