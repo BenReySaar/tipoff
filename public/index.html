@@ -587,21 +587,18 @@ function shareCard(){
   const t=TEAMS[KEY[S.justAdded]];if(!t)return '';
   return `<div class="sharecard"><button class="x" data-closeshare="1" aria-label="סגירה">✕</button>
     <b>${esc(t.name)} נוספה ✓</b><span class="sub">גם ההורים בקבוצה ירצו לדעת מתי ואיפה המשחק.</span>
-    <a class="wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">שתפו את הקבוצה בקבוצת ההורים</a>
-    <div class="soc-row"><span class="sub">ועקבו אחרינו:</span>${socialPills()}</div></div>`}
+    <a class="wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">שתפו את הקבוצה בקבוצת ההורים</a></div>`}
 const APP_TEXT='🏀 טיפ-אוף: לוח משחקי הכדורסל של הילדים במקום אחד. המשחק הבא, ניווט לאולם, ויומן והתראות כשמשחק זז. חינם ובלי הרשמה.';
 const CAN_SHARE=typeof navigator.share==='function';
-function shareLinks(text,url,ev){const u=encodeURIComponent(url),tx=encodeURIComponent(text);
+function shareLinks(text,url,ev){
   return `<div class="sh-row">${CAN_SHARE?`<button class="shr main" data-nshare="${ev}">${ic.share}שיתוף</button>`:''}
     <a class="shr" href="https://wa.me/?text=${encodeURIComponent(text+'\n'+url)}" target="_blank" rel="noopener" data-ev="${ev}_wa">וואטסאפ</a>
-    <a class="shr" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener" data-ev="${ev}_fb">פייסבוק</a>
-    <a class="shr" href="https://t.me/share/url?url=${u}&text=${tx}" target="_blank" rel="noopener" data-ev="${ev}_tg">טלגרם</a>
     <button class="shr" data-copyapp="1">העתקת קישור</button></div>`}
 async function nativeShare(){try{await navigator.share({title:'טיפ-אוף',text:APP_TEXT,url:APP_URL});track('share_app_native')}catch(e){}}
 function footer(){
   return `<footer class="foot"><h2>מכירים עוד הורים?</h2><p class="sub">שתפו את טיפ-אוף בקבוצות, ברשתות או בהודעה.</p>${shareLinks(APP_TEXT,APP_URL,'share_app')}
     ${S.showAppLink?`<input class="calurl" readonly value="${esc(APP_URL)}" onfocus="this.select()" aria-label="קישור לטיפ-אוף">`:''}
-    <div class="soc-row"><span class="sub">עדכונים וטיפים להורים:</span>${socialPills()}</div></footer>`}
+</footer>`}
 
 /* ---------- team links: share a team, open straight on it ---------- */
 const BYID={};TEAMS.forEach(t=>{if(t.id)BYID[t.id]=t.i});
