@@ -381,6 +381,16 @@ body.locked{overflow:hidden}
 .dg b{font-weight:600}
 .dg .btn{align-self:flex-start;padding:7px 14px;font-size:13.5px;margin-top:4px}
 .dg .linkbtn{align-self:flex-start;font-size:13.5px}
+.chips-l{flex:none;align-self:center;font-size:13px;color:var(--muted);font-weight:500}
+.seg.small button{padding:6px;font-size:13.5px}
+.tblock{display:flex;flex-direction:column;gap:8px;padding-top:6px}
+.tblock+.tblock{border-top:2px solid var(--line);padding-top:18px;margin-top:6px}
+.tb-h{margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:16px;font-weight:700}
+.tb-h .dot{width:10px;height:10px}
+.tb-h .tb-n{margin-inline-start:auto}
+.tblock .list{border-top-color:var(--tc)}
+.stabs{flex-wrap:wrap;overflow:visible;margin-inline:0;padding-inline:0}
+.stabs .chip{padding:8px 14px;font-size:14.5px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .privacy-box{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -702,7 +712,7 @@ S.invite=null;const inv=fromRef(params.get('t'));
 if(inv){if(touched&&S.follows.includes(inv.key))S.filter=inv.key;else S.invite=inv.key}
 S.onb=store.get('tipoff.onb',{});
 S.welcome=!S.invite&&!touched&&!S.onb.welcomed;
-S.bip=null;S.det=new Set();S.menu=null;S.menuConfirm=false;S.forgetAsk=false;
+S.bip=null;S.det=new Set();S.monthMode=store.get('tipoff.monthMode','team');S.seasonF='all';S.menu=null;S.menuConfirm=false;S.forgetAsk=false;
 const justDeleted=params.get('deleted')==='1';
 const saveOnb=()=>store.set('tipoff.onb',S.onb);
 
@@ -766,8 +776,8 @@ async function forgetMe(){
 
 /* ---------- coming month + full season ---------- */
 const MONTHS=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-function comingMonth(ts,skip){
-  const multi=ts.length>1,allUp=upcomingOf(ts),until=addDays(NOW,30);
+function monthList(ts,skip,multi){
+  const allUp=upcomingOf(ts),until=addDays(NOW,30);
   const soonAll=allUp.filter(x=>x.g.date<until),later=allUp.filter(x=>x.g.date>=until&&!skip.has(x.g.i));
   const wk=d=>dkey(weekStart(d)),busy=new Set(soonAll.map(x=>wk(x.g.date)));
   const out=[];const thisW=weekStart(NOW);
@@ -775,20 +785,31 @@ function comingMonth(ts,skip){
     const items=soonAll.filter(x=>wk(x.g.date)===dkey(s)&&!skip.has(x.g.i));
     if(!busy.has(dkey(s))){const e=addDays(s,6);out.push(`<span class="gap">${s.getTime()===thisW.getTime()?'השבוע':'שבוע'} ${dm(s)}–${dm(e)} · אין משחק</span>`)}
     else items.forEach(x=>out.push(row(x.g,x.t,multi)))}
-  const total=allUp.length;
   let body=out.length?`<div class="list">${out.join('')}</div>`:'';
   if(!soonAll.some(x=>!skip.has(x.g.i))&&later.length)body+=`<p class="sub">המשחק הבא אחרי החודש הקרוב:</p><div class="list">${row(later[0].g,later[0].t,multi)}</div>`;
-  if(!total)body=`<p class="sub">אין עוד משחקים בלוח העונה.</p>`;
-  return `<section class="sec"><div class="sec-h"><h2>בחודש הקרוב</h2><span class="sub">${total?`עוד ${total} ${total===1?'משחק':'משחקים'} עד סוף העונה`:''}</span></div>
-    ${body}<button class="season-btn" data-go="season">${ic.cal}<span>כל משחקי העונה</span>${ic.next}</button></section>`}
+  if(!allUp.length)body=`<p class="sub">אין עוד משחקים בלוח העונה.</p>`;
+  return {body,total:allUp.length}}
+function comingMonth(ts,skip){
+  const multi=ts.length>1,total=upcomingOf(ts).length;
+  const head=`<div class="sec-h"><h2>בחודש הקרוב</h2><span class="sub">${total?`עוד ${total} ${total===1?'משחק':'משחקים'} עד סוף העונה`:''}</span></div>`;
+  const seasonBtn=(k,label)=>`<button class="season-btn" data-go="season"${k?` data-st="${esc(k)}"`:''}>${ic.cal}<span>${label}</span>${ic.next}</button>`;
+  if(!multi){const m=monthList(ts,skip,false);return `<section class="sec">${head}${m.body}${seasonBtn(ts[0]&&ts[0].key,'כל משחקי העונה')}</section>`}
+  const mode=S.monthMode==='date'?'date':'team';
+  const seg=`<div class="seg small" role="group" aria-label="סידור הרשימה"><button data-mm="team" aria-pressed="${mode==='team'}">לפי קבוצה</button><button data-mm="date" aria-pressed="${mode==='date'}">לפי תאריך</button></div>`;
+  if(mode==='date'){const m=monthList(ts,skip,true);return `<section class="sec">${head}${seg}${m.body}${seasonBtn(null,'כל משחקי העונה')}</section>`}
+  const blocks=ts.map(t=>{const m=monthList([t],skip,false);const n=nickOf(t.key);
+    return `<div class="tblock" style="--tc:${tcolor(t.key)}"><h3 class="tb-h">${dot(t.key)}<span>${esc(t.name)}</span><span class="sub">${n?esc(n)+' · ':''}${ageLabel(t.lg)}</span><span class="sub tb-n">${m.total?`עוד ${m.total}`:''}</span></h3>
+      ${m.body}${seasonBtn(t.key,'כל משחקי העונה של '+esc(t.name))}</div>`}).join('');
+  return `<section class="sec">${head}${seg}${blocks}</section>`}
 function viewSeason(){
-  const keys=S.filter==='all'?S.follows:[S.filter];const ts=keys.map(k=>TEAMS[KEY[k]]).filter(Boolean);
+  if(S.seasonF!=='all'&&!S.follows.includes(S.seasonF))S.seasonF='all';
+  const keys=S.seasonF==='all'?S.follows:[S.seasonF];const ts=keys.map(k=>TEAMS[KEY[k]]).filter(Boolean);
   const back=`<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button>`;
   if(!ts.length)return back+'<div class="empty"><p>עוד לא בחרתם קבוצה.</p></div>';
   const multi=ts.length>1,all=[];ts.forEach(t=>t.games.forEach(g=>all.push({g,t})));all.sort((a,b)=>a.g.date-b.g.date);
   const left=all.filter(x=>!isPast(x.g)).length,nowM=NOW.getFullYear()*12+NOW.getMonth();
   const groups=[];all.forEach(x=>{const k=x.g.date.getFullYear()*12+x.g.date.getMonth();let gr=groups[groups.length-1];if(!gr||gr.k!==k){gr={k,items:[]};groups.push(gr)}gr.items.push(x)});
-  const chips=S.follows.length>1?`<div class="chips" role="group" aria-label="סינון לפי קבוצה"><button class="chip" data-f="all" aria-pressed="${S.filter==='all'}">כל הקבוצות</button>${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
+  const chips=S.follows.length>1?`<div class="chips stabs" role="group" aria-label="איזו קבוצה להציג">${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-sf="${esc(k)}" aria-pressed="${S.seasonF===k}">${dot(k)}${esc(t.name)}${nickOf(k)?`<small>${esc(nickOf(k))}</small>`:''}</button>`}).join('')}<button class="chip" data-sf="all" aria-pressed="${S.seasonF==='all'}">כל הקבוצות</button></div>`:'';
   return `${back}<section class="sec"><h1>כל משחקי העונה</h1><p class="sub">${multi?ts.length+' קבוצות':esc(ts[0].name)+', '+esc(LEAGUES[ts[0].lg].full)}. ${all.length} משחקים, עוד ${left} לשחק.</p></section>${chips}
    ${groups.map(gr=>`<section class="sec month${gr.k<nowM?' past':''}" id="m-${gr.k}"><div class="sec-h"><h2>${MONTHS[gr.k%12]} ${Math.floor(gr.k/12)}</h2><span class="sub">${gr.items.length} ${gr.items.length===1?'משחק':'משחקים'}</span></div>
      <div class="list">${gr.items.map(x=>row(x.g,x.t,multi)).join('')}</div></section>`).join('')}`}
@@ -799,7 +820,7 @@ function viewMy(){
   const keys=S.filter==='all'?S.follows:[S.filter];const ts=keys.map(k=>TEAMS[KEY[k]]);
   const all=S.follows.map(k=>TEAMS[KEY[k]]);
   const multi=ts.length>1;
-  const chips=S.follows.length>1?`<div class="chips" role="group" aria-label="סינון לפי קבוצה">
+  const chips=S.follows.length>1?`<div class="chips" role="group" aria-label="הצגה לפי קבוצה"><span class="chips-l" aria-hidden="true">הצגה:</span>
      <button class="chip" data-f="all" aria-pressed="${S.filter==='all'}">כל הקבוצות</button>
      ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
@@ -1073,6 +1094,9 @@ document.addEventListener('click',e=>{
     S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
     S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
     render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(d.mm){S.monthMode=d.mm;store.set('tipoff.monthMode',d.mm);render();return}
+  if(d.sf){S.seasonF=d.sf;render();return}
+  if(d.go==='season')S.seasonF=d.st||S.filter||'all';
   if(d.go){S.view=d.go;S.findMode='full';if(d.go==='my')S.justAdded=null;render();scrollTo(0,0);if(d.go==='season'){track('season');const el=document.getElementById('m-'+(NOW.getFullYear()*12+NOW.getMonth()));if(el&&el.previousElementSibling)el.scrollIntoView({block:'start'})}}
   else if(d.addres){S.view='find';S.findMode='res';S.q='';render();scrollTo(0,0)}
   else if(d.res)toggleRes(d.res);
