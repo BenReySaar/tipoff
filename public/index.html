@@ -31,17 +31,20 @@
   --bg:#FFFFFF; --fill:#F3F4F6; --ink:#0F1419; --muted:#5E6875; --line:#E4E7EB; --line-2:#CFD4DA;
   --accent:#C2410C; --accent-ink:#FFFFFF; --accent-soft:#FDEDE4; --wa:#0B7A3E;
   --win:#16794A; --loss:#B42318; --warn:#B54708; --warn-soft:#FEF4E6;
+  --sel:var(--ink); --sel-ink:var(--bg); --hero:var(--fill);
   --f:"IBM Plex Sans Hebrew",-apple-system,"Segoe UI",Arial,sans-serif;
   --r:14px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0E1013; --fill:#181B20; --ink:#F1F2F4; --muted:#98A1AD; --line:#23272E; --line-2:#323842;
-  --accent:#FF6B2C; --accent-ink:#140A04; --accent-soft:#2A1A12; --wa:#0B7A3E;
-  --win:#4FCB8B; --loss:#F97066; --warn:#FDB022; --warn-soft:#2A2113; color-scheme:dark}}
+  --bg:#111827; --fill:#1B2436; --ink:#F4F6FA; --muted:#A7B1C4; --line:#253049; --line-2:#36435E;
+  --accent:#FF7A3D; --accent-ink:#1F0D04; --accent-soft:#3B2418; --wa:#1E7A47;
+  --win:#5DD39E; --loss:#FF8F85; --warn:#FFC24D; --warn-soft:#352A17;
+  --sel:#FFE7D9; --sel-ink:#2A1408; --hero:linear-gradient(160deg,#25304A 0%,#1B2436 55%,#22233A 100%); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0E1013; --fill:#181B20; --ink:#F1F2F4; --muted:#98A1AD; --line:#23272E; --line-2:#323842;
-  --accent:#FF6B2C; --accent-ink:#140A04; --accent-soft:#2A1A12; --wa:#0B7A3E;
-  --win:#4FCB8B; --loss:#F97066; --warn:#FDB022; --warn-soft:#2A2113; color-scheme:dark}
+  --bg:#111827; --fill:#1B2436; --ink:#F4F6FA; --muted:#A7B1C4; --line:#253049; --line-2:#36435E;
+  --accent:#FF7A3D; --accent-ink:#1F0D04; --accent-soft:#3B2418; --wa:#1E7A47;
+  --win:#5DD39E; --loss:#FF8F85; --warn:#FFC24D; --warn-soft:#352A17;
+  --sel:#FFE7D9; --sel-ink:#2A1408; --hero:linear-gradient(160deg,#25304A 0%,#1B2436 55%,#22233A 100%); color-scheme:dark}
 
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
@@ -79,7 +82,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-20px;padding-inline:20px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;display:inline-flex;align-items:center;border:1px solid var(--line-2);background:var(--bg);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:500;white-space:nowrap}
-.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
 .chip small{color:inherit;opacity:.65;font-weight:400;margin-inline-start:6px;font-size:12.5px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:7px;flex:none}
 
@@ -96,7 +99,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .day.has .dn{color:var(--ink);font-weight:600}
 .day.today .dw{color:var(--accent);font-weight:600}
 .day.today .dn{color:var(--accent)}
-.day[aria-pressed="true"] .dn{background:var(--ink);color:var(--bg)}
+.day[aria-pressed="true"] .dn{background:var(--sel);color:var(--sel-ink)}
 .day.today[aria-pressed="true"] .dn{background:var(--accent);color:var(--accent-ink)}
 .dots{display:flex;gap:3px;height:6px;align-items:center}
 .dots i{width:6px;height:6px;border-radius:50%}
@@ -134,7 +137,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .more{background:none;border:0;padding:14px 0 0;color:var(--ink);font-weight:600;font-size:14px;text-align:start;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--line-2)}
 
 /* the next game: the one block on the page */
-.hero{background:var(--fill);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.hero{background:var(--hero);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:16px}
 .h-when{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
 .h-rel{color:var(--accent);font-weight:700}
 .h-time{font-size:64px;line-height:.95;font-weight:600;letter-spacing:-.03em;margin-top:-6px}
@@ -199,7 +202,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 .pick .sm{font-size:12.5px;color:var(--muted)}
 .crest{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--fill);color:var(--ink);flex:none}
 .follow{flex:none;border:1px solid var(--line-2);color:var(--ink);background:var(--bg);border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;white-space:nowrap}
-.follow[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.follow[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink);border-color:var(--sel)}
 .search{display:flex;align-items:center;gap:10px;background:var(--fill);border-radius:12px;padding:0 14px}
 .search input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;color:var(--ink);padding:12px 0;outline:none}
 .search input::placeholder{color:var(--muted)}
@@ -222,7 +225,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 .empty{border:1.5px dashed var(--line-2);border-radius:var(--r);padding:28px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
 .btn{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:11px 20px;font-weight:600;text-decoration:none}
 .btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line-2)}
-.toast{position:fixed;bottom:calc(86px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:30;white-space:nowrap}
+.toast{position:fixed;bottom:calc(86px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:30;max-width:calc(100% - 32px);width:max-content;text-align:center}
 
 /* sharing */
 .sharecard{position:relative;border:1px solid var(--line-2);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
@@ -290,6 +293,9 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:600}
 .fb-done{display:flex;flex-direction:column;gap:2px;background:var(--fill);border-radius:12px;padding:14px}
 .idea{border-top:1px solid var(--line);padding-top:22px}
 /* invite parents */
+.invite{position:relative}
+.invite .x{position:absolute;top:-6px;inset-inline-end:-8px;background:none;border:0;color:var(--muted);font-size:15px;padding:8px 10px;border-radius:10px}
+.invite h2{padding-inline-end:36px}
 .inv-list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
 .inv{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
 .inv-n{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
@@ -483,7 +489,7 @@ const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow');syncURL()}
-S.nicks=store.get('tipoff.nicks',{});
+S.nicks=store.get('tipoff.nicks',{});S.invHidden=store.get('tipoff.invHidden',[]);
 const nickOf=k=>S.nicks[k]||'';
 function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
@@ -697,7 +703,8 @@ function copyTeam(key){const t=TEAMS[KEY[key]];if(!t)return;track('share_team');
 function syncURL(){try{const refs=(touched?S.follows:[]).map(k=>tref(TEAMS[KEY[k]])).join(',');
   const want=refs?'/?my='+refs:'/';if(location.pathname+location.search!==want)history.replaceState(null,'',want)}catch(e){}}
 function inviteBlock(ts){
-  return `<section class="sec invite"><h2>הזמינו הורים מהקבוצה</h2><p class="sub">הם יקבלו קישור שפותח ישר את הלוח של הקבוצה, עם כפתור הצטרפות אחד.</p>
+  ts=ts.filter(t=>!S.invHidden.includes(t.key));if(!ts.length)return '';
+  return `<section class="sec invite"><button class="x" data-closeinv="1" aria-label="סגירת הזמנת ההורים">✕</button><h2>הזמינו הורים מהקבוצה</h2><p class="sub">הם יקבלו קישור שפותח ישר את הלוח של הקבוצה, עם כפתור הצטרפות אחד.</p>
    <div class="inv-list">${ts.map(t=>`<div class="inv">${ts.length>1?dot(t.key):''}<span class="inv-n">${esc(t.name)}</span>
      <a class="inv-wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">${ic.share}וואטסאפ</a>
      <button class="inv-copy" data-copyteam="${esc(t.key)}">העתקה</button>${CAN_SHARE?`<button class="inv-copy" data-nshareteam="${esc(t.key)}" aria-label="שיתוף ${esc(t.name)} באפליקציה אחרת">עוד</button>`:''}</div>
@@ -1094,6 +1101,7 @@ document.addEventListener('click',e=>{
     S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
     S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
     render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(d.closeinv){S.invHidden=[...new Set([...S.invHidden,...S.follows])];store.set('tipoff.invHidden',S.invHidden);track('invite_close');render();toast('אפשר לשתף קבוצה בכל רגע דרך ⋯ בכרטיס שלה');return}
   if(d.mm){S.monthMode=d.mm;store.set('tipoff.monthMode',d.mm);render();return}
   if(d.sf){S.seasonF=d.sf;render();return}
   if(d.go==='season')S.seasonF=d.st||S.filter||'all';
