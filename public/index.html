@@ -343,6 +343,46 @@ body.locked{overflow:hidden}
 .month.past .sec-h h2{color:var(--muted)}
 .lg-grp{margin:0;font-size:13px;font-weight:600;color:var(--muted);padding:18px 0 6px;border-bottom:1px solid var(--line)}
 .list>.lg-grp:first-child{padding-top:10px}
+/* team menu (⋯), nickname, details vs. opponent, diagnostics */
+.dots-btn{margin-inline-start:auto;background:none;border:0;width:36px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--muted);font-size:20px;line-height:1;letter-spacing:1px;margin-block:-6px}
+.nx-h .dots-btn{margin-inline-start:6px}
+.nick-pill{font-size:13px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 9px;white-space:nowrap}
+.nick{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.nick label .sub{display:block}
+.nick-row{display:flex;gap:8px}
+.nick-row input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line-2);border-radius:12px;padding:10px 12px}
+.nick-row input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.menu-list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.menu-list>*{display:block;width:100%;text-align:start;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 2px;font-weight:600;text-decoration:none;color:var(--ink)}
+.menu-list .danger,.danger-t{color:var(--loss)}
+.btn.danger{background:#B42318;color:#fff}
+[data-autofocus]:focus{outline:none}
+.actions.four{grid-template-columns:1fr 1fr}
+.nx-a.four{grid-template-columns:repeat(4,1fr)}
+.more-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px}
+.more-row .linkbtn{display:inline-flex;align-items:center;gap:4px}
+.more-row .linkbtn svg{width:14px;height:14px;transform:rotate(90deg);transition:transform .15s}
+.more-row .linkbtn[aria-expanded="true"] svg{transform:rotate(-90deg)}
+.more-row .wrong{color:var(--muted);font-weight:500;font-size:13px}
+.cmp{display:flex;flex-direction:column;gap:8px}
+.cmp table{font-size:13.5px;table-layout:fixed}
+.cmp th,.cmp td{white-space:normal;text-align:start;vertical-align:top;padding:8px 6px 8px 0}
+.cmp thead th{font-size:13px;color:var(--ink);font-weight:700}
+.cmp tbody th{font-size:12.5px;color:var(--muted);font-weight:500;width:28%}
+.hero .cmp table th,.hero .cmp table td{border-top-color:var(--line-2)}
+.diag{border:1px solid var(--line-2);border-radius:var(--r);padding:4px 16px}
+.dg{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.dg:last-child{border-bottom:0}
+.dg i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700;margin-top:1px}
+.dg.ok i{background:var(--win);color:#fff}
+.dg.warn i{background:var(--warn-soft);color:var(--warn)}
+.dg.info i{background:var(--fill);color:var(--muted)}
+.dg>div{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:14px}
+.dg b{font-weight:600}
+.dg .btn{align-self:flex-start;padding:7px 14px;font-size:13.5px;margin-top:4px}
+.dg .linkbtn{align-self:flex-start;font-size:13.5px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.privacy-box{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:380px){.h-time{font-size:54px}.ages{grid-template-columns:repeat(2,1fr)}.day .dn{width:34px;height:34px;font-size:16px}.actions{grid-template-columns:1fr 1fr 1fr}.act span{font-size:13px}}
 </style>
@@ -416,6 +456,7 @@ function gcal(g,t){const o=TEAMS[g.h===t.i?g.a:g.h];const f=d=>d.getFullYear()+p
 const kitText=(g,t)=>g.h===t.i?'משחק בית':'משחק חוץ';
 const isCup=g=>LEAGUES[g.lg].cup;
 const waze=g=>'https://waze.com/ul?q='+encodeURIComponent(VEN[g.v].full)+'&navigate=yes';
+const gmaps=g=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(VEN[g.v].full);
 function wa(g,t){const o=TEAMS[g.h===t.i?g.a:g.h];
   return 'https://wa.me/?text='+encodeURIComponent(`🏀 ${t.name} נגד ${o.name}\n${LEAGUES[g.lg].full}\nיום ${DAYS[g.date.getDay()]} ${dm(g.date)} בשעה ${hm(g.date)}\n👕 ${kitText(g,t)} – לבדוק צבע גופייה\n📍 ${VEN[g.v].full}\nניווט: ${waze(g)}\n\nכל המשחקים של הקבוצה, עם התראות כשמשחק זז:\n${teamURL(t)}`)}
 const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
@@ -432,6 +473,8 @@ const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow');syncURL()}
+S.nicks=store.get('tipoff.nicks',{});
+const nickOf=k=>S.nicks[k]||'';
 function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
   setFollows(f);if(S.filter!=='all'&&!f.includes(S.filter))S.filter='all';S.justAdded=f.includes(key)?key:null;S.dayWeek=null;
@@ -447,20 +490,48 @@ function header(){return `<header class="top"><div class="brand">
 function hero(g,t){
   const home=g.h===t.i,o=TEAMS[home?g.a:g.h],V=VEN[g.v];
   return `<section class="hero" aria-label="המשחק הבא">
-   <div class="h-when"><span class="h-rel">${rel(g.date)}</span><span>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</span></div>
+   <div class="h-when"><span class="h-rel">${rel(g.date)}</span><span>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</span>${menuBtn(t)}</div>
    <div class="h-time">${hm(g.date)}</div>
-   <div class="h-teams"><span>${esc(t.name)}</span><span class="vs">נגד</span><span>${esc(o.name)}</span>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
+   <div class="h-teams"><span>${esc(t.name)}</span>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:''}<span class="vs">נגד</span><span>${esc(o.name)}</span>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
    <div class="facts">
      <div class="fact">${ic.pin}<span><b>${esc(V.name)}</b>${V.addr?`<span class="sub">${esc(V.addr)}</span>`:''}</span></div>
      <div class="fact">${ic.shirt}<span><b>${kitText(g,t)}</b>. שימו לב לצבע הגופייה</span></div>
      ${CH.has(g.id)?`<div class="fact warn">${ic.warn}<span>${chText(g)}</span></div>`:''}
    </div>
-   <div class="actions">
-     <a class="act primary" href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav">${ic.go}<span>ניווט</span></a>
+   <div class="actions four">
+     <a class="act primary" href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav" aria-label="ניווט ב-Waze">${ic.go}<span>Waze</span></a>
+     <a class="act" href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="gmaps">${ic.pin}<span>גוגל מפות</span></a>
      <button class="act" data-gocal="1">${ic.cal}<span>ליומן</span></button>
      <a class="act" href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="share_game">${ic.share}<span>שיתוף</span></a>
    </div>
+   ${moreRow(g,t)}
    <div class="h-league">${esc(LEAGUES[g.lg].full)}</div></section>`}
+
+/* ---------- ⋯ team menu button, details vs. the opponent, "something wrong?" ---------- */
+const menuBtn=t=>touched&&S.follows.includes(t.key)?`<button class="dots-btn" data-menu-open="${esc(t.key)}" aria-label="אפשרויות: ${esc(t.name)}" aria-haspopup="dialog">⋯</button>`:'';
+function moreRow(g,t){const open=S.det.has(g.i);
+  return `<div class="more-row"><button class="linkbtn" data-det="${g.i}" aria-expanded="${open}" aria-controls="det-${g.i}">פירוט מול היריבה${ic.prev}</button>
+    <button class="linkbtn wrong" data-wrong="${g.i}" data-wt="${t.i}">משהו לא נכון?</button></div>${open?details(g,t):''}`}
+function tableRows(lg){
+  const L=LEAGUES[lg],T={};L.teams.forEach(id=>T[id]={id,p:0,w:0,l:0,f:0,a:0});
+  GAMES.forEach(g=>{if(g.lg!==lg||!played(g)||!T[g.h]||!T[g.a])return;const h=T[g.h],a=T[g.a];h.p++;a.p++;h.f+=g.hs;h.a+=g.as;a.f+=g.as;a.a+=g.hs;if(g.hs>g.as){h.w++;a.l++}else{a.w++;h.l++}});
+  return Object.values(T).map(r=>({...r,pts:r.w*2+r.l})).sort((x,y)=>y.pts-x.pts||(y.f-y.a)-(x.f-x.a)||TEAMS[x.id].name.localeCompare(TEAMS[y.id].name,'he'))}
+function teamLine(t){
+  const rows=tableRows(t.lg),i=rows.findIndex(r=>r.id===t.i),r=rows[i];
+  const last=t.games.filter(played).sort((a,b)=>b.date-a.date)[0];
+  let lastTxt='עוד לא שיחקה';
+  if(last){const home=last.h===t.i,my=home?last.hs:last.as,op=home?last.as:last.hs;
+    lastTxt=`<span class="res ${my>op?'w':'l'}">${my>op?'ניצחון':'הפסד'}</span> <span class="score">${my}–${op}</span> נגד ${esc(TEAMS[home?last.a:last.h].name)}, ${dm(last.date)}`}
+  return {pos:r&&r.p?`${i+1} מתוך ${rows.length}`:'עוד אין',rec:r&&r.p?`${r.w} נצ׳, ${r.l} הפ׳`:'—',last:lastTxt}}
+function details(g,t){
+  const o=TEAMS[g.h===t.i?g.a:g.h],A=teamLine(t),B=teamLine(o);
+  const met=t.games.filter(x=>played(x)&&(x.h===o.i||x.a===o.i)).sort((a,b)=>b.date-a.date)[0];
+  const metTxt=met?`המפגש הקודם ביניהן: ${dm(met.date)}, ${esc(TEAMS[met.h].name)} <span class="score">${met.hs}–${met.as}</span> ${esc(TEAMS[met.a].name)}`:'זה המפגש הראשון ביניהן העונה.';
+  return `<div class="cmp" id="det-${g.i}"><table><thead><tr><th><span class="sr">נתון</span></th><th>${esc(t.name)}</th><th>${esc(o.name)}</th></tr></thead><tbody>
+    <tr><th scope="row">מקום בטבלה</th><td>${A.pos}</td><td>${B.pos}</td></tr>
+    <tr><th scope="row">מאזן</th><td>${A.rec}</td><td>${B.rec}</td></tr>
+    <tr><th scope="row">משחק אחרון</th><td>${A.last}</td><td>${B.last}</td></tr></tbody></table>
+    <p class="sub">${metTxt}</p><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
 
 function row(g,t,showTeam){
   const home=g.h===t.i,o=TEAMS[home?g.a:g.h];let right;
@@ -470,13 +541,11 @@ function row(g,t,showTeam){
   else right=`<span class="tm">${hm(g.date)}</span>${CH.has(g.id)?'<span class="pill-warn">עודכן</span>':''}`;
   const meta=isPast(g)?esc(LEAGUES[g.lg].cup?LEAGUES[g.lg].full:LEAGUES[g.lg].short):`<a href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav">${esc(VEN[g.v].name)}</a>`;
   return `<div class="row${showTeam?' tagged':''}"${showTeam?` style="--tc:${tcolor(t.key)}"`:''}><div class="date"><span class="dn">${DAYS[g.date.getDay()]}</span><span class="dd">${dm(g.date)}</span></div>
-   <div class="mid">${showTeam?`<span class="who">${dot(t.key)}${esc(t.name)}, ${ageLabel(t.lg)}</span>`:''}<span class="vs">נגד ${esc(o.name)}<span class="ha-badge">${home?'בית':'חוץ'}</span>${isCup(g)?'<span class="cup">גביע</span>':''}</span>
+   <div class="mid">${showTeam?`<span class="who">${dot(t.key)}${esc(t.name)}, ${nickOf(t.key)?esc(nickOf(t.key)):ageLabel(t.lg)}</span>`:''}<span class="vs">נגד ${esc(o.name)}<span class="ha-badge">${home?'בית':'חוץ'}</span>${isCup(g)?'<span class="cup">גביע</span>':''}</span>
    <span class="meta">${meta}</span></div><div class="right">${right}</div></div>`}
 
 function standings(lg,tid){
-  const L=LEAGUES[lg],T={};L.teams.forEach(id=>T[id]={id,p:0,w:0,l:0,f:0,a:0});
-  GAMES.forEach(g=>{if(g.lg!==lg||!played(g)||!T[g.h]||!T[g.a])return;const h=T[g.h],a=T[g.a];h.p++;a.p++;h.f+=g.hs;h.a+=g.as;a.f+=g.as;a.a+=g.hs;if(g.hs>g.as){h.w++;a.l++}else{a.w++;h.l++}});
-  const rows=Object.values(T).map(r=>({...r,pts:r.w*2+r.l})).sort((x,y)=>y.pts-x.pts||(y.f-y.a)-(x.f-x.a)||TEAMS[x.id].name.localeCompare(TEAMS[y.id].name,'he'));
+  const L=LEAGUES[lg],rows=tableRows(lg);
   return `<details class="tbl"><summary>טבלת ${esc(L.full)}</summary><div class="tw"><table><thead><tr><th>#</th><th class="tn">קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>הפרש</th><th>נק׳</th></tr></thead><tbody>
    ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${esc(TEAMS[r.id].name)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
    </tbody></table></div><a class="src" href="${leagueURL(lg)}" target="_blank" rel="noopener">לעמוד הליגה באתר האיגוד</a></details>`}
@@ -515,12 +584,13 @@ const dot=key=>`<i class="dot" style="background:${tcolor(key)}"></i>`;
 function nextCard(g,t){
   const home=g.h===t.i,o=TEAMS[home?g.a:g.h],V=VEN[g.v];
   return `<div class="nx">
-   <div class="nx-h">${dot(t.key)}<b>${esc(t.name)}</b><span class="sub">${ageLabel(t.lg)}</span><span class="nx-rel">${rel(g.date)}</span></div>
+   <div class="nx-h">${dot(t.key)}<b>${esc(t.name)}</b>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:`<span class="sub">${ageLabel(t.lg)}</span>`}<span class="nx-rel">${rel(g.date)}</span>${menuBtn(t)}</div>
    <div class="nx-b"><span class="nx-t">${hm(g.date)}</span><div class="nx-d">
      <div><b>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</b>. נגד ${esc(o.name)}${isCup(g)?'<span class="cup">גביע</span>':''}</div>
      <div class="sub">${esc(V.name)}${V.addr?', '+esc(V.addr):''}</div>
      <div class="nx-kit">${ic.shirt}${kitText(g,t)}. שימו לב לצבע הגופייה</div>${CH.has(g.id)?`<div class="nx-kit warn">${ic.warn}${chText(g)}</div>`:''}</div></div>
-   <div class="nx-a"><a href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav">${ic.go}ניווט</a><button data-gocal="1">${ic.cal}ליומן</button><a href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="share_game">${ic.share}שיתוף</a></div>
+   <div class="nx-a four"><a href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav" aria-label="ניווט ב-Waze">${ic.go}Waze</a><a href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="gmaps">גוגל מפות</a><button data-gocal="1">${ic.cal}ליומן</button><a href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="share_game">${ic.share}שיתוף</a></div>
+   ${moreRow(g,t)}
   </div>`}
 
 /* ---------- week strip ---------- */
@@ -632,7 +702,8 @@ S.invite=null;const inv=fromRef(params.get('t'));
 if(inv){if(touched&&S.follows.includes(inv.key))S.filter=inv.key;else S.invite=inv.key}
 S.onb=store.get('tipoff.onb',{});
 S.welcome=!S.invite&&!touched&&!S.onb.welcomed;
-S.bip=null;
+S.bip=null;S.det=new Set();S.menu=null;S.menuConfirm=false;S.forgetAsk=false;
+const justDeleted=params.get('deleted')==='1';
 const saveOnb=()=>store.set('tipoff.onb',S.onb);
 
 function sheet(inner,label){return `<div class="scrim" data-closesheet="1"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${label}">${inner}</div>`}
@@ -667,7 +738,31 @@ function checklist(){
       :`<span>אחרי ההוספה למסך הבית.</span>`}</li>`;
   return `<section class="setup" aria-label="השלמת ההגדרה"><div class="setup-h"><b>עוד ${(!home&&IOS?1:0)+(!push?1:0)} ${(!home&&IOS?1:0)+(!push?1:0)===1?'צעד':'צעדים'} ותקבלו עדכונים</b><button class="linkbtn" data-donelist="1">אחר כך</button></div>
     <ol class="setup-steps"><li class="ok"><b>בחרתם קבוצה</b></li>${stepHome}${stepPush}</ol></section>`}
-function overlay(){return S.invite?inviteSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function teamMenu(){const t=TEAMS[KEY[S.menu]];if(!t){S.menu=null;return ''}
+  if(S.menuConfirm)return sheet(`<h2 tabindex="-1" data-autofocus>להסיר את ${esc(t.name)}?</h2>
+    <p class="sub">המשחקים שלה ייצאו מהלוח, מהיומן ומההתראות. אפשר להוסיף אותה שוב בכל רגע.</p>
+    <button class="btn wide danger" data-menu="remove-yes">הסרה</button><button class="linkbtn sh-skip" data-menu="remove-no">ביטול</button>`,'הסרת קבוצה');
+  return sheet(`<p class="sub" style="margin-bottom:-8px">${ageLabel(t.lg)} · ${esc(LEAGUES[t.lg].full)}</p><h2 tabindex="-1" data-autofocus>${esc(t.name)}</h2>
+    <form class="nick" data-nickform="1" novalidate><label for="nick-in"><b>כינוי</b><span class="sub">למשל של מי הקבוצה. יופיע בכרטיס, בהתראות וביומן בטלפון הזה בלבד, ולא בקישורי שיתוף.</span></label>
+      <div class="nick-row"><input id="nick-in" name="nick" maxlength="20" placeholder="למשל: של דניאל" value="${esc(nickOf(t.key))}" autocomplete="off"><button class="btn" type="submit">שמירה</button></div></form>
+    <div class="menu-list">${CAN_SHARE?`<button data-nshareteam="${esc(t.key)}">שיתוף הקבוצה עם הורים</button>`:`<a href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">שיתוף הקבוצה בוואטסאפ</a>`}
+      <button class="danger" data-menu="remove">הסרת הקבוצה מהרשימה</button></div>
+    <button class="linkbtn sh-skip" data-menu="close">סגירה</button>`,'אפשרויות לקבוצה')}
+function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק את המידע שלכם?</h2>
+  <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
+  <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
+  <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
+function overlay(){return S.forgetAsk?forgetSheet():S.menu?teamMenu():S.invite?inviteSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function closeSmall(){S.menu=null;S.menuConfirm=false;S.forgetAsk=false}
+function saveNicks(){store.set('tipoff.nicks',S.nicks)}
+function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
+  setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
+async function forgetMe(){
+  let ok=false;try{const r=await fetch('/api/forget',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV})});ok=r.ok}catch(e){}
+  if(!ok){S.forgetAsk=false;render();toast('המחיקה לא הצליחה. בדקו את החיבור ונסו שוב.');return}
+  try{const reg=await navigator.serviceWorker.getRegistration();const sub=reg&&await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe()}catch(e){}
+  try{Object.keys(localStorage).filter(k=>k.startsWith('tipoff.')).forEach(k=>localStorage.removeItem(k))}catch(e){}
+  location.replace('/?deleted=1')}
 
 /* ---------- coming month + full season ---------- */
 const MONTHS=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -693,7 +788,7 @@ function viewSeason(){
   const multi=ts.length>1,all=[];ts.forEach(t=>t.games.forEach(g=>all.push({g,t})));all.sort((a,b)=>a.g.date-b.g.date);
   const left=all.filter(x=>!isPast(x.g)).length,nowM=NOW.getFullYear()*12+NOW.getMonth();
   const groups=[];all.forEach(x=>{const k=x.g.date.getFullYear()*12+x.g.date.getMonth();let gr=groups[groups.length-1];if(!gr||gr.k!==k){gr={k,items:[]};groups.push(gr)}gr.items.push(x)});
-  const chips=S.follows.length>1?`<div class="chips" role="group" aria-label="סינון לפי קבוצה"><button class="chip" data-f="all" aria-pressed="${S.filter==='all'}">כל הקבוצות</button>${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
+  const chips=S.follows.length>1?`<div class="chips" role="group" aria-label="סינון לפי קבוצה"><button class="chip" data-f="all" aria-pressed="${S.filter==='all'}">כל הקבוצות</button>${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   return `${back}<section class="sec"><h1>כל משחקי העונה</h1><p class="sub">${multi?ts.length+' קבוצות':esc(ts[0].name)+', '+esc(LEAGUES[ts[0].lg].full)}. ${all.length} משחקים, עוד ${left} לשחק.</p></section>${chips}
    ${groups.map(gr=>`<section class="sec month${gr.k<nowM?' past':''}" id="m-${gr.k}"><div class="sec-h"><h2>${MONTHS[gr.k%12]} ${Math.floor(gr.k/12)}</h2><span class="sub">${gr.items.length} ${gr.items.length===1?'משחק':'משחקים'}</span></div>
      <div class="list">${gr.items.map(x=>row(x.g,x.t,multi)).join('')}</div></section>`).join('')}`}
@@ -706,7 +801,7 @@ function viewMy(){
   const multi=ts.length>1;
   const chips=S.follows.length>1?`<div class="chips" role="group" aria-label="סינון לפי קבוצה">
      <button class="chip" data-f="all" aria-pressed="${S.filter==='all'}">כל הקבוצות</button>
-     ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
+     ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
   const demo=!touched?'<div class="banner">אלה שתי קבוצות לדוגמה מהלוח האמיתי. לחצו "+ קבוצה" כדי לבחור את שלכם.</div>':'';
   const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${chips}${weekStrip(ts)}`;
@@ -720,7 +815,7 @@ function viewMy(){
      ${pastBlock}${resultsBlock()}${ideaBox()}${footer()}`}
   const t=ts[0],next=up[0],rest=up.slice(1);
   return `${head}
-   ${next?hero(next.g,next.t):'<div class="empty"><p>אין משחקים קרובים בלוח.</p></div>'}
+   ${next?hero(next.g,next.t):`<div class="empty"><p>אין משחקים קרובים בלוח.</p>${touched?`<button class="linkbtn" data-menu-open="${esc(t.key)}">אפשרויות לקבוצה</button>`:''}</div>`}
    ${touched?inviteBlock(ts):''}
    ${comingMonth(ts,new Set(next?[next.g.i]:[]))}
    ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
@@ -771,8 +866,13 @@ const DEV=(()=>{let d=store.get('tipoff.device',null);
   return d})();
 const PLATFORM=IOS?'ios':/Android/i.test(UA)?'android':'other';
 const STANDALONE=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const IN_APP=/FBAN|FBAV|Instagram|WhatsApp|Line\/|TikTok|musical_ly/i.test(UA);
+const BROWSER=/FBAN|FBAV/.test(UA)?'דפדפן פנימי של פייסבוק':/Instagram/.test(UA)?'דפדפן פנימי של אינסטגרם':/TikTok|musical_ly/i.test(UA)?'דפדפן פנימי של טיקטוק':/WhatsApp/.test(UA)?'דפדפן פנימי של וואטסאפ':
+  /CriOS/.test(UA)?'Chrome':/FxiOS|Firefox/.test(UA)?'Firefox':/EdgiOS|Edg\//.test(UA)?'Edge':/SamsungBrowser/.test(UA)?'Samsung Internet':/Chrome/.test(UA)?'Chrome':/Safari/.test(UA)?'Safari':'דפדפן אחר';
+const OS=(()=>{let m;if(IOS)return (m=UA.match(/OS (\d+)[_.](\d+)/))?`iOS ${m[1]}.${m[2]}`:'iOS';if((m=UA.match(/Android (\d+(\.\d+)?)/)))return 'Android '+m[1];return /Mac/.test(UA)?'מחשב Mac':/Windows/.test(UA)?'מחשב Windows':'מחשב'})();
 const post=(p,b)=>fetch(p,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b),keepalive:true}).catch(()=>null);
-function syncState(type){return post('/api/state',{device:DEV,type,platform:PLATFORM,standalone:STANDALONE,full:touched?S.follows:[],res:S.res,prefs:S.alerts})}
+function syncState(type){const full=touched?S.follows:[];
+  return post('/api/state',{device:DEV,type,platform:PLATFORM,standalone:STANDALONE,full,res:S.res,prefs:S.alerts,nicks:Object.fromEntries(full.filter(k=>S.nicks[k]).map(k=>[k,S.nicks[k]]))})}
 const track=type=>post('/api/event',{device:DEV,type});
 
 const PUSH_OK='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -828,7 +928,7 @@ function viewAlerts(){
   const mine=touched&&S.follows.length;
   return `<section class="sec"><h1>התראות ויומן</h1><p class="sub">נשלח הודעה לטלפון כשמשהו משתנה במשחקים של הקבוצות שלכם.</p></section>
    ${box}${S.pushMsg?`<div class="banner">${esc(S.pushMsg)}</div>`:''}
-   <section class="sec"><h2>על מה להתריע</h2><div class="alert-card">${sw('change','שינוי מועד או אולם','ברגע שהאיגוד מעדכן את הלוח')}${sw('eve','תזכורת ערב לפני','בשעה 20:00, עם השעה, האולם ובית או חוץ')}${sw('result','תוצאה סופית','גם לקבוצות שב"מעקב תוצאות"')}</div></section>
+   <section class="sec"><h2>על מה להתריע</h2><div class="alert-card">${sw('change','שינוי מועד או אולם','ברגע שהאיגוד מעדכן את הלוח. בלילה (23:00–08:00) נחכה לבוקר')}${sw('eve','תזכורת ערב לפני','בשעה 20:00, עם השעה, האולם ובית או חוץ')}${sw('result','תוצאה סופית','גם לקבוצות שב"מעקב תוצאות"')}</div></section>
    <section class="sec" id="cal"><h2>יומן שמתעדכן לבד</h2>
      <p class="sub">מחברים פעם אחת, וכל המשחקים של הקבוצות שלכם נכנסים ליומן של הטלפון. כשמשחק זז, גם היומן מתעדכן.</p>
      ${mine?`<div class="calbtns"><a class="btn" href="${CAL_WEBCAL}" data-ev="cal_sub">יומן אייפון</a><a class="btn ghost" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}" target="_blank" rel="noopener" data-ev="cal_sub">יומן גוגל</a></div>
@@ -845,15 +945,16 @@ function viewAlerts(){
 /* ---------- help: FAQ, "how can we help", ideas ---------- */
 const FAQ=[
  ['מאיפה מגיעים המשחקים?','מאתר איגוד הכדורסל. טיפ-אוף בודקת את הלוח כל שעה ומתעדכנת לבד. טיפ-אוף אינה מטעם האיגוד, ובכל סתירה הקובע הוא האיגוד והמאמן.'],
- ['משחק זז. תוך כמה זמן אדע?','עד שעה מהרגע שהאיגוד מעדכן את האתר שלו. אם הפעלתם התראות, תקבלו הודעה לטלפון. שינוי שהמאמן הודיע עליו ועוד לא עודכן באתר האיגוד יופיע כאן רק אחרי העדכון שם.'],
+ ['משחק זז. תוך כמה זמן אדע?','עד שעה מהרגע שהאיגוד מעדכן את האתר שלו. אם הפעלתם התראות, תקבלו הודעה לטלפון. בין 23:00 ל־08:00 לא שולחים התראות: מה שהשתנה בלילה מגיע בהודעה אחת בבוקר. שינוי שהמאמן הודיע עליו ועוד לא עודכן באתר האיגוד יופיע כאן רק אחרי העדכון שם.'],
  ['איך מוסיפים עוד ילד או עוד קבוצה?','ב"המשחקים שלי" לוחצים "+ קבוצה". אפשר לעקוב אחרי כמה קבוצות, ולכל אחת יש צבע משלה ברצועת השבוע.'],
+ ['איך מבדילים בין הקבוצות של שני ילדים?','לוחצים על ⋯ בכרטיס של הקבוצה ונותנים לה כינוי, למשל "של דניאל". הכינוי מופיע בכרטיס, בהתראות וביומן, רק בטלפון שלכם. באותו תפריט אפשר גם להסיר קבוצה.'],
  ['לא מוצאים את הקבוצה','נסו לחפש רק את שם העיר או המועדון, למשל "רחובות". טיפ-אוף מציגה ליגות נוער בלבד, מקט-סל ועד נוער. אם עדיין לא מוצאים, כתבו לנו כאן למטה.'],
  ['איך מפעילים התראות באייפון?','אפל מאפשרת התראות רק לאפליקציה שנוספה למסך הבית. פותחים את טיפ-אוף בספארי, לוחצים על כפתור השיתוף, בוחרים "הוספה למסך הבית", פותחים מהאייקון החדש ומפעילים בלשונית "התראות ויומן". נדרשת גרסת iOS 16.4 ומעלה.'],
  ['ההתראות לא מגיעות','בלשונית "התראות ויומן" לוחצים "שליחת התראת בדיקה". אם היא לא מגיעה, בודקים שמצב "ריכוז" או "נא לא להפריע" כבוי, ושבהגדרות הטלפון מותר לטיפ-אוף לשלוח התראות.'],
  ['היומן לא מתעדכן מיד','היומן של הטלפון בודק עדכונים בקצב שלו, ויומן גוגל עושה את זה כמה פעמים ביום. לכן על שינוי של הרגע האחרון ההתראה תגיע לפני היומן.'],
  ['איך יודעים איזה צבע גופייה ללבוש?','האיגוד מפרסם רק אם זה משחק בית או חוץ, לא את צבע הגופייה. טיפ-אוף מזכירה לבדוק, ואת הצבע עצמו כדאי לוודא מול המאמן.'],
  ['מה זה "מעקב תוצאות"?','קבוצה שרוצים לדעת רק איך גמרה, למשל של אחיין או של חבר. היא לא נכנסת ללוח וליומן. אם הפעלתם התראת תוצאות, תקבלו הודעה כשהתוצאה מתפרסמת.'],
- ['צריך להירשם? מה נשמר עליי?','לא צריך הרשמה. נשמרים רק מזהה אקראי של הטלפון, הקבוצות שבחרתם והגדרות ההתראות, בלי שם, טלפון או אימייל. כל הפרטים ב<a href="/privacy.html">מדיניות הפרטיות</a>.'],
+ ['צריך להירשם? מה נשמר עליי?','לא צריך הרשמה. נשמרים רק מזהה אקראי של הטלפון, הקבוצות שבחרתם והגדרות ההתראות, בלי שם, טלפון או אימייל. אפשר למחוק הכול בלחיצה על "מחיקת המידע שלי" בתחתית העזרה. כל הפרטים ב<a href="/privacy.html">מדיניות הפרטיות</a>.'],
  ['זה עולה כסף?','לא. טיפ-אוף חינמית.'],
 ];
 const TOPICS=[
@@ -877,6 +978,27 @@ const TOPICS=[
  {id:'other',title:'משהו אחר',sub:'כל שאלה או הערה',ph:'כתבו לנו'},
 ];
 S.helpOpen=null;S.sent={};S.drafts={};
+S.me=null;
+function loadMe(){fetch('/api/me?device='+DEV).then(r=>r.ok?r.json():Promise.reject()).then(j=>{S.me=j}).catch(()=>{S.me={err:true}}).then(()=>{if(S.view==='help')render()})}
+const diagInfo=()=>({os:OS,browser:BROWSER,home:STANDALONE?'כן':'לא',push:{on:'פעילות',off:'כבויות',denied:'חסומות',install:'צריך מסך הבית',unsupported:'לא נתמך',checking:'לא ידוע'}[S.push]||S.push,cal:S.me&&S.me.calDay?'מחובר':'לא מחובר',teams:String(touched?S.follows.length:0)});
+function diagBox(){
+  const it=(cls,title,body='',act='')=>`<div class="dg ${cls}"><i aria-hidden="true">${cls==='ok'?'✓':cls==='warn'?'!':'i'}</i><div><b>${title}</b>${body?`<span class="sub">${body}</span>`:''}${act}</div></div>`;
+  const out=[it('info',`${OS} · ${BROWSER}`,IN_APP?`זה דפדפן שנפתח מתוך אפליקציה אחרת. כדי להתקין ולקבל התראות פותחים ב${IOS?'ספארי':'כרום'}: לוחצים על ⋯ ובוחרים "פתיחה בדפדפן".`:'')];
+  out.push(STANDALONE?it('ok','נפתחה מהמסך הבית'):IOS?it('warn','לא נוספה למסך הבית','באייפון זה נדרש כדי לקבל התראות.',`<button class="linkbtn" data-go="alerts" data-fix="1">איך מוסיפים</button>`):it('info','נפתחה בדפדפן','באנדרואיד זה לא חובה. אפשר להוסיף למסך הבית מתפריט הדפדפן.'));
+  const p=S.push;
+  if(p==='on')out.push(S.me&&S.me.known&&!S.me.push?it('warn','ההתראות פעילות בטלפון, אבל לא רשומות אצלנו','כבו והפעילו אותן שוב בלשונית "התראות ויומן".',`<button class="linkbtn" data-go="alerts" data-fix="1">ללשונית התראות ויומן</button>`):it('ok','ההתראות פעילות','אפשר לשלוח התראת בדיקה מלשונית "התראות ויומן".'));
+  else if(p==='denied')out.push(it('warn','ההתראות חסומות',IOS?'פותחים הגדרות ← התראות ← טיפ-אוף ← "לאפשר התראות".':'בכרום: לוחצים על הסמל שליד הכתובת ← הרשאות ← התראות ← "אפשר".'));
+  else if(p==='install')out.push(it('warn','אין עדיין התראות','באייפון מפעילים אותן אחרי ההוספה למסך הבית.'));
+  else if(p==='unsupported')out.push(it('warn','הדפדפן הזה לא תומך בהתראות',IOS?'פותחים בספארי.':'נסו בכרום.'));
+  else if(p==='off')out.push(it('warn','ההתראות כבויות','נעדכן אתכם כשמשחק זז או מחליף אולם.',`<button class="btn" data-push="on" data-fix="1">הפעלת התראות</button>`));
+  else out.push(it('info','בודקים את ההתראות…'));
+  const mine=touched&&S.follows.length;
+  out.push(mine?it('ok',`${S.follows.length===1?'קבוצה אחת':S.follows.length+' קבוצות'} במעקב`):it('warn','עוד לא בחרתם קבוצה','',`<button class="linkbtn" data-go="find" data-fix="1">מציאת קבוצה</button>`));
+  if(!S.me)out.push(it('info','בודקים את היומן…'));
+  else if(S.me.err)out.push(it('info','לא הצלחנו לבדוק את היומן','בדקו את החיבור לאינטרנט.'));
+  else if(S.me.calDay){const [y,m,d]=S.me.calDay.split('-');out.push(it('ok','היומן המתעדכן מחובר',`נקרא לאחרונה ב־${+d}.${+m}.`))}
+  else if(mine)out.push(it('info','היומן המתעדכן לא מחובר','לא חובה. כך כל המשחקים נכנסים ליומן של הטלפון.',`<button class="linkbtn" data-gocal="1" data-fix="1">לחיבור יומן</button>`));
+  return `<section class="sec"><h2>מה בדקנו בטלפון הזה</h2><div class="diag">${out.join('')}</div></section>`}
 function fbForm(topic,{ph,contact=true,source='help'}){
   if(S.sent[topic+source])return `<div class="fb-done"><b>קיבלנו, תודה.</b><span class="sub">${contact?'אם השארתם פרטים, נחזור אליכם.':'כל רעיון נקרא.'}</span></div>`;
   const d=S.drafts[topic+source]||{};
@@ -884,6 +1006,7 @@ function fbForm(topic,{ph,contact=true,source='help'}){
     <textarea id="fb-${topic}-${source}" name="text" rows="3" maxlength="1500" placeholder="${esc(ph)}" aria-label="${esc(ph)}">${esc(d.text||'')}</textarea>
     ${contact?`<input id="fbc-${topic}-${source}" name="contact" maxlength="120" placeholder="איך לחזור אליכם? טלפון או אימייל (לא חובה)" aria-label="פרטים לחזרה, לא חובה" value="${esc(d.contact||'')}">`:''}
     <div class="fb-row"><button class="btn" type="submit">שליחה</button>${S.fbErr===topic+source?'<span class="fb-err">לא הצלחנו לשלוח. בדקו את החיבור ונסו שוב.</span>':''}</div>
+    ${source==='help'?'<p class="note">יחד עם ההודעה נשלחים פרטים טכניים שיעזרו לנו לבדוק: סוג הטלפון והדפדפן, ומצב ההתראות והיומן.</p>':''}
   </form>`}
 function ideaBox(){
   return `<section class="sec idea"><h2>מה עוד הייתם רוצים בטיפ-אוף?</h2>
@@ -894,8 +1017,12 @@ function viewHelp(){
     return `<div class="topic${open?' open':''}"><button class="topic-h" data-topic="${t.id}" aria-expanded="${open}"><span><b>${t.title}</b><span class="sub">${t.sub}</span></span>${ic.prev}</button>
       ${open?`<div class="topic-b">${t.tips?`<p class="tip">${t.tips}</p>`:''}${t.go?`<button class="linkbtn" data-go="${t.go}">${t.goText}</button>`:''}${fbForm(t.id,{ph:t.ph})}</div>`:''}</div>`}).join('');
   return `<section class="sec"><h1>עזרה</h1></section>
+   ${diagBox()}
    <section class="sec"><h2>שאלות נפוצות</h2><div class="faqs">${faq}</div></section>
    <section class="sec"><h2>במה אפשר לעזור?</h2><div class="topics">${topics}</div></section>
+   <section class="sec privacy-box"><h2>הפרטיות שלכם</h2><p class="sub">אין הרשמה. נשמרים רק מזהה אקראי של הטלפון, הקבוצות וההגדרות. אפשר למחוק הכול בלחיצה.</p>
+     <button class="btn ghost danger-t" data-forget="ask">מחיקת המידע שלי</button>
+     <p class="note"><a href="/privacy.html">מדיניות הפרטיות</a> · <a href="/terms.html">תנאי שימוש</a></p></section>
    <p class="note">טיפ-אוף נבנתה כך שתהיה נוחה לשימוש גם לאנשים עם מוגבלות. <a href="/accessibility.html">הצהרת הנגישות</a></p>
    ${footer()}`}
 async function sendFeedback(form){
@@ -905,29 +1032,47 @@ async function sendFeedback(form){
   const btn=form.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='שולחים…';
   let ok=false;
   try{const r=await fetch('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({device:DEV,topic,source,text,contact,teams:touched?S.follows:[],platform:PLATFORM,standalone:STANDALONE})});ok=r.ok}catch(e){}
+      body:JSON.stringify({device:DEV,topic,source,text,contact,teams:touched?S.follows:[],platform:PLATFORM,standalone:STANDALONE,diag:source==='help'?diagInfo():undefined})});ok=r.ok}catch(e){}
   if(ok){S.sent[key]=true;delete S.drafts[key];S.fbErr=null}else S.fbErr=key;
   render()}
 
 function render(){
   const app=document.getElementById('app');
+  const ae=document.activeElement,aid=ae&&ae.id&&app.contains(ae)&&/^(fb|fbc|nick)-/.test(ae.id)?ae.id:null,sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   const ovEl=document.getElementById('ov'),ovHTML=overlay();
   ovEl.innerHTML=ovHTML;
   app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():S.view==='season'?viewSeason():viewAlerts())+
-   `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
+   `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/terms.html">תנאי שימוש</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
   const tab=(S.view==='find'||S.view==='season')?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   const open=!!ovHTML;document.body.classList.toggle('locked',open);
   app.inert=open;document.querySelector('nav.tabs').inert=open;
-  if(open&&!ovEl.contains(document.activeElement)){const f=ovEl.querySelector('.btn');if(f)f.focus()}
+  if(open&&!ovEl.contains(document.activeElement)){const f=ovEl.querySelector('[data-autofocus]')||ovEl.querySelector('.btn');if(f)f.focus()}
+  if(S.view==='help'&&!S.me)loadMe();
+  if(aid&&!open){const n=document.getElementById(aid);if(n){n.focus({preventScroll:true});if(sel)try{n.setSelectionRange(sel[0],sel[1])}catch(e){}}}
   const q=document.getElementById('q');
   if(q)q.addEventListener('input',e=>{S.q=e.target.value;const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
 }
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);return}
+  if(e.target.closest('.scrim')&&(S.menu||S.forgetAsk)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
-  if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';render();scrollTo(0,0);return}
+  if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;render();scrollTo(0,0);return}
   const d=b.dataset;
+  if(d.fix)track('diag_fix');
+  if(d.menuOpen){S.menu=d.menuOpen;S.menuConfirm=false;render();return}
+  if(d.menu){const k=S.menu;
+    if(d.menu==='close'||d.menu==='remove-no'&&!k){closeSmall()}
+    else if(d.menu==='remove')S.menuConfirm=true;
+    else if(d.menu==='remove-no')S.menuConfirm=false;
+    else if(d.menu==='remove-yes'){closeSmall();removeTeam(k)}
+    render();return}
+  if(d.forget){if(d.forget==='ask')S.forgetAsk=true;else if(d.forget==='no')S.forgetAsk=false;else if(d.forget==='yes'){b.disabled=true;b.textContent='מוחקים…';forgetMe();return}render();return}
+  if(d.det){const i=+d.det;if(S.det.has(i))S.det.delete(i);else{S.det.add(i);track('details')}render();return}
+  if(d.wrong){const g=GAMES[+d.wrong],t=TEAMS[+d.wt],o=TEAMS[g.h===t.i?g.a:g.h];track('wrong_open');
+    S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
+    S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
+    render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
   if(d.go){S.view=d.go;S.findMode='full';if(d.go==='my')S.justAdded=null;render();scrollTo(0,0);if(d.go==='season'){track('season');const el=document.getElementById('m-'+(NOW.getFullYear()*12+NOW.getMonth()));if(el&&el.previousElementSibling)el.scrollIntoView({block:'start'})}}
   else if(d.addres){S.view='find';S.findMode='res';S.q='';render();scrollTo(0,0)}
   else if(d.res)toggleRes(d.res);
@@ -964,8 +1109,12 @@ document.addEventListener('click',e=>{
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
-document.addEventListener('submit',e=>{const f=e.target.closest('form.fb');if(!f)return;e.preventDefault();sendFeedback(f)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.menu||S.forgetAsk)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
+  if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
+document.addEventListener('submit',e=>{
+  const n=e.target.closest('form.nick');if(n){e.preventDefault();const k=S.menu,v=n.elements.nick.value.replace(/[<>]/g,'').trim().slice(0,20);
+    if(v)S.nicks[k]=v;else delete S.nicks[k];saveNicks();syncState('nick');closeSmall();render();toast(v?'הכינוי נשמר':'הכינוי הוסר');return}
+  const f=e.target.closest('form.fb');if(!f)return;e.preventDefault();sendFeedback(f)});
 document.addEventListener('input',e=>{const f=e.target.closest('form.fb');if(!f)return;const k=f.dataset.fb+f.dataset.src;S.drafts[k]={text:f.elements.text.value,contact:f.elements.contact?.value||''}});
 document.addEventListener('change',e=>{
   if(e.target.id==='selAge'){S.age=e.target.value||null;S.league=null;render()}
@@ -974,6 +1123,7 @@ document.addEventListener('change',e=>{
 window.__onbip=()=>{if(S.view==='my')render()};
 if(S.invite)track('invite_open');
 render();
+if(justDeleted)toast('המידע נמחק');
 syncState('open');
 if(!S.invite)syncURL();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});

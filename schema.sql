@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS changes (
 );
 
 -- what parents write in "help" and "what else would you like"
-CREATE TABLE IF NOT EXISTS feedback (ts INTEGER NOT NULL, device TEXT, topic TEXT NOT NULL, source TEXT, text TEXT NOT NULL, contact TEXT, teams TEXT, platform TEXT);
+CREATE TABLE IF NOT EXISTS feedback (ts INTEGER NOT NULL, device TEXT, topic TEXT NOT NULL, source TEXT, text TEXT NOT NULL, contact TEXT, teams TEXT, platform TEXT, diag TEXT);
 CREATE INDEX IF NOT EXISTS feedback_ts ON feedback(ts);
 
 CREATE TABLE IF NOT EXISTS pushlog (
@@ -45,4 +45,20 @@ CREATE TABLE IF NOT EXISTS pushlog (
   sent   INTEGER DEFAULT 0,
   failed INTEGER DEFAULT 0,
   PRIMARY KEY (day, kind)
+);
+
+-- nickname a family gave a followed team ("של דניאל"); only in their own notifications and calendar
+CREATE TABLE IF NOT EXISTS nicks (
+  device TEXT NOT NULL,
+  team   TEXT NOT NULL,
+  nick   TEXT NOT NULL,
+  PRIMARY KEY (device, team)
+);
+
+-- notifications held during quiet hours (23:00–08:00), sent together in the morning
+CREATE TABLE IF NOT EXISTS pending (
+  device TEXT NOT NULL,
+  kind   TEXT NOT NULL,
+  ts     INTEGER NOT NULL,
+  msg    TEXT NOT NULL
 );

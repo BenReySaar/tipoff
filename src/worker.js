@@ -13,6 +13,12 @@ const TEAM = /^[^|]{1,12}\|.{1,80}$/;
 
 const ilDay = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d);
 const ilHour = (d = new Date()) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hourCycle: 'h23' }).format(d);
+const quietNow = (d = new Date()) => { const h = ilHour(d); return h >= 23 || h < 8; }; // no notifications 23:00–08:00
+// Local testing only (DEV_ALLOW_HTTP_PUSH=1 exists only in .dev.vars): pretend it is night or day.
+async function isQuiet(env) {
+  if (env.DEV_ALLOW_HTTP_PUSH === '1') { const f = await env.KV.get('dev:quiet'); if (f != null) return f === '1'; }
+  return quietNow();
+}
 const json = (obj, status = 200, headers = {}) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...headers } });
 
 // Push signing keys: taken from settings if given, otherwise created once by the server and kept in KV.
@@ -80,10 +86,11 @@ const dayName = d => { const x = fromD(d); return DAYS[new Date(Date.UTC(x.y, x.
 const whenText = d => { const x = fromD(d); return `${dayName(d)} ${x.day}.${x.m} ב־${x.hm}`; };
 const hallShort = v => String(v).split(',')[0].trim();
 
-function messageFor(change, teamKey) {
+const withNick = (team, nick) => nick ? `${team} (${nick})` : team;
+function messageFor(change, teamKey, nick) {
   const g = change.game, b = change.before;
   const mineHome = g.homeKey === teamKey;
-  const team = mineHome ? g.home : g.away, opp = mineHome ? g.away : g.home;
+  const team = withNick(mineHome ? g.home : g.away, nick), opp = mineHome ? g.away : g.home;
   switch (change.kind) {
     case 'moved': return { title: `⚠️ המשחק זז: ${team}`, body: `נגד ${opp}: עכשיו ${whenText(g.d)} (היה ${whenText(b.d)})` };
     case 'venue': return { title: `📍 החלפת אולם: ${team}`, body: `נגד ${opp}, ${whenText(g.d)}\n${g.venue}` };
@@ -101,7 +108,8 @@ async function devicesFollowing(env, teamKeys) {
   const keys = [...new Set(teamKeys)];
   for (let i = 0; i < keys.length; i += 90) {
     const part = keys.slice(i, i + 90);
-    const r = await env.DB.prepare(`SELECT f.device, f.team, f.kind, d.push, d.prefs FROM follows f JOIN devices d ON d.id=f.device
+    const r = await env.DB.prepare(`SELECT f.device, f.team, f.kind, d.push, d.prefs, n.nick FROM follows f JOIN devices d ON d.id=f.device
+      LEFT JOIN nicks n ON n.device=f.device AND n.team=f.team
       WHERE d.push IS NOT NULL AND f.team IN (${part.map(() => '?').join(',')})`).bind(...part).all();
     rows.push(...r.results);
   }
@@ -142,9 +150,33 @@ async function notifyChanges(env, changes) {
       const b = bucket.get(row.device);
       if (b.seen.has(c.game.id + c.kind)) continue; // two followed teams in the same game
       b.seen.add(c.game.id + c.kind);
-      b.msgs.push(messageFor(c, row.team));
+      b.msgs.push(messageFor(c, row.team, row.nick));
     }
   }
+  if (await isQuiet(env)) return holdForMorning(env, per);
+  return (await deliver(env, per.change, 'change')) + (await deliver(env, per.result, 'result'));
+}
+
+// Quiet hours: keep the messages and send them together after 08:00.
+async function holdForMorning(env, per) {
+  const stmt = env.DB.prepare('INSERT INTO pending(device,kind,ts,msg) VALUES(?,?,?,?)');
+  const rows = [];
+  for (const kind of Object.keys(per)) for (const b of per[kind].values()) for (const m of b.msgs) rows.push(stmt.bind(b.device, kind, Date.now(), JSON.stringify(m)));
+  for (let i = 0; i < rows.length; i += 100) await env.DB.batch(rows.slice(i, i + 100));
+  return 0;
+}
+export async function flushPending(env) {
+  if (await isQuiet(env)) return 0;
+  const { results } = await env.DB.prepare(`SELECT p.rowid id, p.device, p.kind, p.msg, d.push FROM pending p JOIN devices d ON d.id=p.device
+    WHERE d.push IS NOT NULL ORDER BY p.ts LIMIT 2000`).all();
+  const per = { change: new Map(), result: new Map() };
+  for (const r of results) {
+    const bucket = per[r.kind === 'result' ? 'result' : 'change'];
+    if (!bucket.has(r.device)) bucket.set(r.device, { device: r.device, push: r.push, msgs: [] });
+    bucket.get(r.device).msgs.push(JSON.parse(r.msg));
+  }
+  await env.DB.prepare('DELETE FROM pending WHERE rowid <= ?').bind(results.length ? Math.max(...results.map(r => r.id)) : 0).run();
+  await env.DB.prepare('DELETE FROM pending WHERE device NOT IN (SELECT id FROM devices WHERE push IS NOT NULL)').run();
   return (await deliver(env, per.change, 'change')) + (await deliver(env, per.result, 'result'));
 }
 
@@ -165,13 +197,36 @@ async function eveningReminders(env) {
       const home = g[3] === ti, opp = pack.tm[home ? g[4] : g[3]][0];
       if (!per.has(row.device)) per.set(row.device, { device: row.device, push: row.push, msgs: [] });
       per.get(row.device).msgs.push({
-        title: `מחר: ${pack.tm[ti][0]} ב־${fromD(g[1]).hm}`,
+        title: `מחר: ${withNick(pack.tm[ti][0], row.nick)} ב־${fromD(g[1]).hm}`,
         body: `נגד ${opp} · ${hallShort(pack.vn[g[5]])}\n👕 ${home ? 'משחק בית' : 'משחק חוץ'} – לבדוק צבע גופייה`,
       });
     }
   }
   for (const p of per.values()) p.msgs.sort((a, b) => a.title.localeCompare(b.title));
   return deliver(env, per, 'eve');
+}
+
+/* ---------------- retention (what the privacy page promises) ---------------- */
+
+export async function cleanup(env, now = Date.now()) {
+  const day = n => ilDay(new Date(now - n * 864e5));
+  const yearAgo = now - 365 * 864e5;
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM activity WHERE day < ?').bind(day(730)),            // usage log: 24 months
+    env.DB.prepare('DELETE FROM feedback WHERE ts < ?').bind(now - 365 * 864e5),     // messages: 12 months
+    env.DB.prepare('DELETE FROM pushlog WHERE day < ?').bind(day(90)),               // sent-notification counts: 90 days
+    env.DB.prepare('DELETE FROM changes WHERE ts < ?').bind(now - 365 * 864e5),
+    env.DB.prepare('DELETE FROM pending WHERE ts < ?').bind(now - 2 * 864e5),
+    env.DB.prepare('DELETE FROM follows WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo), // a phone unused for a year
+    env.DB.prepare('DELETE FROM nicks WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo),
+    env.DB.prepare('DELETE FROM devices WHERE last_seen < ?').bind(yearAgo),
+  ]);
+}
+
+// "מחיקת המידע שלי": everything tied to this phone's random id.
+async function forgetDevice(env, device) {
+  await env.DB.batch(['devices WHERE id', 'follows WHERE device', 'nicks WHERE device', 'pending WHERE device', 'activity WHERE device', 'feedback WHERE device']
+    .map(t => env.DB.prepare(`DELETE FROM ${t}=?`).bind(device)));
 }
 
 /* ---------------- HTTP ---------------- */
@@ -197,6 +252,14 @@ async function saveState(env, b) {
     const ins = env.DB.prepare('INSERT OR IGNORE INTO follows(device,team,kind) VALUES(?,?,?)');
     for (const k of full) stmts.push(ins.bind(b.device, k, 'full'));
     for (const k of res) stmts.push(ins.bind(b.device, k, 'res'));
+    if (b.nicks && typeof b.nicks === 'object') {
+      stmts.push(env.DB.prepare('DELETE FROM nicks WHERE device=?').bind(b.device));
+      const nk = env.DB.prepare('INSERT OR REPLACE INTO nicks(device,team,nick) VALUES(?,?,?)');
+      for (const k of full) {
+        const n = String(b.nicks[k] || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 20);
+        if (n) stmts.push(nk.bind(b.device, k, n));
+      }
+    }
   }
   const act = env.DB.prepare('INSERT INTO activity(day,device,type,n) VALUES(?,?,?,1) ON CONFLICT(day,device,type) DO UPDATE SET n=n+1');
   stmts.push(act.bind(ilDay(), b.device, /^[a-z_]{2,20}$/.test(b.type || '') ? b.type : 'open'));
@@ -245,10 +308,27 @@ export default {
         const recent = await env.DB.prepare('SELECT COUNT(*) c FROM feedback WHERE device=? AND ts>?').bind(b.device, Date.now() - 864e5).first();
         if (recent.c >= 10) return json({ error: 'too many' }, 429);
         const teams = Array.isArray(b.teams) ? b.teams.filter(k => TEAM.test(k)).slice(0, 10) : [];
-        await env.DB.prepare('INSERT INTO feedback(ts,device,topic,source,text,contact,teams,platform) VALUES(?,?,?,?,?,?,?,?)')
+        const diag = b.diag && typeof b.diag === 'object'
+          ? JSON.stringify(Object.fromEntries(Object.entries(b.diag).slice(0, 12).map(([k, v]) => [String(k).slice(0, 20), String(v).slice(0, 60)]))) : null;
+        await env.DB.prepare('INSERT INTO feedback(ts,device,topic,source,text,contact,teams,platform,diag) VALUES(?,?,?,?,?,?,?,?,?)')
           .bind(Date.now(), b.device, b.topic, b.source === 'my' ? 'my' : 'help', text, String(b.contact || '').trim().slice(0, 120) || null,
-            JSON.stringify(teams), ['ios', 'android', 'other'].includes(b.platform) ? b.platform : 'other').run();
+            JSON.stringify(teams), ['ios', 'android', 'other'].includes(b.platform) ? b.platform : 'other', diag).run();
         await track(env, b.device, 'feedback');
+        return json({ ok: true });
+      }
+      if (p === '/api/me' && req.method === 'GET') { // for "מה בדקנו בטלפון הזה" in Help
+        const device = url.searchParams.get('device') || '';
+        if (!DEVICE.test(device)) return json({ error: 'device' }, 400);
+        const [d, cal] = await Promise.all([
+          env.DB.prepare('SELECT push IS NOT NULL AS push FROM devices WHERE id=?').bind(device).first(),
+          env.DB.prepare("SELECT MAX(day) day FROM activity WHERE device=? AND type='cal_fetch'").bind(device).first(),
+        ]);
+        return json({ known: !!d, push: !!d?.push, calDay: cal?.day || null }, 200, { 'cache-control': 'no-store' });
+      }
+      if (p === '/api/forget' && req.method === 'POST') {
+        const b = await readJSON(req);
+        if (!DEVICE.test(b.device || '')) return json({ error: 'device' }, 400);
+        await forgetDevice(env, b.device);
         return json({ ok: true });
       }
       if (p === '/api/test-push' && req.method === 'POST') {
@@ -266,10 +346,11 @@ export default {
       }
       const cal = p.match(/^\/cal\/([a-f0-9-]{36})\.ics$/);
       if (cal) {
-        const [pack, follows] = await Promise.all([getPack(env), env.DB.prepare("SELECT team FROM follows WHERE device=? AND kind='full'").bind(cal[1]).all()]);
+        const [pack, follows, nicks] = await Promise.all([getPack(env), env.DB.prepare("SELECT team FROM follows WHERE device=? AND kind='full'").bind(cal[1]).all(),
+          env.DB.prepare('SELECT team, nick FROM nicks WHERE device=?').bind(cal[1]).all()]);
         if (!pack) return new Response('no data', { status: 503 });
         ctx.waitUntil(track(env, cal[1], 'cal_fetch').catch(() => {}));
-        return new Response(icsFor(pack, follows.results.map(r => r.team), url.host), {
+        return new Response(icsFor(pack, follows.results.map(r => r.team), url.host, Object.fromEntries(nicks.results.map(r => [r.team, r.nick]))), {
           headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'public, max-age=900', 'content-disposition': 'inline; filename="tipoff.ics"' },
         });
       }
@@ -289,6 +370,12 @@ export default {
         if (!Array.isArray(raw.leagues) || !Array.isArray(raw.events) || !Array.isArray(raw.venues)) return json({ error: 'shape' }, 400, CORS);
         return json(await runSync(env, { raw, source: 'browser' }), 200, CORS);
       }
+      if (p === '/api/dev-quiet' && env.DEV_ALLOW_HTTP_PUSH === '1' && keyAllowed(env, url, req)) {
+        await env.KV.put('dev:quiet', url.searchParams.get('on') || '0');
+        if (url.searchParams.get('flush')) return json({ sent: await flushPending(env) });
+        if (url.searchParams.get('cleanup')) { await cleanup(env); return json({ ok: true }); }
+        return json({ ok: true });
+      }
       if (p.startsWith('/api/')) return json({ error: 'not found' }, 404);
       return env.ASSETS.fetch(req);
     } catch (e) {
@@ -299,9 +386,10 @@ export default {
   async scheduled(event, env, ctx) {
     await ensureSchema(env);
     if (event.cron === env.EVENING_CRON || event.cron === '0 17,18 * * *') {
-      if (ilHour() === 20) await eveningReminders(env);
+      if (ilHour() === 20) { await eveningReminders(env); await cleanup(env); }
       return;
     }
     await runSync(env);
+    await flushPending(env); // morning: what was held overnight
   },
 };

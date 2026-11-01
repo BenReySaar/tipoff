@@ -8,10 +8,12 @@ const when = ms => ms ? new Date(ms).toLocaleString('he-IL', { timeZone: 'Asia/J
 
 const TOPIC = { a11y: 'נגישות', wrong: 'פרט במשחק לא נכון', team: 'לא מוצאים קבוצה', push: 'התראות', cal: 'יומן', idea: 'רעיון', other: 'אחר' };
 
+const DIAG = { os: 'מערכת', browser: 'דפדפן', home: 'מסך הבית', push: 'התראות', cal: 'יומן', teams: 'קבוצות' };
+
 const ACTIONS = {
   open: 'פתחו את האפליקציה', new: 'מכשירים חדשים', follow: 'הוסיפו או הסירו קבוצה', standalone: 'פתחו מהמסך הבית',
   push_on: 'הפעילו התראות', push_off: 'כיבו התראות', nav: 'לחצו ניווט', calendar: 'הוסיפו משחק ליומן', cal_sub: 'חיברו יומן מתעדכן',
-  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', share_app_wa: 'שיתפו את האפליקציה בוואטסאפ', share_app_fb: 'שיתפו את האפליקציה בפייסבוק', share_app_tg: 'שיתפו את האפליקציה בטלגרם', share_app_native: 'שיתפו את האפליקציה (תפריט השיתוף)', share_app_copy: 'העתיקו קישור לאפליקציה', share_team_native: 'שיתפו קבוצה (תפריט השיתוף)', season: 'פתחו את כל משחקי העונה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות',
+  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', share_app_wa: 'שיתפו את האפליקציה בוואטסאפ', share_app_fb: 'שיתפו את האפליקציה בפייסבוק', share_app_tg: 'שיתפו את האפליקציה בטלגרם', share_app_native: 'שיתפו את האפליקציה (תפריט השיתוף)', share_app_copy: 'העתיקו קישור לאפליקציה', share_team_native: 'שיתפו קבוצה (תפריט השיתוף)', season: 'פתחו את כל משחקי העונה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות', nick: 'נתנו כינוי לקבוצה', remove_team: 'הסירו קבוצה מהתפריט', details: 'פתחו פירוט מול היריבה', gmaps: 'לחצו Google Maps', wrong_open: 'לחצו "משהו לא נכון?"', forget: 'מחקו את המידע שלהם', diag_fix: 'לחצו על תיקון באבחון',
 };
 
 export async function statsPage(env, pack) {
@@ -35,7 +37,7 @@ export async function statsPage(env, pack) {
     all('SELECT kind, SUM(sent) sent, SUM(failed) failed FROM pushlog WHERE day>=? GROUP BY kind', d30),
     all('SELECT kind, COUNT(*) c FROM changes WHERE ts>? GROUP BY kind', now - 7 * 864e5),
     all("SELECT team, kind FROM follows"),
-    all('SELECT ts, topic, source, text, contact, teams, platform FROM feedback ORDER BY ts DESC LIMIT 60'),
+    all('SELECT ts, topic, source, text, contact, teams, platform, diag FROM feedback ORDER BY ts DESC LIMIT 60'),
     one('SELECT COUNT(*) c FROM feedback WHERE ts>?', now - 30 * 864e5),
   ]);
   const sync = JSON.parse(await env.KV.get('sync:status') || 'null');
@@ -122,7 +124,7 @@ ${tile(fbCount?.c, 'הודעות מהורים', '30 ימים אחרונים. ה�
 ${fb.length ? `<div class="fbl">${fb.map(f => {
   const teams = JSON.parse(f.teams || '[]').map(k => k.split('|')[1]).join(', ');
   return `<div class="fbi"><div class="fbh"><span class="st ${f.topic === 'idea' ? 'ok' : 'bad'}">${esc(TOPIC[f.topic] || f.topic)}</span><span class="sub">${when(f.ts)}${f.source === 'my' ? ' · מתחתית "המשחקים שלי"' : ''} · ${esc(f.platform || '')}</span></div>
-  <p>${esc(f.text)}</p>${f.contact ? `<div class="sub">לחזור אל: <b dir="ltr">${esc(f.contact)}</b></div>` : ''}${teams ? `<div class="sub">עוקבים אחרי: ${esc(teams)}</div>` : ''}</div>`;
+  <p>${esc(f.text)}</p>${f.contact ? `<div class="sub">לחזור אל: <b dir="ltr">${esc(f.contact)}</b></div>` : ''}${teams ? `<div class="sub">עוקבים אחרי: ${esc(teams)}</div>` : ''}${f.diag ? `<div class="sub">פרטים טכניים: ${esc(Object.entries(JSON.parse(f.diag)).map(([k, v]) => (DIAG[k] || k) + ': ' + v).join(' · '))}</div>` : ''}</div>`;
 }).join('')}</div>` : '<p class="sub">עוד אין הודעות.</p>'}
 </div>
 

@@ -9,11 +9,18 @@ export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS feedback (ts INTEGER NOT NULL, device TEXT, topic TEXT NOT NULL, source TEXT, text TEXT NOT NULL, contact TEXT, teams TEXT, platform TEXT)`,
   `CREATE INDEX IF NOT EXISTS feedback_ts ON feedback(ts)`,
   `CREATE TABLE IF NOT EXISTS pushlog (day TEXT NOT NULL, kind TEXT NOT NULL, sent INTEGER DEFAULT 0, failed INTEGER DEFAULT 0, PRIMARY KEY (day, kind))`,
+  `CREATE TABLE IF NOT EXISTS nicks (device TEXT NOT NULL, team TEXT NOT NULL, nick TEXT NOT NULL, PRIMARY KEY (device, team))`,
+  `CREATE TABLE IF NOT EXISTS pending (device TEXT NOT NULL, kind TEXT NOT NULL, ts INTEGER NOT NULL, msg TEXT NOT NULL)`,
+];
+// Columns added after launch. Running them again fails harmlessly ("duplicate column"), so errors are ignored.
+export const MIGRATIONS = [
+  `ALTER TABLE feedback ADD COLUMN diag TEXT`,
 ];
 
 let ready = false;
 export async function ensureSchema(env) {
   if (ready) return;
   await env.DB.batch(SCHEMA.map(s => env.DB.prepare(s)));
+  for (const m of MIGRATIONS) { try { await env.DB.prepare(m).run(); } catch (e) { /* already there */ } }
   ready = true;
 }

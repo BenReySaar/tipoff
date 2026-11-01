@@ -33,7 +33,7 @@ function fold(line) {
 }
 
 /** pack: the app pack. teamKeys: ["slug|name", ...]. host: e.g. "tipoff.co.il" */
-export function icsFor(pack, teamKeys, host = 'tipoff') {
+export function icsFor(pack, teamKeys, host = 'tipoff', nicks = {}) {
   const keyOf = ti => pack.lg[pack.tm[ti][1]][1] + '|' + pack.tm[ti][0];
   const want = new Set(teamKeys);
   const changed = new Map((pack.ch || []).map(c => [c[1], c]));
@@ -50,7 +50,8 @@ export function icsFor(pack, teamKeys, host = 'tipoff') {
     const ours = want.has(hk) ? h : a, opp = ours === h ? a : h;
     const home = ours === h;
     const both = want.has(hk) && want.has(ak);
-    const title = both ? `🏀 ${pack.tm[h][0]} – ${pack.tm[a][0]}` : `🏀 ${pack.tm[ours][0]} נגד ${pack.tm[opp][0]}`;
+    const nm = (ti, k) => nicks[k] ? `${pack.tm[ti][0]} (${nicks[k]})` : pack.tm[ti][0];
+    const title = both ? `🏀 ${nm(h, hk)} – ${nm(a, ak)}` : `🏀 ${nm(ours, ours === h ? hk : ak)} נגד ${pack.tm[opp][0]}`;
     const desc = [pack.lg[lg][0]];
     if (!both) desc.push(`👕 ${home ? 'משחק בית' : 'משחק חוץ'} – לבדוק צבע גופייה`);
     if (hs != null) desc.push(`תוצאה: ${pack.tm[h][0]} ${hs} – ${as} ${pack.tm[a][0]}`);
