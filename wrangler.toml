@@ -17,7 +17,7 @@ database_id = "e4b65dfb-cc52-4479-b6db-fbf42579ff82"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "FILL-kv-namespace-id"
+id = "4aeaf53ead9f403497ea781d2c3bbd18"
 
 [triggers]
 # :07 every hour: sync from the association. 17:00+18:00 UTC: one of them is 20:00 in Israel (winter/summer) for the evening reminder.
