@@ -251,6 +251,38 @@ nav.tabs button{background:none;border:0;padding:9px 4px 8px;display:flex;flex-d
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:600}
 
+/* find: back */
+.back{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;background:none;border:0;padding:0;margin-bottom:-14px;color:var(--muted);font-size:14px;font-weight:500}
+.back svg{width:16px;height:16px}
+/* help */
+.faqs{border-top:1px solid var(--line)}
+.faq{border-bottom:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;padding:14px 0;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";flex:none;width:8px;height:8px;border-inline-start:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg);margin-inline-end:4px;transition:transform .15s}
+.faq[open] summary::after{transform:rotate(135deg)}
+.faq-a{padding:0 0 16px;color:var(--muted);font-size:14.5px;line-height:1.65;max-width:62ch}
+.faq-a a{color:var(--ink)}
+.topics{border-top:1px solid var(--line)}
+.topic{border-bottom:1px solid var(--line)}
+.topic-h{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;background:none;border:0;padding:14px 0;text-align:start}
+.topic-h b{display:block;font-weight:600}
+.topic-h svg{width:16px;height:16px;color:var(--muted);transform:rotate(180deg);transition:transform .15s}
+.topic.open .topic-h svg{transform:rotate(90deg)}
+.topic-b{display:flex;flex-direction:column;gap:12px;padding:0 0 18px}
+.tip{margin:0;background:var(--fill);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.6}
+.topic-b .linkbtn{align-self:flex-start}
+/* feedback form */
+.fb{display:flex;flex-direction:column;gap:8px}
+.fb textarea,.fb input{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;resize:vertical}
+.fb textarea::placeholder,.fb input::placeholder{color:var(--muted)}
+.fb textarea:focus,.fb input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.fb-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.fb .btn{padding:10px 22px}
+.fb .btn:disabled{opacity:.6}
+.fb-err{color:var(--loss);font-size:13.5px}
+.fb-done{display:flex;flex-direction:column;gap:2px;background:var(--fill);border-radius:12px;padding:14px}
+.idea{border-top:1px solid var(--line);padding-top:22px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:380px){.h-time{font-size:54px}.ages{grid-template-columns:repeat(2,1fr)}.day .dn{width:34px;height:34px;font-size:16px}.actions{grid-template-columns:1fr 1fr 1fr}.act span{font-size:13px}}
 </style>
@@ -260,8 +292,8 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:600}
 <div class="app" dir="rtl" lang="he" id="app"><p class="sub" style="text-align:center;margin-top:40px">טוענים את לוח המשחקים…</p></div>
 <nav class="tabs" dir="rtl" aria-label="ניווט ראשי"><div class="in">
   <button data-v="my"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>המשחקים שלי</button>
-  <button data-v="find"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17M6 6c3 3 3 9 0 12M18 6c-3 3-3 9 0 12"/></svg>מציאת קבוצה</button>
-  <button data-v="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>התראות</button>
+  <button data-v="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>התראות ויומן</button>
+  <button data-v="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2 1-1.2 1.9v.5"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg>עזרה</button>
 </div></nav>
 
 <script>
@@ -502,7 +534,7 @@ function footer(){
 
 function viewMy(){
   const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><button class="addbtn" data-go="find">+ קבוצה</button></div>`;
-  if(!S.follows.length) return `${title}<div class="empty"><h2>עוד לא בחרתם קבוצה</h2><p class="sub">מחפשים את הקבוצה של הילד, והמשחק הבא מופיע כאן.</p><button class="btn" data-go="find">מציאת קבוצה</button></div>${resultsBlock()}${footer()}`;
+  if(!S.follows.length) return `${title}<div class="empty"><h2>עוד לא בחרתם קבוצה</h2><p class="sub">מחפשים את הקבוצה של הילד, והמשחק הבא מופיע כאן.</p><button class="btn" data-go="find">מציאת קבוצה</button></div>${resultsBlock()}${ideaBox()}${footer()}`;
   const keys=S.filter==='all'?S.follows:[S.filter];const ts=keys.map(k=>TEAMS[KEY[k]]);
   const all=S.follows.map(k=>TEAMS[KEY[k]]);
   const multi=ts.length>1;
@@ -519,14 +551,14 @@ function viewMy(){
      <section class="sec"><h2>המשחק הבא של כל קבוצה</h2>${nexts.map(x=>nextCard(x.g,x.t)).join('')||'<p class="sub">אין משחקים קרובים.</p>'}</section>
      ${up.length?`<section class="sec"><h2>כל המשחקים לפי תאריך</h2><div class="list">${up.slice(0,S.showUp).map(x=>row(x.g,x.t,true)).join('')}
        ${up.length>S.showUp?`<button class="more" data-more="1">הצגת עוד משחקים</button>`:''}</div></section>`:''}
-     ${pastBlock}${resultsBlock()}${footer()}`}
+     ${pastBlock}${resultsBlock()}${ideaBox()}${footer()}`}
   const t=ts[0],next=up[0],rest=up.slice(1);
   const shown=withGaps(rest.slice(0,S.showUp),next&&next.g.date);
   return `${head}
    ${next?hero(next.g,next.t):'<div class="empty"><p>אין משחקים קרובים בלוח.</p></div>'}
    ${rest.length?`<section class="sec"><div class="sec-h"><h2>בהמשך</h2><span class="sub">עוד ${rest.length} משחקים העונה</span></div><div class="list">${shown.map(x=>x.gap?`<span class="gap">שבוע ${x.gap} · אין משחק</span>`:row(x.g,x.t,false)).join('')}
      ${rest.length>S.showUp?`<button class="more" data-more="1">הצגת עוד משחקים</button>`:''}</div></section>`:''}
-   ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${footer()}`}
+   ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
 
 /* ---------- find a team: gender → age → league → team ---------- */
 function teamPick(t,withLeague){const RES=S.findMode==='res';const on=RES?S.res.includes(t.key):S.follows.includes(t.key)&&touched;
@@ -540,7 +572,7 @@ function viewFind(){
   const search=`<label class="search">${ic.search}<input id="q" type="search" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(q)}" autocomplete="off"></label>`;
   if(q.length>=2){const hits=TEAMS.filter(t=>t.name.includes(q)||LEAGUES[t.lg].full.includes(q))
       .sort((x,y)=>AGES.findIndex(a=>a.id===LEAGUES[x.lg].age)-AGES.findIndex(a=>a.id===LEAGUES[y.lg].age));
-    return `<section class="sec"><h1>מציאת קבוצה</h1></section>${search}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
+    return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
   const crumbs=S.age?`<div class="steps"><button data-back="age">כל הגילאים</button> ‹ ${S.league!=null?`<button data-back="league">${ageOf(S.age).name}</button> ‹ <span>${esc(LEAGUES[S.league].full)}</span>`:'<span>'+ageOf(S.age).name+'</span>'}</div>`:'';
   let body;
   if(!S.age){const ages=AGES.filter(a=>a.g===S.gender);
@@ -553,7 +585,8 @@ function viewFind(){
   const RES=S.findMode==='res';
   const top=RES?`<section class="sec"><h1>קבוצה למעקב תוצאות</h1><p class="sub">רק תוצאה סופית, בלי לוח ובלי יומן. <button class="linkbtn" data-mode="full">לחיפוש רגיל</button></p></section>`
     :`<section class="sec"><h1>מציאת קבוצה</h1><p class="sub">${S.age?'':'בוחרים גיל, ליגה וקבוצה. או מחפשים לפי שם.'}</p></section>`;
-  return `${top}${!RES&&S.justAdded?shareCard():''}${search}${crumbs}${body}`}
+  const back=`<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button>`;
+  return `${back}${top}${!RES&&S.justAdded?shareCard():''}${search}${crumbs}${body}`}
 
 /* ---------- notifications ---------- */
 const UA=navigator.userAgent||'';
@@ -608,8 +641,8 @@ function viewAlerts(){
   if(S.dev==null)S.dev=IOS?'ios':'android';
   const sw=(k,t,s)=>`<div class="al"><div><div style="font-weight:600">${t}</div><div class="sub">${s}</div></div><button class="sw" role="switch" data-al="${k}" aria-checked="${!!S.alerts[k]}" aria-label="${t}"></button></div>`;
   const steps={
-    ios:['פותחים את האתר בספארי (לא בכרום ולא מתוך וואטסאפ).','לוחצים על כפתור השיתוף, הריבוע עם החץ למעלה.','בוחרים "הוספה למסך הבית" ומאשרים.','פותחים את טיפ-אוף מהאייקון החדש במסך הבית.','נכנסים ל"התראות", לוחצים "הפעלת התראות" ובוחרים "אפשר".'],
-    android:['פותחים את האתר בכרום.','נכנסים ל"התראות" ולוחצים "הפעלת התראות".','כשהטלפון שואל, בוחרים "אפשר".','מומלץ: בתפריט של כרום (שלוש הנקודות) בוחרים "הוספה למסך הבית".']};
+    ios:['פותחים את האתר בספארי (לא בכרום ולא מתוך וואטסאפ).','לוחצים על כפתור השיתוף, הריבוע עם החץ למעלה.','בוחרים "הוספה למסך הבית" ומאשרים.','פותחים את טיפ-אוף מהאייקון החדש במסך הבית.','נכנסים ל"התראות ויומן", לוחצים "הפעלת התראות" ובוחרים "אפשר".'],
+    android:['פותחים את האתר בכרום.','נכנסים ל"התראות ויומן" ולוחצים "הפעלת התראות".','כשהטלפון שואל, בוחרים "אפשר".','מומלץ: בתפריט של כרום (שלוש הנקודות) בוחרים "הוספה למסך הבית".']};
   const box={
     on:`<div class="push on"><div><b>✓ ההתראות פעילות בטלפון הזה</b><div class="sub">נעדכן כשמשהו משתנה במשחקים של הקבוצות שלכם.</div></div>
         <div class="pbtns"><button class="btn ghost" data-testpush="1">שליחת התראת בדיקה</button><button class="linkbtn" data-push="off">כיבוי</button></div></div>`,
@@ -619,7 +652,7 @@ function viewAlerts(){
     unsupported:`<div class="push"><div><b>הדפדפן הזה לא תומך בהתראות</b><div class="sub">נסו בכרום באנדרואיד או בספארי באייפון.</div></div></div>`,
     checking:`<div class="push"><div><b>בודקים…</b></div></div>`}[S.push];
   const mine=touched&&S.follows.length;
-  return `<section class="sec"><h1>התראות</h1><p class="sub">נשלח הודעה לטלפון כשמשהו משתנה במשחקים של הקבוצות שלכם.</p></section>
+  return `<section class="sec"><h1>התראות ויומן</h1><p class="sub">נשלח הודעה לטלפון כשמשהו משתנה במשחקים של הקבוצות שלכם.</p></section>
    ${box}${S.pushMsg?`<div class="banner">${esc(S.pushMsg)}</div>`:''}
    <section class="sec"><h2>על מה להתריע</h2><div class="alert-card">${sw('change','שינוי מועד או אולם','ברגע שהאיגוד מעדכן את הלוח')}${sw('eve','תזכורת ערב לפני','בשעה 20:00, עם השעה, האולם ובית או חוץ')}${sw('result','תוצאה סופית','גם לקבוצות שב"מעקב תוצאות"')}</div></section>
    <section class="sec" id="cal"><h2>יומן שמתעדכן לבד</h2>
@@ -635,11 +668,74 @@ function viewAlerts(){
      ${S.dev==='ios'?'<p class="note">נדרשת גרסת iOS 16.4 ומעלה. אפשר לבדוק בהגדרות ← כללי ← אודות.</p>':''}
    </section>`}
 
+/* ---------- help: FAQ, "how can we help", ideas ---------- */
+const FAQ=[
+ ['מאיפה מגיעים המשחקים?','מאתר איגוד הכדורסל. טיפ-אוף בודקת את הלוח כל שעה ומתעדכנת לבד. טיפ-אוף אינה מטעם האיגוד, ובכל סתירה הקובע הוא האיגוד והמאמן.'],
+ ['משחק זז. תוך כמה זמן אדע?','עד שעה מהרגע שהאיגוד מעדכן את האתר שלו. אם הפעלתם התראות, תקבלו הודעה לטלפון. שינוי שהמאמן הודיע עליו ועוד לא עודכן באתר האיגוד יופיע כאן רק אחרי העדכון שם.'],
+ ['איך מוסיפים עוד ילד או עוד קבוצה?','ב"המשחקים שלי" לוחצים "+ קבוצה". אפשר לעקוב אחרי כמה קבוצות, ולכל אחת יש צבע משלה ברצועת השבוע.'],
+ ['לא מוצאים את הקבוצה','נסו לחפש רק את שם העיר או המועדון, למשל "רחובות". טיפ-אוף מציגה ליגות נוער בלבד, מקט-סל ועד נוער. אם עדיין לא מוצאים, כתבו לנו כאן למטה.'],
+ ['איך מפעילים התראות באייפון?','אפל מאפשרת התראות רק לאפליקציה שנוספה למסך הבית. פותחים את טיפ-אוף בספארי, לוחצים על כפתור השיתוף, בוחרים "הוספה למסך הבית", פותחים מהאייקון החדש ומפעילים בלשונית "התראות ויומן". נדרשת גרסת iOS 16.4 ומעלה.'],
+ ['ההתראות לא מגיעות','בלשונית "התראות ויומן" לוחצים "שליחת התראת בדיקה". אם היא לא מגיעה, בודקים שמצב "ריכוז" או "נא לא להפריע" כבוי, ושבהגדרות הטלפון מותר לטיפ-אוף לשלוח התראות.'],
+ ['היומן לא מתעדכן מיד','היומן של הטלפון בודק עדכונים בקצב שלו, ויומן גוגל עושה את זה כמה פעמים ביום. לכן על שינוי של הרגע האחרון ההתראה תגיע לפני היומן.'],
+ ['איך יודעים איזה צבע גופייה ללבוש?','האיגוד מפרסם רק אם זה משחק בית או חוץ, לא את צבע הגופייה. טיפ-אוף מזכירה לבדוק, ואת הצבע עצמו כדאי לוודא מול המאמן.'],
+ ['מה זה "מעקב תוצאות"?','קבוצה שרוצים לדעת רק איך גמרה, למשל של אחיין או של חבר. היא לא נכנסת ללוח וליומן. אם הפעלתם התראת תוצאות, תקבלו הודעה כשהתוצאה מתפרסמת.'],
+ ['צריך להירשם? מה נשמר עליי?','לא צריך הרשמה. נשמרים רק מזהה אקראי של הטלפון, הקבוצות שבחרתם והגדרות ההתראות, בלי שם, טלפון או אימייל. כל הפרטים ב<a href="/privacy.html">מדיניות הפרטיות</a>.'],
+ ['זה עולה כסף?','לא. טיפ-אוף חינמית.'],
+];
+const TOPICS=[
+ {id:'wrong',title:'פרט במשחק לא נכון',sub:'שעה, תאריך, אולם או יריבה',
+  tips:'הלוח מגיע מאתר האיגוד ומתעדכן כל שעה. אם המאמן הודיע על שינוי שעוד לא עודכן באיגוד, הוא יופיע כאן אחרי שהאיגוד יעדכן.',
+  ph:'איזה משחק, ומה לא נכון? למשל: מכבי רחובות ילדים א׳, 5.11, השעה הנכונה 18:30'},
+ {id:'team',title:'לא מוצאים את הקבוצה',sub:'הקבוצה או הליגה לא מופיעות',
+  tips:'נסו לחפש רק את שם העיר או המועדון. טיפ-אוף מציגה ליגות נוער בלבד, מקט-סל ועד נוער.',
+  ph:'שם המועדון, הגיל והעיר'},
+ {id:'push',title:'התראות לא מגיעות',sub:'או שאי אפשר להפעיל אותן',
+  tips:'באייפון צריך קודם להוסיף את טיפ-אוף למסך הבית ולפתוח משם. אחר כך שולחים התראת בדיקה מלשונית "התראות ויומן", ובודקים שמצב "ריכוז" כבוי.',
+  go:'alerts',goText:'ללשונית התראות ויומן',
+  ph:'איזה טלפון, ומה קורה כשמנסים?'},
+ {id:'cal',title:'בעיה ביומן',sub:'המשחקים לא מופיעים או לא מתעדכנים',
+  tips:'יומן גוגל מרענן יומנים כאלה כמה פעמים ביום, ולכן שינוי חדש יכול להופיע באיחור. באייפון אפשר לבדוק בהגדרות ← יומן ← חשבונות ← "קבלת נתונים חדשים".',
+  ph:'איזה יומן (אייפון או גוגל), ומה רואים?'},
+ {id:'idea',title:'רעיון לאפליקציה',sub:'משהו שהיה עוזר לכם',ph:'מה היה עוזר לכם?'},
+ {id:'other',title:'משהו אחר',sub:'כל שאלה או הערה',ph:'כתבו לנו'},
+];
+S.helpOpen=null;S.sent={};S.drafts={};
+function fbForm(topic,{ph,contact=true,source='help'}){
+  if(S.sent[topic+source])return `<div class="fb-done"><b>קיבלנו, תודה.</b><span class="sub">${contact?'אם השארתם פרטים, נחזור אליכם.':'כל רעיון נקרא.'}</span></div>`;
+  const d=S.drafts[topic+source]||{};
+  return `<form class="fb" data-fb="${topic}" data-src="${source}" novalidate>
+    <textarea id="fb-${topic}-${source}" name="text" rows="3" maxlength="1500" placeholder="${esc(ph)}" aria-label="${esc(ph)}">${esc(d.text||'')}</textarea>
+    ${contact?`<input id="fbc-${topic}-${source}" name="contact" maxlength="120" placeholder="איך לחזור אליכם? טלפון או אימייל (לא חובה)" aria-label="פרטים לחזרה, לא חובה" value="${esc(d.contact||'')}">`:''}
+    <div class="fb-row"><button class="btn" type="submit">שליחה</button>${S.fbErr===topic+source?'<span class="fb-err">לא הצלחנו לשלוח. בדקו את החיבור ונסו שוב.</span>':''}</div>
+  </form>`}
+function ideaBox(){
+  return `<section class="sec idea"><h2>מה עוד הייתם רוצים בטיפ-אוף?</h2>
+    <p class="sub">כתבו בקצרה. אנחנו קוראים כל רעיון.</p>${fbForm('idea',{ph:'למשל: תזכורת לאימונים, תוצאות בזמן אמת…',contact:false,source:'my'})}</section>`}
+function viewHelp(){
+  const faq=FAQ.map(([q,a],i)=>`<details class="faq" id="faq-${i}"><summary>${q}</summary><div class="faq-a">${a}</div></details>`).join('');
+  const topics=TOPICS.map(t=>{const open=S.helpOpen===t.id;
+    return `<div class="topic${open?' open':''}"><button class="topic-h" data-topic="${t.id}" aria-expanded="${open}"><span><b>${t.title}</b><span class="sub">${t.sub}</span></span>${ic.prev}</button>
+      ${open?`<div class="topic-b">${t.tips?`<p class="tip">${t.tips}</p>`:''}${t.go?`<button class="linkbtn" data-go="${t.go}">${t.goText}</button>`:''}${fbForm(t.id,{ph:t.ph})}</div>`:''}</div>`}).join('');
+  return `<section class="sec"><h1>עזרה</h1></section>
+   <section class="sec"><h2>שאלות נפוצות</h2><div class="faqs">${faq}</div></section>
+   <section class="sec"><h2>במה אפשר לעזור?</h2><div class="topics">${topics}</div></section>
+   ${footer()}`}
+async function sendFeedback(form){
+  const topic=form.dataset.fb,source=form.dataset.src,key=topic+source;
+  const text=(form.elements.text.value||'').trim(),contact=(form.elements.contact?.value||'').trim();
+  if(text.length<2){form.elements.text.focus();return}
+  const btn=form.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='שולחים…';
+  let ok=false;
+  try{const r=await fetch('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({device:DEV,topic,source,text,contact,teams:touched?S.follows:[],platform:PLATFORM,standalone:STANDALONE})});ok=r.ok}catch(e){}
+  if(ok){S.sent[key]=true;delete S.drafts[key];S.fbErr=null}else S.fbErr=key;
+  render()}
+
 function render(){
   const app=document.getElementById('app');
-  app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():viewAlerts())+
+  app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():viewAlerts())+
    `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
-  document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===S.view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  const tab=S.view==='find'?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   const q=document.getElementById('q');
   if(q)q.addEventListener('input',e=>{S.q=e.target.value;const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
 }
@@ -671,8 +767,11 @@ document.addEventListener('click',e=>{
   else if(d.copycal)copyCal();
   else if(d.gocal){S.view='alerts';render();setTimeout(()=>{const c=document.getElementById('cal');if(c)c.scrollIntoView({behavior:'smooth'})},60)}
   else if(d.dev){S.dev=d.dev;render()}
+  else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
+document.addEventListener('submit',e=>{const f=e.target.closest('form.fb');if(!f)return;e.preventDefault();sendFeedback(f)});
+document.addEventListener('input',e=>{const f=e.target.closest('form.fb');if(!f)return;const k=f.dataset.fb+f.dataset.src;S.drafts[k]={text:f.elements.text.value,contact:f.elements.contact?.value||''}});
 document.addEventListener('change',e=>{
   if(e.target.id==='selAge'){S.age=e.target.value||null;S.league=null;render()}
   else if(e.target.id==='selLg'){S.league=e.target.value===''?null:+e.target.value;render()}

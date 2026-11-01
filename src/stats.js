@@ -6,10 +6,12 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const fmt = n => Number(n || 0).toLocaleString('he-IL');
 const when = ms => ms ? new Date(ms).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
+const TOPIC = { wrong: 'פרט במשחק לא נכון', team: 'לא מוצאים קבוצה', push: 'התראות', cal: 'יומן', idea: 'רעיון', other: 'אחר' };
+
 const ACTIONS = {
   open: 'פתחו את האפליקציה', new: 'מכשירים חדשים', follow: 'הוסיפו או הסירו קבוצה', standalone: 'פתחו מהמסך הבית',
   push_on: 'הפעילו התראות', push_off: 'כיבו התראות', nav: 'לחצו ניווט', calendar: 'הוסיפו משחק ליומן', cal_sub: 'חיברו יומן מתעדכן',
-  cal_fetch: 'יומן מתעדכן נקרא', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות',
+  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות',
 };
 
 export async function statsPage(env, pack) {
@@ -19,7 +21,7 @@ export async function statsPage(env, pack) {
   const all = (sql, ...b) => DB.prepare(sql).bind(...b).all().then(r => r.results);
   const now = Date.now();
 
-  const [dau, wau, mau, tot, withTeam, returning, series, newSeries, actions, topTeams, pushes, changes, allFollows] = await Promise.all([
+  const [dau, wau, mau, tot, withTeam, returning, series, newSeries, actions, topTeams, pushes, changes, allFollows, fb, fbCount] = await Promise.all([
     one("SELECT COUNT(DISTINCT device) c FROM activity WHERE day=? AND type='open'", today),
     one("SELECT COUNT(DISTINCT device) c FROM activity WHERE day>=? AND type='open'", d7),
     one("SELECT COUNT(DISTINCT device) c FROM activity WHERE day>=? AND type='open'", d30),
@@ -33,6 +35,8 @@ export async function statsPage(env, pack) {
     all('SELECT kind, SUM(sent) sent, SUM(failed) failed FROM pushlog WHERE day>=? GROUP BY kind', d30),
     all('SELECT kind, COUNT(*) c FROM changes WHERE ts>? GROUP BY kind', now - 7 * 864e5),
     all("SELECT team, kind FROM follows"),
+    all('SELECT ts, topic, source, text, contact, teams, platform FROM feedback ORDER BY ts DESC LIMIT 60'),
+    one('SELECT COUNT(*) c FROM feedback WHERE ts>?', now - 30 * 864e5),
   ]);
   const sync = JSON.parse(await env.KV.get('sync:status') || 'null');
   const lastOk = JSON.parse(await env.KV.get('sync:last-ok') || 'null');
@@ -86,6 +90,7 @@ td:not(:first-child){text-align:left;white-space:nowrap}
 .st{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:600;font-size:13px}.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
 .lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-inline:8px 4px}
 svg{width:100%;height:auto;display:block}
+.fbl{display:flex;flex-direction:column}.fbi{border-top:1px solid var(--l);padding:12px 0}.fbi:first-child{border-top:0;padding-top:0}.fbh{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.fbi p{margin:6px 0;white-space:pre-wrap}
 </style></head><body><main>
 <div><h1>טיפ-אוף · נתוני שימוש</h1><div class="sub">עודכן ${when(now)}. "משתמש" = מכשיר אחד (טלפון או מחשב). הורה עם שני מכשירים נספר פעמיים.</div></div>
 
@@ -95,6 +100,7 @@ ${tile(tot?.c, 'מכשירים בסך הכל', `${fmt(withTeam?.c)} עם קבו�
 ${tile(tot?.push, 'התראות פעילות', pct(tot?.push, withTeam?.c) + ' ממי שבחר קבוצה')}
 ${tile(tot?.home, 'הוסיפו למסך הבית', `אייפון ${fmt(tot?.ios)} · אנדרואיד ${fmt(tot?.android)}`)}
 ${tile(returning?.c, 'חוזרים', 'מכשירים ותיקים משבוע שעבר שנכנסו השבוע')}
+${tile(fbCount?.c, 'הודעות מהורים', '30 ימים אחרונים. הרשימה למטה')}
 </div>
 
 <div class="card"><h2>פעילים בכל יום, 30 ימים</h2><div class="sub lg"><i style="background:var(--a)"></i>פעילים<i style="background:var(--b)"></i>חדשים</div>
@@ -110,6 +116,14 @@ ${tile(returning?.c, 'חוזרים', 'מכשירים ותיקים משבוע ש�
 <div class="card"><h2>הקבוצות הכי נעקבות</h2>${table(topTeams, [r => esc(r.team.split('|')[1]) + `<div class="sub">${esc(leagueName.get(r.team.split('|')[0]) || '')}</div>`, r => fmt(r.c)])}</div>
 <div class="card"><h2>לפי מועדון</h2>${table(sortMap(byClub).slice(0, 12), [r => esc(r[0]), r => fmt(r[1])])}
 <h2 style="margin-top:14px">לפי גיל</h2>${table(sortMap(byAge), [r => esc(r[0]), r => fmt(r[1])])}</div>
+</div>
+
+<div class="card"><h2>מה ההורים כתבו</h2>
+${fb.length ? `<div class="fbl">${fb.map(f => {
+  const teams = JSON.parse(f.teams || '[]').map(k => k.split('|')[1]).join(', ');
+  return `<div class="fbi"><div class="fbh"><span class="st ${f.topic === 'idea' ? 'ok' : 'bad'}">${esc(TOPIC[f.topic] || f.topic)}</span><span class="sub">${when(f.ts)}${f.source === 'my' ? ' · מתחתית "המשחקים שלי"' : ''} · ${esc(f.platform || '')}</span></div>
+  <p>${esc(f.text)}</p>${f.contact ? `<div class="sub">לחזור אל: <b dir="ltr">${esc(f.contact)}</b></div>` : ''}${teams ? `<div class="sub">עוקבים אחרי: ${esc(teams)}</div>` : ''}</div>`;
+}).join('')}</div>` : '<p class="sub">עוד אין הודעות.</p>'}
 </div>
 
 <div class="card"><h2>סנכרון מול אתר האיגוד</h2>

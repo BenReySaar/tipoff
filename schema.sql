@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS changes (
   info  TEXT                             -- JSON with before/after
 );
 
+-- what parents write in "help" and "what else would you like"
+CREATE TABLE IF NOT EXISTS feedback (ts INTEGER NOT NULL, device TEXT, topic TEXT NOT NULL, source TEXT, text TEXT NOT NULL, contact TEXT, teams TEXT, platform TEXT);
+CREATE INDEX IF NOT EXISTS feedback_ts ON feedback(ts);
+
 CREATE TABLE IF NOT EXISTS pushlog (
   day    TEXT NOT NULL,
   kind   TEXT NOT NULL,                  -- change | result | eve | test

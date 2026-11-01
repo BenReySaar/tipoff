@@ -6,6 +6,8 @@ export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS activity (day TEXT NOT NULL, device TEXT NOT NULL, type TEXT NOT NULL, n INTEGER DEFAULT 1, PRIMARY KEY (day, device, type))`,
   `CREATE INDEX IF NOT EXISTS activity_type ON activity(type, day)`,
   `CREATE TABLE IF NOT EXISTS changes (ts INTEGER NOT NULL, game INTEGER NOT NULL, kind TEXT NOT NULL, info TEXT)`,
+  `CREATE TABLE IF NOT EXISTS feedback (ts INTEGER NOT NULL, device TEXT, topic TEXT NOT NULL, source TEXT, text TEXT NOT NULL, contact TEXT, teams TEXT, platform TEXT)`,
+  `CREATE INDEX IF NOT EXISTS feedback_ts ON feedback(ts)`,
   `CREATE TABLE IF NOT EXISTS pushlog (day TEXT NOT NULL, kind TEXT NOT NULL, sent INTEGER DEFAULT 0, failed INTEGER DEFAULT 0, PRIMARY KEY (day, kind))`,
 ];
 

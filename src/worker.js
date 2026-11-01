@@ -237,6 +237,20 @@ export default {
         await track(env, b.device, sub ? 'push_on' : 'push_off');
         return json({ ok: true });
       }
+      if (p === '/api/feedback' && req.method === 'POST') {
+        const b = await readJSON(req);
+        const topics = ['wrong', 'team', 'push', 'cal', 'idea', 'other'];
+        const text = String(b.text || '').trim().slice(0, 1500);
+        if (!DEVICE.test(b.device || '') || !topics.includes(b.topic) || text.length < 2) return json({ error: 'bad' }, 400);
+        const recent = await env.DB.prepare('SELECT COUNT(*) c FROM feedback WHERE device=? AND ts>?').bind(b.device, Date.now() - 864e5).first();
+        if (recent.c >= 10) return json({ error: 'too many' }, 429);
+        const teams = Array.isArray(b.teams) ? b.teams.filter(k => TEAM.test(k)).slice(0, 10) : [];
+        await env.DB.prepare('INSERT INTO feedback(ts,device,topic,source,text,contact,teams,platform) VALUES(?,?,?,?,?,?,?,?)')
+          .bind(Date.now(), b.device, b.topic, b.source === 'my' ? 'my' : 'help', text, String(b.contact || '').trim().slice(0, 120) || null,
+            JSON.stringify(teams), ['ios', 'android', 'other'].includes(b.platform) ? b.platform : 'other').run();
+        await track(env, b.device, 'feedback');
+        return json({ ok: true });
+      }
       if (p === '/api/test-push' && req.method === 'POST') {
         const b = await readJSON(req);
         if (!DEVICE.test(b.device || '')) return json({ error: 'device' }, 400);
