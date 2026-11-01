@@ -133,7 +133,7 @@ export function buildPack(raw, gen = new Date().toISOString()) {
   const tm = [], tIdx = new Map();
   for (const [tid, nm] of tName) {
     const best = [...tCount.get(tid)].sort((a, b) => b[1] - a[1])[0][0];
-    tIdx.set(tid, tm.length); tm.push([nm, best]);
+    tIdx.set(tid, tm.length); tm.push([nm, best, tid]);
   }
   const g = evs.map(e => {
     const d = e[1].replace(/[-T:]/g, '').slice(2, 12);

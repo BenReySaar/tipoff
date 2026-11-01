@@ -283,6 +283,45 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:600}
 .fb-err{color:var(--loss);font-size:13.5px}
 .fb-done{display:flex;flex-direction:column;gap:2px;background:var(--fill);border-radius:12px;padding:14px}
 .idea{border-top:1px solid var(--line);padding-top:22px}
+/* invite parents */
+.inv-list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.inv{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.inv-n{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.inv-wa,.inv-copy{display:inline-flex;align-items:center;gap:6px;flex:none;border-radius:10px;padding:7px 12px;font-size:13.5px;font-weight:600;text-decoration:none;white-space:nowrap}
+.inv-wa{background:#128C4B;color:#fff;border:0}
+.inv-wa svg{width:15px;height:15px}
+.inv-copy{background:var(--bg);border:1px solid var(--line-2)}
+/* setup checklist */
+.setup{border:1px solid var(--line-2);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.setup-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.setup-h .linkbtn{color:var(--muted);font-weight:500;font-size:13.5px}
+.setup-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;counter-reset:s}
+.setup-steps li{counter-increment:s;position:relative;padding-inline-start:34px;display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+.setup-steps li::before{content:counter(s);position:absolute;inset-inline-start:0;top:-1px;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:12.5px;font-weight:600;color:var(--muted)}
+.setup-steps li b{color:var(--ink);font-weight:600}
+.setup-steps li span{font-size:14px;line-height:1.55}
+.setup-steps li.ok b{color:var(--muted);font-weight:500;text-decoration:line-through;text-decoration-color:var(--line-2)}
+.setup-steps li.ok::before{content:"✓";background:var(--win);border-color:var(--win);color:#fff}
+.setup-steps li.cur::before{border-color:var(--accent);color:var(--accent)}
+.setup-steps .btn.sm{align-self:flex-start;padding:8px 16px;font-size:14px;margin-top:4px}
+.kbd{display:inline-grid;place-items:center;width:24px;height:24px;border:1px solid var(--line-2);border-radius:6px;vertical-align:-6px;color:#0A84FF}
+.kbd svg{width:15px;height:15px}
+/* sheets (welcome, invite) */
+body.locked{overflow:hidden}
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(10,12,16,.45)}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:41;width:min(540px,100%);background:var(--bg);border-radius:22px 22px 0 0;padding:26px max(22px,env(safe-area-inset-left,0px)) calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;box-shadow:0 -10px 40px rgba(0,0,0,.18);max-height:92vh;overflow:auto}
+.sheet h2{font-size:24px}
+.sh-ball svg{width:40px;height:40px}
+.sh-steps{margin:4px 0 6px;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:12px}
+.sh-steps li{counter-increment:s;display:flex;flex-direction:column;padding-inline-start:40px;position:relative}
+.sh-steps li::before{content:counter(s);position:absolute;inset-inline-start:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--fill);display:grid;place-items:center;font-weight:700}
+.sh-steps li span{color:var(--muted);font-size:14px}
+.sh-next{display:flex;gap:14px;align-items:center;background:var(--fill);border-radius:14px;padding:14px}
+.sh-next .sh-t{font-size:30px;font-weight:600;letter-spacing:-.02em}
+.sh-next span{display:flex;flex-direction:column}
+.btn.wide{width:100%;padding:14px;font-size:16px}
+.sh-skip{align-self:center;color:var(--muted);font-weight:500}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translate(-50%,30px);opacity:.4}}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:380px){.h-time{font-size:54px}.ages{grid-template-columns:repeat(2,1fr)}.day .dn{width:34px;height:34px;font-size:16px}.actions{grid-template-columns:1fr 1fr 1fr}.act span{font-size:13px}}
 </style>
@@ -297,6 +336,7 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:600}
 </div></nav>
 
 <script>
+window.__bip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__bip=e;if(window.__onbip)window.__onbip()});
 (async function boot(){
 const appEl=document.getElementById('app');
 let DATA;
@@ -308,7 +348,7 @@ document.documentElement.setAttribute('dir','rtl');
 const AGES=DATA.ages.map(([id,name,g])=>({id,name,g}));
 const LEAGUES=DATA.lg.map(([full,slug,age,cup,short],i)=>({i,full,slug,age,cup:!!cup,short}));
 const VEN=DATA.vn.map(s=>{const p=s.split(',').map(x=>x.trim()).filter(Boolean);return {full:s,name:p[0],addr:p.slice(1).join(', ')}});
-const TEAMS=DATA.tm.map(([name,lg],i)=>({i,name,lg,key:LEAGUES[lg].slug+'|'+name,games:[]}));
+const TEAMS=DATA.tm.map(([name,lg,id],i)=>({i,name,lg,id:id||null,key:LEAGUES[lg].slug+'|'+name,games:[]}));
 const KEY={};TEAMS.forEach(t=>KEY[t.key]=t.i);
 const GAMES=DATA.g.map(([id,d,lg,h,a,v,hs,as],i)=>{
   const date=new Date(2000+ +d.slice(0,2),+d.slice(2,4)-1,+d.slice(4,6),+d.slice(6,8),+d.slice(8,10));
@@ -354,12 +394,13 @@ const kitText=(g,t)=>g.h===t.i?'משחק בית':'משחק חוץ';
 const isCup=g=>LEAGUES[g.lg].cup;
 const waze=g=>'https://waze.com/ul?q='+encodeURIComponent(VEN[g.v].full)+'&navigate=yes';
 function wa(g,t){const o=TEAMS[g.h===t.i?g.a:g.h];
-  return 'https://wa.me/?text='+encodeURIComponent(`🏀 ${t.name} נגד ${o.name}\n${LEAGUES[g.lg].full}\nיום ${DAYS[g.date.getDay()]} ${dm(g.date)} בשעה ${hm(g.date)}\n👕 ${kitText(g,t)} – לבדוק צבע גופייה\n📍 ${VEN[g.v].full}\nניווט: ${waze(g)}`)}
+  return 'https://wa.me/?text='+encodeURIComponent(`🏀 ${t.name} נגד ${o.name}\n${LEAGUES[g.lg].full}\nיום ${DAYS[g.date.getDay()]} ${dm(g.date)} בשעה ${hm(g.date)}\n👕 ${kitText(g,t)} – לבדוק צבע גופייה\n📍 ${VEN[g.v].full}\nניווט: ${waze(g)}\n\nכל המשחקים של הקבוצה, עם התראות כשמשחק זז:\n${teamURL(t)}`)}
 const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4"/></svg>',
  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.2 10.8l7.6-4M8.2 13.2l7.6 4"/></svg>',
  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+ ishare:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5v10h14V11h-1"/></svg>',
  go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
  shirt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 3l-5 3 2 5 2-1v11h10V10l2 1 2-5-5-3c-.5 1.6-2 2.5-4 2.5S8.5 4.6 8 3z"/></svg>',
  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2z" stroke-linejoin="round"/><path d="M12 10v5M12 18v.5"/></svg>',
@@ -367,7 +408,7 @@ const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>'};
 
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
-function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow')}
+function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow');syncURL()}
 function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
   setFollows(f);if(S.filter!=='all'&&!f.includes(S.filter))S.filter='all';S.justAdded=f.includes(key)?key:null;S.dayWeek=null;
@@ -526,11 +567,77 @@ function shareCard(){
   const t=TEAMS[KEY[S.justAdded]];if(!t)return '';
   return `<div class="sharecard"><button class="x" data-closeshare="1" aria-label="סגירה">✕</button>
     <b>${esc(t.name)} נוספה ✓</b><span class="sub">גם ההורים בקבוצה ירצו לדעת מתי ואיפה המשחק.</span>
-    <a class="wa" href="${shareAppURL(t)}" target="_blank" rel="noopener" data-ev="share_app">שתפו בקבוצת ההורים בוואטסאפ</a>
+    <a class="wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">שתפו את הקבוצה בקבוצת ההורים</a>
     <div class="soc-row"><span class="sub">ועקבו אחרינו:</span>${socialPills()}</div></div>`}
 function footer(){
   return `<footer class="foot"><a class="wa" href="${shareAppURL(null)}" target="_blank" rel="noopener" data-ev="share_app">שתפו את טיפ-אוף עם חברים</a>
     <div class="soc-row"><span class="sub">עדכונים וטיפים להורים:</span>${socialPills()}</div></footer>`}
+
+/* ---------- team links: share a team, open straight on it ---------- */
+const BYID={};TEAMS.forEach(t=>{if(t.id)BYID[t.id]=t.i});
+const tref=t=>t.id?String(t.id):'k'+encodeURIComponent(t.key);
+function fromRef(r){if(!r)return null;if(/^\d+$/.test(r))return BYID[r]!=null?TEAMS[BYID[r]]:null;
+  if(r[0]==='k'){try{const k=decodeURIComponent(r.slice(1));return k in KEY?TEAMS[KEY[k]]:null}catch(e){return null}}return null}
+const teamURL=t=>`${location.origin}/?t=${tref(t)}`;
+function teamMsg(t){return `🏀 כל המשחקים של ${t.name} (${ageLabel(t.lg)}) במקום אחד: המשחק הבא, ניווט לאולם, ויומן והתראות כשמשחק זז.\nנכנסים ומצטרפים בלחיצה אחת:\n${teamURL(t)}`}
+const waTeam=t=>'https://wa.me/?text='+encodeURIComponent(teamMsg(t));
+function copyTeam(key){const t=TEAMS[KEY[key]];if(!t)return;track('share_team');
+  if(navigator.clipboard)navigator.clipboard.writeText(teamURL(t)).then(()=>toast('הקישור הועתק')).catch(()=>{S.showLink=key;render()});else{S.showLink=key;render()}}
+/* keep the chosen teams in the address, so "add to home screen" carries them (an iPhone home-screen app starts with empty storage) */
+function syncURL(){try{const refs=(touched?S.follows:[]).map(k=>tref(TEAMS[KEY[k]])).join(',');
+  const want=refs?'/?my='+refs:'/';if(location.pathname+location.search!==want)history.replaceState(null,'',want)}catch(e){}}
+function inviteBlock(ts){
+  return `<section class="sec invite"><h2>הזמינו הורים מהקבוצה</h2><p class="sub">הם יקבלו קישור שפותח ישר את הלוח של הקבוצה, עם כפתור הצטרפות אחד.</p>
+   <div class="inv-list">${ts.map(t=>`<div class="inv">${ts.length>1?dot(t.key):''}<span class="inv-n">${esc(t.name)}</span>
+     <a class="inv-wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">${ic.share}וואטסאפ</a>
+     <button class="inv-copy" data-copyteam="${esc(t.key)}">העתקת קישור</button></div>
+     ${S.showLink===t.key?`<input class="calurl" readonly value="${esc(teamURL(t))}" onfocus="this.select()">`:''}`).join('')}</div></section>`}
+
+/* ---------- first visit, invites, setup checklist ---------- */
+const params=new URLSearchParams(location.search);
+// arriving from a home-screen icon or a saved link: restore its teams
+const myRefs=(params.get('my')||'').split(',').map(fromRef).filter(Boolean);
+if(myRefs.length&&!touched){touched=true;store.set('tipoff.touched',true);S.follows=myRefs.map(t=>t.key);store.set('tipoff.follows',S.follows)}
+S.invite=null;const inv=fromRef(params.get('t'));
+if(inv){if(touched&&S.follows.includes(inv.key))S.filter=inv.key;else S.invite=inv.key}
+S.onb=store.get('tipoff.onb',{});
+S.welcome=!S.invite&&!touched&&!S.onb.welcomed;
+S.bip=null;
+const saveOnb=()=>store.set('tipoff.onb',S.onb);
+
+function sheet(inner,label){return `<div class="scrim" data-closesheet="1"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${label}">${inner}</div>`}
+function welcomeSheet(){return sheet(`<div class="sh-ball">${header().match(/<svg[\s\S]*?<\/svg>/)[0]}</div>
+  <h2>ברוכים הבאים לטיפ-אוף</h2>
+  <p class="sub">לוח המשחקים של הילדים בכדורסל, ישר מהאיגוד. שלושה צעדים קצרים:</p>
+  <ol class="sh-steps"><li><b>בוחרים קבוצה</b><span>גיל, ליגה וקבוצה</span></li><li><b>מוסיפים למסך הבית</b><span>נפתח כמו אפליקציה</span></li><li><b>מפעילים התראות</b><span>ויודעים מיד כשמשחק זז</span></li></ol>
+  <button class="btn wide" data-welcome="go">בחירת קבוצה</button>
+  <button class="linkbtn sh-skip" data-welcome="skip">רק להסתכל קודם</button>`,'ברוכים הבאים')}
+function inviteSheet(){const t=TEAMS[KEY[S.invite]];const nx=t.games.find(g=>!isPast(g));
+  return sheet(`<p class="sub">הזמינו אתכם לעקוב אחרי</p><h2>${esc(t.name)}</h2><p class="sub" style="margin-top:-6px">${esc(LEAGUES[t.lg].full)}</p>
+  ${nx?`<div class="sh-next"><span class="sh-t">${hm(nx.date)}</span><span><b>${rel(nx.date)}, יום ${DAYS[nx.date.getDay()]} ${dm(nx.date)}</b><span class="sub">נגד ${esc(TEAMS[nx.h===t.i?nx.a:nx.h].name)} · ${esc(VEN[nx.v].name)}</span></span></div>`:''}
+  <button class="btn wide" data-invite="yes">עקבו אחרי ${esc(t.name)}</button>
+  <button class="linkbtn sh-skip" data-invite="no">לא עכשיו</button>`,'הזמנה לקבוצה')}
+
+const iosSafari=()=>IOS&&/Safari/.test(UA)&&!/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram|WhatsApp|Line\//.test(UA);
+function checklist(){
+  if(!touched||!S.follows.length||S.onb.doneList)return '';
+  const home=STANDALONE,push=S.push==='on';
+  if(home&&push)return '';
+  if(!IOS&&push)return '';
+  const stepHome=home?`<li class="ok"><b>נוסף למסך הבית</b></li>`:
+    `<li class="cur"><b>מוסיפים למסך הבית</b>${IOS
+      ?(iosSafari()?`<span>לוחצים על <span class="kbd">${ic.ishare}</span> בתחתית ספארי, גוללים ובוחרים <b>"הוספה למסך הבית"</b>. אחר כך פותחים את טיפ-אוף מהאייקון החדש.</span>`
+        :`<span>באייפון צריך לפתוח את הקישור ב<b>ספארי</b>. אם פתחתם מתוך וואטסאפ, לוחצים על <b>⋯</b> או על <b>⇱</b> ובוחרים "פתיחה בספארי".</span>`)
+      :(window.__bip?`<span>כך טיפ-אוף נפתחת כמו אפליקציה.</span><button class="btn sm" data-install="1">התקנה</button>`
+        :`<span>בתפריט של כרום (<b>⋮</b>) בוחרים <b>"הוספה למסך הבית"</b> או <b>"התקנת אפליקציה"</b>. לא חובה, אבל נוח.</span>`)}</li>`;
+  const pushReady=!(IOS&&!home);
+  const stepPush=push?`<li class="ok"><b>ההתראות פעילות</b></li>`:
+    `<li class="${pushReady?'cur':''}"><b>מפעילים התראות</b>${pushReady
+      ?(S.push==='denied'?`<span>ההתראות חסומות בהגדרות הטלפון. ההסבר בלשונית "התראות ויומן".</span>`:`<span>נעדכן אתכם כשמשחק זז או מחליף אולם.</span><button class="btn sm" data-push="on">הפעלת התראות</button>`)
+      :`<span>אחרי ההוספה למסך הבית.</span>`}</li>`;
+  return `<section class="setup" aria-label="השלמת ההגדרה"><div class="setup-h"><b>עוד ${(!home&&IOS?1:0)+(!push?1:0)} ${(!home&&IOS?1:0)+(!push?1:0)===1?'צעד':'צעדים'} ותקבלו עדכונים</b><button class="linkbtn" data-donelist="1">אחר כך</button></div>
+    <ol class="setup-steps"><li class="ok"><b>בחרתם קבוצה</b></li>${stepHome}${stepPush}</ol></section>`}
+function overlay(){return S.invite?inviteSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
 
 function viewMy(){
   const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><button class="addbtn" data-go="find">+ קבוצה</button></div>`;
@@ -543,12 +650,13 @@ function viewMy(){
      ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
   const demo=!touched?'<div class="banner">אלה שתי קבוצות לדוגמה מהלוח האמיתי. לחצו "+ קבוצה" כדי לבחור את שלכם.</div>':'';
-  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${S.justAdded?shareCard():''}${chips}${weekStrip(ts)}`;
+  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${chips}${weekStrip(ts)}`;
   const pastBlock=past.length?`<section class="sec"><h2>תוצאות אחרונות</h2><div class="list">${past.slice(0,4).map(x=>row(x.g,x.t,multi)).join('')}</div></section>`:'';
   if(multi){
     const nexts=ts.map(t=>({t,g:t.games.find(g=>!isPast(g))})).filter(x=>x.g).sort((a,b)=>a.g.date-b.g.date);
     return `${head}
      <section class="sec"><h2>המשחק הבא של כל קבוצה</h2>${nexts.map(x=>nextCard(x.g,x.t)).join('')||'<p class="sub">אין משחקים קרובים.</p>'}</section>
+     ${touched?inviteBlock(ts):''}
      ${up.length?`<section class="sec"><h2>כל המשחקים לפי תאריך</h2><div class="list">${up.slice(0,S.showUp).map(x=>row(x.g,x.t,true)).join('')}
        ${up.length>S.showUp?`<button class="more" data-more="1">הצגת עוד משחקים</button>`:''}</div></section>`:''}
      ${pastBlock}${resultsBlock()}${ideaBox()}${footer()}`}
@@ -556,6 +664,7 @@ function viewMy(){
   const shown=withGaps(rest.slice(0,S.showUp),next&&next.g.date);
   return `${head}
    ${next?hero(next.g,next.t):'<div class="empty"><p>אין משחקים קרובים בלוח.</p></div>'}
+   ${touched?inviteBlock(ts):''}
    ${rest.length?`<section class="sec"><div class="sec-h"><h2>בהמשך</h2><span class="sub">עוד ${rest.length} משחקים העונה</span></div><div class="list">${shown.map(x=>x.gap?`<span class="gap">שבוע ${x.gap} · אין משחק</span>`:row(x.g,x.t,false)).join('')}
      ${rest.length>S.showUp?`<button class="more" data-more="1">הצגת עוד משחקים</button>`:''}</div></section>`:''}
    ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
@@ -733,14 +842,16 @@ async function sendFeedback(form){
 
 function render(){
   const app=document.getElementById('app');
-  app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():viewAlerts())+
+  app.innerHTML=overlay()+header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():viewAlerts())+
    `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
   const tab=S.view==='find'?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  document.body.classList.toggle('locked',!!(S.invite||(S.welcome&&S.view==='my')));
   const q=document.getElementById('q');
   if(q)q.addEventListener('input',e=>{S.q=e.target.value;const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
 }
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);return}
+  if(e.target.closest('.scrim')){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
   if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';render();scrollTo(0,0);return}
   const d=b.dataset;
@@ -767,19 +878,30 @@ document.addEventListener('click',e=>{
   else if(d.copycal)copyCal();
   else if(d.gocal){S.view='alerts';render();setTimeout(()=>{const c=document.getElementById('cal');if(c)c.scrollIntoView({behavior:'smooth'})},60)}
   else if(d.dev){S.dev=d.dev;render()}
+  else if(d.copyteam)copyTeam(d.copyteam);
+  else if(d.invite==='yes'){const k=S.invite;S.invite=null;track('invite_follow');setFollows(touched?(S.follows.includes(k)?S.follows:[...S.follows,k]):[k]);S.filter=S.follows.length>1?k:'all';S.dayWeek=null;S.justAdded=null;S.welcome=false;S.onb.welcomed=true;saveOnb();toast('הקבוצה נוספה ✓');render();scrollTo(0,0)}
+  else if(d.invite==='no'){S.invite=null;track('invite_skip');syncURL();render()}
+  else if(d.welcome==='go'){S.welcome=false;S.onb.welcomed=true;saveOnb();S.view='find';render();scrollTo(0,0)}
+  else if(d.welcome==='skip'||d.closesheet){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();track('onboard_skip');render()}
+  else if(d.donelist){S.onb.doneList=true;saveOnb();render()}
+  else if(d.install){const e=window.__bip;if(e){e.prompt();e.userChoice.then(c=>{if(c.outcome==='accepted'){track('install');toast('טיפ-אוף נוספה ✓')}window.__bip=null;render()})}}
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
 document.addEventListener('submit',e=>{const f=e.target.closest('form.fb');if(!f)return;e.preventDefault();sendFeedback(f)});
 document.addEventListener('input',e=>{const f=e.target.closest('form.fb');if(!f)return;const k=f.dataset.fb+f.dataset.src;S.drafts[k]={text:f.elements.text.value,contact:f.elements.contact?.value||''}});
 document.addEventListener('change',e=>{
   if(e.target.id==='selAge'){S.age=e.target.value||null;S.league=null;render()}
   else if(e.target.id==='selLg'){S.league=e.target.value===''?null:+e.target.value;render()}
 });
+window.__onbip=()=>{if(S.view==='my')render()};
+if(S.invite)track('invite_open');
 render();
 syncState('open');
+if(!S.invite)syncURL();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-S.push=await pushState();if(S.view==='alerts')render();
+S.push=await pushState();if(S.view==='alerts'||S.view==='my')render();
 })();
 </script>
 </body>

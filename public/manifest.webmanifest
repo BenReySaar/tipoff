@@ -4,7 +4,6 @@
   "description": "המשחק הבא, ניווט לאולם, יומן שמתעדכן לבד והתראות כשמשהו משתנה.",
   "lang": "he",
   "dir": "rtl",
-  "start_url": "/?source=homescreen",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

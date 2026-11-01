@@ -11,7 +11,7 @@ const TOPIC = { wrong: 'פרט במשחק לא נכון', team: 'לא מוצאי
 const ACTIONS = {
   open: 'פתחו את האפליקציה', new: 'מכשירים חדשים', follow: 'הוסיפו או הסירו קבוצה', standalone: 'פתחו מהמסך הבית',
   push_on: 'הפעילו התראות', push_off: 'כיבו התראות', nav: 'לחצו ניווט', calendar: 'הוסיפו משחק ליומן', cal_sub: 'חיברו יומן מתעדכן',
-  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות',
+  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות',
 };
 
 export async function statsPage(env, pack) {
