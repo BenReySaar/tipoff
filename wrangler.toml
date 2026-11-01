@@ -13,7 +13,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "tipoff"
-database_id = "FILL-d1-database-id"
+database_id = "e4b65dfb-cc52-4479-b6db-fbf42579ff82"
 
 [[kv_namespaces]]
 binding = "KV"
