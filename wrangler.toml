@@ -1,9 +1,11 @@
 # טיפ-אוף — Cloudflare Worker configuration.
-# Two values marked FILL: the database id and the KV id, from the Cloudflare dashboard.
+# The database id and the KV id below come from the Cloudflare dashboard.
 
 name = "tipoff"
 main = "src/worker.js"
 compatibility_date = "2025-09-01"
+workers_dev = true      # the app is reachable at tipoff.<account>.workers.dev
+preview_urls = false
 
 # The app (public/) is served as static files; /api, /cal and /stats go to the worker.
 [assets]
