@@ -34,3 +34,32 @@ assert.ok(diffPacks(pack, half, now).guard);
 attachChangeLog(pack2, [], changes, now.getTime());
 assert.equal(pack2.ch.length, 3);
 console.log('ibba: ok');
+
+// ---- season history from the association's Excel export (REST only returns recent + upcoming games) ----
+{
+  const fs = await import('node:fs');
+  const { readXlsx } = await import('../src/xlsx.js');
+  const { histRows } = await import('../src/ibba.js');
+  const rows = await readXlsx(fs.readFileSync(new URL('./fixtures/league-119995.xlsx', import.meta.url)));
+  const hist = histRows(119995, rows);
+  // (a few rows in this sample have empty date cells; rows without a date are skipped)
+  assert.equal(hist.length, rows.slice(1).filter(r => /^\d{1,2}-\d{1,2}-\d{4}$/.test(String(r[3])) && r[6] && r[8]).length);
+  assert.ok(hist.length >= 99);
+  assert.deepEqual(hist[0].slice(0, 3), [119995, 807161, '2026-10-15T19:00']);
+  // REST view on 1.11: only games from 29.10 on, team names with "/" and its own ids
+  const ids = new Map(); const tid = n => { const k = n.replace('-', '/'); if (!ids.has(k)) ids.set(k, 5000 + ids.size); return ids.get(k); };
+  const restGames = hist.filter(h => h[2] >= '2026-10-29');
+  const events = restGames.map((h, i) => [900 + i, h[2] + ':00', 119995, tid(h[3]), tid(h[4]), h[3].replace('-', '/'), h[4].replace('-', '/'), 1, h[2] < '2026-11-01' && h[6] != null ? h[6] : null, h[2] < '2026-11-01' && h[6] != null ? h[7] : null]);
+  const raw = { leagues: [[119995, 'ילדים א בקעת אונו', '2026-271']], events, venues: [[1, 'אולם']] };
+  const before = buildPack(raw, '2026-11-01T16:00:00Z');
+  const after = buildPack({ ...raw, hist }, '2026-11-01T16:00:00Z');
+  console.log('history: REST only', before.g.length, 'games → with Excel', after.g.length, '| teams', before.tm.length, '→', after.tm.length);
+  assert.equal(after.g.length, hist.length, 'all season games present, no duplicates');
+  assert.equal(after.tm.length, before.tm.length, 'no duplicate teams from name differences');
+  const first = after.g.find(g => g[0] === -807161);
+  assert.ok(first, 'game from 15.10 is back'); assert.equal(first[1], '2610151900'); assert.equal(first[6], 37); assert.equal(first[7], 35);
+  assert.equal(after.tm[first[3]][0], 'עירוני ק. אונו עתיד');
+  assert.ok(after.g.filter(g => g[1] < '2610290000').every(g => g[6] != null), 'old games have results');
+  assert.ok(after.g.filter(g => g[1] >= '2611020000').every(g => g[0] >= 900), 'upcoming games come from REST only');
+  console.log('history: ok');
+}

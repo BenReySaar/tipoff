@@ -1,6 +1,6 @@
 // טיפ-אוף server: serves the app, syncs the schedule every hour, sends push notifications,
 // serves each family's calendar feed, and counts usage.
-import { fetchSeason, buildPack, diffPacks, attachChangeLog, ymd } from './ibba.js';
+import { fetchSeason, fetchHistory, buildPack, diffPacks, attachChangeLog, ymd } from './ibba.js';
 import { sendPush } from './push.js';
 import { icsFor } from './ics.js';
 import { statsPage } from './stats.js';
@@ -56,7 +56,27 @@ export async function runSync(env, { raw = null, source = 'cron' } = {}) {
   const status = { at: started, source };
   try {
     const prev = await getPack(env);
-    raw = raw || await fetchSeason({ season: env.SEASON || '2026', userAgent: `Mozilla/5.0 (compatible; TipOff/1.0; +${env.APP_URL || 'https://tipoff'})` });
+    const userAgent = `Mozilla/5.0 (compatible; TipOff/1.0; +${env.APP_URL || 'https://tipoff'})`;
+    raw = raw || await fetchSeason({ season: env.SEASON || '2026', userAgent });
+    // whole-season history (the REST API only returns the last few days onward): refreshed every 6 hours
+    let hist = JSON.parse(await env.KV.get('hist') || 'null');
+    const tried = +(await env.KV.get('hist:tried') || 0);
+    if (((!hist || Date.now() - hist.at > 6 * 3600e3) && Date.now() - tried > 6 * 3600e3) || source === 'manual' || source === 'history') {
+      await env.KV.put('hist:tried', String(Date.now())); // at most every 6 hours, also when it fails
+      try {
+        const ids = raw.leagues.map(l => l[0]);
+        const got = await fetchHistory(ids, { userAgent });
+        if (got.hist.length) {
+          const failed = new Set(got.failed);
+          const keep = (hist?.rows || []).filter(r => failed.has(r[0])); // leagues that failed this time keep their last rows
+          hist = { at: Date.now(), rows: got.hist.concat(keep), leagues: ids.length - got.failed.length, failed: got.failed.length };
+          await env.KV.put('hist', JSON.stringify(hist));
+        } else if (hist) hist.error = 'קבצי האקסל לא נטענו (' + got.failed.length + ' ליגות)';
+        else status.histError = 'קבצי האקסל של האיגוד לא נטענו';
+      } catch (e) { status.histError = 'קבצי האקסל: ' + String(e && e.message || e); }
+    }
+    raw = { ...raw, hist: hist?.rows || [] };
+    if (hist) Object.assign(status, { histAt: hist.at, histRows: hist.rows.length, histLeagues: hist.leagues, histFailed: hist.failed });
     const next = buildPack(raw);
     const { changes, guard } = diffPacks(prev, next);
     if (guard) throw new Error('נעצר כדי לא לשמור נתונים חסרים: ' + guard);

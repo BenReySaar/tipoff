@@ -1,7 +1,10 @@
 // Pulls the youth schedule from the Israel Basketball Association site (WordPress + SportsPress REST API)
 // and turns it into the compact "pack" the app reads.
 
-const BASE = 'https://ibasketball.co.il/wp-json/sportspress/v2';
+import { readXlsx } from './xlsx.js';
+
+const SITE = 'https://ibasketball.co.il';
+const BASE = SITE + '/wp-json/sportspress/v2';
 const YOUTH = /ילד|נער|נוער|קט/;
 
 // Age groups, youngest first. id, display name, gender, league-name prefix used by the association.
@@ -104,6 +107,44 @@ export async function fetchSeason({ season = '2026', userAgent = 'TipOff/1.0' } 
 }
 
 /**
+ * The association's REST API only returns games from the last few days onward, but each league's
+ * "יצוא לאקסל" file has the whole season with results. HIST rows:
+ * [leagueId, code, 'YYYY-MM-DDTHH:MM', home, away, venue, homeScore|null, awayScore|null]
+ */
+export async function fetchHistory(leagueIds, { userAgent = 'TipOff/1.0' } = {}) {
+  const hist = [], failed = [];
+  await pool(leagueIds, 6, async id => {
+    try {
+      const r = await fetch(`${SITE}/?feed=xlsx&league_id=${id}`, { headers: { 'User-Agent': userAgent } });
+      if (!r.ok || !/sheet|octet|zip/.test(r.headers.get('content-type') || '')) throw new Error('HTTP ' + r.status);
+      hist.push(...histRows(id, await readXlsx(await r.arrayBuffer())));
+    } catch (e) { failed.push(id); }
+  });
+  return { hist, failed };
+}
+export function histRows(leagueId, rows) {
+  const head = rows[0] || [];
+  const col = (...names) => head.findIndex(h => names.includes(String(h || '').trim()));
+  const C = { code: col('Code'), date: col('תאריך', 'Date'), time: col('Time', 'שעה'), home: col('Home Team'), away: col('Away Team'),
+    venue: col('Venue', 'אולם'), hs: col('Home Score'), as: col('Away Score') };
+  if (C.date < 0 || C.home < 0 || C.away < 0) return [];
+  const out = [];
+  for (const r of rows.slice(1)) {
+    const m = String(r[C.date] || '').match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    const t = String(r[C.time] || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!m || !r[C.home] || !r[C.away]) continue;
+    const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}T${t ? t[1].padStart(2, '0') + ':' + t[2] : '00:00'}`;
+    const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
+    const hs = num(r[C.hs]), as = num(r[C.as]);
+    out.push([leagueId, +r[C.code] || 0, iso, String(r[C.home]).trim(), String(r[C.away]).trim(), String(r[C.venue] ?? '').trim(),
+      hs != null && as != null ? hs : null, hs != null && as != null ? as : null]);
+  }
+  return out;
+}
+// Team names differ slightly between the two sources ("מכבי תל אביב-שוהם" / "מכבי תל אביב/שוהם").
+export const normName = s => String(s).replace(/[-–־/\\]/g, '/').replace(/["״׳'`]/g, '').replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
+
+/**
  * RAW -> pack the app reads:
  * { gen, ages:[[id,name,g]], lg:[[full,slug,age,cup,short]], tm:[[name,lgIdx]], vn:[name], g:[[id,yymmddhhmm,lg,h,a,v,hs?,as?]] }
  */
@@ -114,11 +155,13 @@ export function buildPack(raw, gen = new Date().toISOString()) {
     lgIdx.set(id, lgRows.length);
     lgRows.push([name, String(slug).replace(/^\d{4}-/, ''), c[0], c[1] ? 1 : 0, c[2]]);
   }
+  const venues = raw.venues.slice();
+  const ageOfLg = id => lgRows[lgIdx.get(id)][2];
+  const evs = mergeHistory(raw.events.filter(e => lgIdx.has(e[2])), (raw.hist || []).filter(h => lgIdx.has(h[0])), venues, gen, ageOfLg).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : a[0] - b[0]));
   const vnIdx = new Map(), vn = [];
-  for (const [id, name] of raw.venues) { vnIdx.set(id, vn.length); vn.push(name); }
+  for (const [id, name] of venues) { vnIdx.set(id, vn.length); vn.push(name); }
   const unknownVenue = () => { if (!vnIdx.has(null)) { vnIdx.set(null, vn.length); vn.push('אולם לא ידוע'); } return vnIdx.get(null); };
 
-  const evs = raw.events.filter(e => lgIdx.has(e[2])).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : a[0] - b[0]));
   // team id -> name, and the regular (non-cup) league it plays most in
   const tName = new Map(), tCount = new Map();
   for (const e of evs) {
@@ -132,8 +175,9 @@ export function buildPack(raw, gen = new Date().toISOString()) {
   }
   const tm = [], tIdx = new Map();
   for (const [tid, nm] of tName) {
+    const out = typeof tid === 'string' ? null : tid; // teams known only from the Excel file have no association id
     const best = [...tCount.get(tid)].sort((a, b) => b[1] - a[1])[0][0];
-    tIdx.set(tid, tm.length); tm.push([nm, best, tid]);
+    tIdx.set(tid, tm.length); tm.push(out ? [nm, best, out] : [nm, best]);
   }
   const g = evs.map(e => {
     const d = e[1].replace(/[-T:]/g, '').slice(2, 12);
@@ -143,6 +187,51 @@ export function buildPack(raw, gen = new Date().toISOString()) {
   });
   return { v: 2, gen, ages: AGES.map(([id, n, gg]) => [id, n, gg]), lg: lgRows, tm, vn, g };
 }
+
+/**
+ * Adds the games that only the Excel files still have (played games the REST API no longer returns),
+ * and fills in results the REST API has not shown yet. Future games come from the REST API only.
+ */
+function mergeHistory(events, hist, venues, gen, ageOfLg) {
+  if (!hist.length) return events;
+  events = events.map(e => e.slice());
+  const nowIso = new Date(gen).toLocaleString('sv-SE', { timeZone: 'Asia/Jerusalem' }).slice(0, 16).replace(' ', 'T');
+  const key = (lg, iso, h, a) => `${lg}|${iso.slice(0, 16)}|${normName(h)}|${normName(a)}`;
+  const byKey = new Map(), names = new Map(), byAge = new Map();
+  for (const e of events) {
+    byKey.set(key(e[2], e[1], e[5], e[6]), e);
+    for (const [tid, nm] of [[e[3], e[5]], [e[4], e[6]]]) {
+      names.set(e[2] + '|' + normName(nm), [tid, nm]);
+      const k = ageOfLg(e[2]) + '|' + normName(nm);
+      if (!byAge.has(k)) byAge.set(k, new Map());
+      byAge.get(k).set(tid, nm);
+    }
+  }
+  // same league first; otherwise (e.g. a cup game of a team that is out of the cup) the one team with that name in the same age group
+  const team = (lg, nm) => {
+    const hit = names.get(lg + '|' + normName(nm)); if (hit) return hit;
+    const same = byAge.get(ageOfLg(lg) + '|' + normName(nm));
+    if (same && same.size === 1) return [...same][0];
+    const id = 'x:' + ageOfLg(lg) + ':' + normName(nm);
+    names.set(lg + '|' + normName(nm), [id, nm]);
+    return [id, nm];
+  };
+  // same game seen again under a slightly different time: match by league + day + teams
+  const byDay = new Map(events.map(e => [`${e[2]}|${e[1].slice(0, 10)}|${normName(e[5])}|${normName(e[6])}`, e]));
+  const vByName = new Map(venues.map(([id, n]) => [normName(n), id]));
+  const out = events.slice();
+  for (const [lg, code, iso, home, away, venue, hs, as] of hist) {
+    const e = byKey.get(key(lg, iso, home, away)) || byDay.get(`${lg}|${iso.slice(0, 10)}|${normName(home)}|${normName(away)}`);
+    if (e) { if (e[8] == null && hs != null && iso < nowIso) { e[8] = hs; e[9] = as; } continue; }
+    if (iso >= nowIso) continue; // upcoming games: the REST API is the source of truth
+    const [hid, hn] = team(lg, home), [aid, an] = team(lg, away);
+    let vid = vByName.get(normName(venue));
+    if (vid == null && venue) { vid = 'xv:' + normName(venue); vByName.set(normName(venue), vid); venues.push([vid, venue]); }
+    out.push([-(code || Math.abs(hashCode(lg + iso + home + away))), iso + ':00', lg, hid, aid, hn, an, vid ?? null, hs, as]);
+  }
+  return out;
+}
+const hashCode = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return h || 1; };
 
 const teamKey = (pack, ti) => pack.lg[pack.tm[ti][1]][1] + '|' + pack.tm[ti][0];
 const fmtWhen = d => `${+d.slice(4, 6)}.${+d.slice(2, 4)} ${d.slice(6, 8)}:${d.slice(8, 10)}`;
