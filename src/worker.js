@@ -239,7 +239,7 @@ export default {
       }
       if (p === '/api/feedback' && req.method === 'POST') {
         const b = await readJSON(req);
-        const topics = ['wrong', 'team', 'push', 'cal', 'idea', 'other'];
+        const topics = ['wrong', 'team', 'push', 'cal', 'a11y', 'idea', 'other'];
         const text = String(b.text || '').trim().slice(0, 1500);
         if (!DEVICE.test(b.device || '') || !topics.includes(b.topic) || text.length < 2) return json({ error: 'bad' }, 400);
         const recent = await env.DB.prepare('SELECT COUNT(*) c FROM feedback WHERE device=? AND ts>?').bind(b.device, Date.now() - 864e5).first();

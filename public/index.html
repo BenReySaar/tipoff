@@ -13,7 +13,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta property="og:title" content="טיפ-אוף · המשחק הבא של הילדים בכדורסל">
 <meta property="og:description" content="המשחק הבא, ניווט לאולם והתראות כשמשהו משתנה. בלי הרשמה.">
-<meta property="og:image" content="/icons/og.png">
+<meta property="og:image" content="https://tipoff.tipoff-il.workers.dev/icons/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://tipoff.tipoff-il.workers.dev/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="he_IL">
+<meta name="twitter:card" content="summary_large_image">
 <title>טיפ-אוף</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap">
@@ -23,18 +29,18 @@
    Lists are separated by hairlines; only the next game gets a block of its own. */
 :root{
   --bg:#FFFFFF; --fill:#F3F4F6; --ink:#0F1419; --muted:#5E6875; --line:#E4E7EB; --line-2:#CFD4DA;
-  --accent:#E8530E; --accent-ink:#FFFFFF; --accent-soft:#FDEDE4;
+  --accent:#C2410C; --accent-ink:#FFFFFF; --accent-soft:#FDEDE4; --wa:#0B7A3E;
   --win:#16794A; --loss:#B42318; --warn:#B54708; --warn-soft:#FEF4E6;
   --f:"IBM Plex Sans Hebrew",-apple-system,"Segoe UI",Arial,sans-serif;
   --r:14px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0E1013; --fill:#181B20; --ink:#F1F2F4; --muted:#98A1AD; --line:#23272E; --line-2:#323842;
-  --accent:#FF6B2C; --accent-ink:#140A04; --accent-soft:#2A1A12;
+  --accent:#FF6B2C; --accent-ink:#140A04; --accent-soft:#2A1A12; --wa:#0B7A3E;
   --win:#4FCB8B; --loss:#F97066; --warn:#FDB022; --warn-soft:#2A2113; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0E1013; --fill:#181B20; --ink:#F1F2F4; --muted:#98A1AD; --line:#23272E; --line-2:#323842;
-  --accent:#FF6B2C; --accent-ink:#140A04; --accent-soft:#2A1A12;
+  --accent:#FF6B2C; --accent-ink:#140A04; --accent-soft:#2A1A12; --wa:#0B7A3E;
   --win:#4FCB8B; --loss:#F97066; --warn:#FDB022; --warn-soft:#2A2113; color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -221,7 +227,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 /* sharing */
 .sharecard{position:relative;border:1px solid var(--line-2);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
 .sharecard .x{position:absolute;top:8px;inset-inline-end:8px;background:none;border:0;color:var(--muted);font-size:14px;padding:6px 8px}
-.wa{display:flex;align-items:center;justify-content:center;gap:8px;background:#128C4B;color:#fff;text-decoration:none;border-radius:12px;padding:11px;font-weight:600;text-align:center}
+.wa{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--wa);color:#fff;text-decoration:none;border-radius:12px;padding:11px;font-weight:600;text-align:center}
 .soc-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .soc{border:1px solid var(--line-2);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:500;text-decoration:none}
 .foot{display:flex;flex-direction:column;gap:12px;padding-top:18px;border-top:1px solid var(--line)}
@@ -288,7 +294,7 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:600}
 .inv{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
 .inv-n{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
 .inv-wa,.inv-copy{display:inline-flex;align-items:center;gap:6px;flex:none;border-radius:10px;padding:7px 12px;font-size:13.5px;font-weight:600;text-decoration:none;white-space:nowrap}
-.inv-wa{background:#128C4B;color:#fff;border:0}
+.inv-wa{background:var(--wa);color:#fff;border:0}
 .inv-wa svg{width:15px;height:15px}
 .inv-copy{background:var(--bg);border:1px solid var(--line-2)}
 /* setup checklist */
@@ -322,13 +328,21 @@ body.locked{overflow:hidden}
 .btn.wide{width:100%;padding:14px;font-size:16px}
 .sh-skip{align-self:center;color:var(--muted);font-weight:500}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translate(-50%,30px);opacity:.4}}}
+/* share row */
+.foot h2{font-size:17px}
+.foot .sub{margin-top:-8px}
+.sh-row{display:flex;flex-wrap:wrap;gap:8px}
+.shr{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--bg);color:var(--ink);border-radius:10px;padding:8px 14px;font-size:14px;font-weight:600;text-decoration:none}
+.shr.main{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.shr svg{width:15px;height:15px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:380px){.h-time{font-size:54px}.ages{grid-template-columns:repeat(2,1fr)}.day .dn{width:34px;height:34px;font-size:16px}.actions{grid-template-columns:1fr 1fr 1fr}.act span{font-size:13px}}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
 </head>
 <body>
-<div class="app" dir="rtl" lang="he" id="app"><p class="sub" style="text-align:center;margin-top:40px">טוענים את לוח המשחקים…</p></div>
+<main class="app" dir="rtl" lang="he" id="app"><p class="sub" style="text-align:center;margin-top:40px" role="status">טוענים את לוח המשחקים…</p></main>
+<div id="ov" dir="rtl" lang="he"></div>
 <nav class="tabs" dir="rtl" aria-label="ניווט ראשי"><div class="in">
   <button data-v="my"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>המשחקים שלי</button>
   <button data-v="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>התראות ויומן</button>
@@ -407,7 +421,7 @@ const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
  prev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>',
  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>'};
 
-function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
+function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow');syncURL()}
 function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
@@ -569,8 +583,18 @@ function shareCard(){
     <b>${esc(t.name)} נוספה ✓</b><span class="sub">גם ההורים בקבוצה ירצו לדעת מתי ואיפה המשחק.</span>
     <a class="wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">שתפו את הקבוצה בקבוצת ההורים</a>
     <div class="soc-row"><span class="sub">ועקבו אחרינו:</span>${socialPills()}</div></div>`}
+const APP_TEXT='🏀 טיפ-אוף: לוח משחקי הכדורסל של הילדים במקום אחד. המשחק הבא, ניווט לאולם, ויומן והתראות כשמשחק זז. חינם ובלי הרשמה.';
+const CAN_SHARE=typeof navigator.share==='function';
+function shareLinks(text,url,ev){const u=encodeURIComponent(url),tx=encodeURIComponent(text);
+  return `<div class="sh-row">${CAN_SHARE?`<button class="shr main" data-nshare="${ev}">${ic.share}שיתוף</button>`:''}
+    <a class="shr" href="https://wa.me/?text=${encodeURIComponent(text+'\n'+url)}" target="_blank" rel="noopener" data-ev="${ev}_wa">וואטסאפ</a>
+    <a class="shr" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener" data-ev="${ev}_fb">פייסבוק</a>
+    <a class="shr" href="https://t.me/share/url?url=${u}&text=${tx}" target="_blank" rel="noopener" data-ev="${ev}_tg">טלגרם</a>
+    <button class="shr" data-copyapp="1">העתקת קישור</button></div>`}
+async function nativeShare(){try{await navigator.share({title:'טיפ-אוף',text:APP_TEXT,url:APP_URL});track('share_app_native')}catch(e){}}
 function footer(){
-  return `<footer class="foot"><a class="wa" href="${shareAppURL(null)}" target="_blank" rel="noopener" data-ev="share_app">שתפו את טיפ-אוף עם חברים</a>
+  return `<footer class="foot"><h2>מכירים עוד הורים?</h2><p class="sub">שתפו את טיפ-אוף בקבוצות, ברשתות או בהודעה.</p>${shareLinks(APP_TEXT,APP_URL,'share_app')}
+    ${S.showAppLink?`<input class="calurl" readonly value="${esc(APP_URL)}" onfocus="this.select()" aria-label="קישור לטיפ-אוף">`:''}
     <div class="soc-row"><span class="sub">עדכונים וטיפים להורים:</span>${socialPills()}</div></footer>`}
 
 /* ---------- team links: share a team, open straight on it ---------- */
@@ -590,7 +614,7 @@ function inviteBlock(ts){
   return `<section class="sec invite"><h2>הזמינו הורים מהקבוצה</h2><p class="sub">הם יקבלו קישור שפותח ישר את הלוח של הקבוצה, עם כפתור הצטרפות אחד.</p>
    <div class="inv-list">${ts.map(t=>`<div class="inv">${ts.length>1?dot(t.key):''}<span class="inv-n">${esc(t.name)}</span>
      <a class="inv-wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">${ic.share}וואטסאפ</a>
-     <button class="inv-copy" data-copyteam="${esc(t.key)}">העתקת קישור</button></div>
+     <button class="inv-copy" data-copyteam="${esc(t.key)}">העתקה</button>${CAN_SHARE?`<button class="inv-copy" data-nshareteam="${esc(t.key)}" aria-label="שיתוף ${esc(t.name)} באפליקציה אחרת">עוד</button>`:''}</div>
      ${S.showLink===t.key?`<input class="calurl" readonly value="${esc(teamURL(t))}" onfocus="this.select()">`:''}`).join('')}</div></section>`}
 
 /* ---------- first visit, invites, setup checklist ---------- */
@@ -678,7 +702,7 @@ function teamPick(t,withLeague){const RES=S.findMode==='res';const on=RES?S.res.
 
 function viewFind(){
   const q=S.q.trim();
-  const search=`<label class="search">${ic.search}<input id="q" type="search" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(q)}" autocomplete="off"></label>`;
+  const search=`<label class="search">${ic.search}<input id="q" type="search" aria-label="חיפוש קבוצה לפי שם או עיר" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(q)}" autocomplete="off"></label>`;
   if(q.length>=2){const hits=TEAMS.filter(t=>t.name.includes(q)||LEAGUES[t.lg].full.includes(q))
       .sort((x,y)=>AGES.findIndex(a=>a.id===LEAGUES[x.lg].age)-AGES.findIndex(a=>a.id===LEAGUES[y.lg].age));
     return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
@@ -805,6 +829,9 @@ const TOPICS=[
  {id:'cal',title:'בעיה ביומן',sub:'המשחקים לא מופיעים או לא מתעדכנים',
   tips:'יומן גוגל מרענן יומנים כאלה כמה פעמים ביום, ולכן שינוי חדש יכול להופיע באיחור. באייפון אפשר לבדוק בהגדרות ← יומן ← חשבונות ← "קבלת נתונים חדשים".',
   ph:'איזה יומן (אייפון או גוגל), ומה רואים?'},
+ {id:'a11y',title:'בעיית נגישות',sub:'משהו לא נגיש לכם או לא נקרא נכון',
+  tips:'ספרו לנו מה ניסיתם לעשות ומה לא עבד, ואיזה טלפון או קורא מסך אתם משתמשים. בינתיים נשמח לשלוח לכם את לוח המשחקים בדרך אחרת.',
+  ph:'מה לא נגיש, ובאיזה מסך?'},
  {id:'idea',title:'רעיון לאפליקציה',sub:'משהו שהיה עוזר לכם',ph:'מה היה עוזר לכם?'},
  {id:'other',title:'משהו אחר',sub:'כל שאלה או הערה',ph:'כתבו לנו'},
 ];
@@ -828,6 +855,7 @@ function viewHelp(){
   return `<section class="sec"><h1>עזרה</h1></section>
    <section class="sec"><h2>שאלות נפוצות</h2><div class="faqs">${faq}</div></section>
    <section class="sec"><h2>במה אפשר לעזור?</h2><div class="topics">${topics}</div></section>
+   <p class="note">טיפ-אוף נבנתה כך שתהיה נוחה לשימוש גם לאנשים עם מוגבלות. <a href="/accessibility.html">הצהרת הנגישות</a></p>
    ${footer()}`}
 async function sendFeedback(form){
   const topic=form.dataset.fb,source=form.dataset.src,key=topic+source;
@@ -842,10 +870,14 @@ async function sendFeedback(form){
 
 function render(){
   const app=document.getElementById('app');
-  app.innerHTML=overlay()+header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():viewAlerts())+
+  const ovEl=document.getElementById('ov'),ovHTML=overlay();
+  ovEl.innerHTML=ovHTML;
+  app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():viewAlerts())+
    `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
   const tab=S.view==='find'?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-  document.body.classList.toggle('locked',!!(S.invite||(S.welcome&&S.view==='my')));
+  const open=!!ovHTML;document.body.classList.toggle('locked',open);
+  app.inert=open;document.querySelector('nav.tabs').inert=open;
+  if(open&&!ovEl.contains(document.activeElement)){const f=ovEl.querySelector('.btn');if(f)f.focus()}
   const q=document.getElementById('q');
   if(q)q.addEventListener('input',e=>{S.q=e.target.value;const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
 }
@@ -879,6 +911,9 @@ document.addEventListener('click',e=>{
   else if(d.gocal){S.view='alerts';render();setTimeout(()=>{const c=document.getElementById('cal');if(c)c.scrollIntoView({behavior:'smooth'})},60)}
   else if(d.dev){S.dev=d.dev;render()}
   else if(d.copyteam)copyTeam(d.copyteam);
+  else if(d.nshare)nativeShare();
+  else if(d.nshareteam){const tt=TEAMS[KEY[d.nshareteam]];if(tt)navigator.share({title:tt.name,text:teamMsg(tt).split('\n').slice(0,-1).join('\n'),url:teamURL(tt)}).then(()=>track('share_team_native')).catch(()=>{})}
+  else if(d.copyapp){track('share_app_copy');if(navigator.clipboard)navigator.clipboard.writeText(APP_URL).then(()=>toast('הקישור הועתק')).catch(()=>{S.showAppLink=true;render()});else{S.showAppLink=true;render()}}
   else if(d.invite==='yes'){const k=S.invite;S.invite=null;track('invite_follow');setFollows(touched?(S.follows.includes(k)?S.follows:[...S.follows,k]):[k]);S.filter=S.follows.length>1?k:'all';S.dayWeek=null;S.justAdded=null;S.welcome=false;S.onb.welcomed=true;saveOnb();toast('הקבוצה נוספה ✓');render();scrollTo(0,0)}
   else if(d.invite==='no'){S.invite=null;track('invite_skip');syncURL();render()}
   else if(d.welcome==='go'){S.welcome=false;S.onb.welcomed=true;saveOnb();S.view='find';render();scrollTo(0,0)}

@@ -6,12 +6,12 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const fmt = n => Number(n || 0).toLocaleString('he-IL');
 const when = ms => ms ? new Date(ms).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
-const TOPIC = { wrong: 'פרט במשחק לא נכון', team: 'לא מוצאים קבוצה', push: 'התראות', cal: 'יומן', idea: 'רעיון', other: 'אחר' };
+const TOPIC = { a11y: 'נגישות', wrong: 'פרט במשחק לא נכון', team: 'לא מוצאים קבוצה', push: 'התראות', cal: 'יומן', idea: 'רעיון', other: 'אחר' };
 
 const ACTIONS = {
   open: 'פתחו את האפליקציה', new: 'מכשירים חדשים', follow: 'הוסיפו או הסירו קבוצה', standalone: 'פתחו מהמסך הבית',
   push_on: 'הפעילו התראות', push_off: 'כיבו התראות', nav: 'לחצו ניווט', calendar: 'הוסיפו משחק ליומן', cal_sub: 'חיברו יומן מתעדכן',
-  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות',
+  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', share_app_wa: 'שיתפו את האפליקציה בוואטסאפ', share_app_fb: 'שיתפו את האפליקציה בפייסבוק', share_app_tg: 'שיתפו את האפליקציה בטלגרם', share_app_native: 'שיתפו את האפליקציה (תפריט השיתוף)', share_app_copy: 'העתיקו קישור לאפליקציה', share_team_native: 'שיתפו קבוצה (תפריט השיתוף)', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות',
 };
 
 export async function statsPage(env, pack) {
