@@ -136,7 +136,7 @@ export function histRows(leagueId, rows) {
     const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}T${t ? t[1].padStart(2, '0') + ':' + t[2] : '00:00'}`;
     const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
     const hs = num(r[C.hs]), as = num(r[C.as]);
-    out.push([leagueId, +r[C.code] || 0, iso, String(r[C.home]).trim(), String(r[C.away]).trim(), String(r[C.venue] ?? '').trim(),
+    out.push([leagueId, +r[C.code] || 0, iso, decodeEntities(r[C.home]).trim(), decodeEntities(r[C.away]).trim(), decodeEntities(r[C.venue] ?? '').trim(),
       hs != null && as != null ? hs : null, hs != null && as != null ? as : null]);
   }
   return out;
@@ -210,6 +210,13 @@ function mergeHistory(events, hist, venues, gen, ageOfLg) {
   // same league first; otherwise (e.g. a cup game of a team that is out of the cup) the one team with that name in the same age group
   const team = (lg, nm) => {
     const hit = names.get(lg + '|' + normName(nm)); if (hit) return hit;
+    // the Excel file sometimes cuts long names ("הפועל ב\"ש-מבועים-מרח"): one name starting with the other, in the same league
+    const n = normName(nm);
+    if (n.length >= 8) {
+      const cands = new Map();
+      for (const [k, v] of names) { if (!k.startsWith(lg + '|') || typeof v[0] === 'string') continue; const m = k.slice(String(lg).length + 1); if (m.startsWith(n) || n.startsWith(m)) cands.set(v[0], v); }
+      if (cands.size === 1) { const v = [...cands.values()][0]; names.set(lg + '|' + n, v); return v; }
+    }
     const same = byAge.get(ageOfLg(lg) + '|' + normName(nm));
     if (same && same.size === 1) return [...same][0];
     const id = 'x:' + ageOfLg(lg) + ':' + normName(nm);
@@ -220,7 +227,8 @@ function mergeHistory(events, hist, venues, gen, ageOfLg) {
   const byDay = new Map(events.map(e => [`${e[2]}|${e[1].slice(0, 10)}|${normName(e[5])}|${normName(e[6])}`, e]));
   const vByName = new Map(venues.map(([id, n]) => [normName(n), id]));
   const out = events.slice();
-  for (const [lg, code, iso, home, away, venue, hs, as] of hist) {
+  for (const [lg, code, iso, home0, away0, venue0, hs, as] of hist) {
+    const home = decodeEntities(home0), away = decodeEntities(away0), venue = decodeEntities(venue0); // rows saved before this fix
     const e = byKey.get(key(lg, iso, home, away)) || byDay.get(`${lg}|${iso.slice(0, 10)}|${normName(home)}|${normName(away)}`);
     if (e) { if (e[8] == null && hs != null && iso < nowIso) { e[8] = hs; e[9] = as; } continue; }
     if (iso >= nowIso) continue; // upcoming games: the REST API is the source of truth
