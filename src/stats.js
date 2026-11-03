@@ -16,6 +16,29 @@ const ACTIONS = {
   cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', share_app_wa: 'שיתפו את האפליקציה בוואטסאפ', share_app_fb: 'שיתפו את האפליקציה בפייסבוק', share_app_tg: 'שיתפו את האפליקציה בטלגרם', share_app_native: 'שיתפו את האפליקציה (תפריט השיתוף)', share_app_copy: 'העתיקו קישור לאפליקציה', share_team_native: 'שיתפו קבוצה (תפריט השיתוף)', season: 'פתחו את כל משחקי העונה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות', nick: 'נתנו כינוי לקבוצה', remove_team: 'הסירו קבוצה מהתפריט', details: 'פתחו פירוט מול היריבה', gmaps: 'לחצו Google Maps', wrong_open: 'לחצו "משהו לא נכון?"', forget: 'מחקו את המידע שלהם', diag_fix: 'לחצו על תיקון באבחון', invite_close: 'סגרו את "הזמינו הורים"', howto_open: 'פתחו את מדריך ההוספה למסך הבית', install_copy: 'העתיקו קישור כדי לעבור לספארי', install_send: 'שלחו לעצמם קישור מהמחשב', installed_open: 'פתחו לראשונה מהמסך הבית', howto_auto: 'קיבלו את מדריך ההתקנה אחרי בחירת קבוצה (אייפון)', pushask_show: 'קיבלו הצעה להפעיל התראות אחרי בחירת קבוצה', pushask_no: 'דחו את ההצעה להפעיל התראות', edit_open: 'פתחו עריכת קבוצות', invite_dismiss: 'סגרו את חלון ההזמנה בלחיצה מחוץ לו',
 };
 
+// One club often appears under several names ("הפועל מרנין טבעון", "הפועל קרית טבעון", "הפועל ק.טבעון מרנין").
+// Names that share a distinctive word are counted together, under the most followed name.
+const STOP = new Set(['הפועל', 'מכבי', 'אליצור', 'ביתר', 'בני', 'עירוני', 'אסא', 'אס', 'מועדון', 'כדורסל', 'בנות', 'צעירים', 'קרית', 'רמת', 'תל', 'גבעת', 'כפר', 'נווה', 'עין', 'בית', 'אבן', 'מתנס', 'עלה', 'אור', 'גני', 'ראש', 'מעלה', 'נוער', 'ילדים', 'א', 'ב', 'ג']);
+const clubWords = n => n.replace(/["״׳'`]/g, '').replace(/\./g, ' ').replace(/[-/–]/g, ' ').split(/\s+/).map(w => w === 'ק' ? 'קרית' : w)
+  .filter(w => w.length >= 3 && !STOP.has(w));
+export function groupClubs(names) {
+  const list = [...names], parent = list.map((_, i) => i);
+  const find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
+  const byWord = new Map();
+  // same organisation (first word) and a shared distinctive word
+  const org = n => n.replace(/["״׳'`.]/g, '').split(/\s+/)[0];
+  list.forEach(([n], i) => { for (const w0 of clubWords(n)) { const w = org(n) + '|' + w0; if (byWord.has(w)) parent[find(i)] = find(byWord.get(w)); else byWord.set(w, i); } });
+  const groups = new Map();
+  list.forEach(([n, c], i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push([n, c]); });
+  const out = new Map();
+  for (const g of groups.values()) {
+    g.sort((a, b) => b[1] - a[1]);
+    const total = g.reduce((s, x) => s + x[1], 0);
+    out.set(g[0][0] + (g.length > 1 ? ` (+${g.length - 1} ${g.length === 2 ? 'שם נוסף' : 'שמות נוספים'})` : ''), total);
+  }
+  return out;
+}
+
 export async function statsPage(env, pack) {
   const DB = env.DB;
   const today = ilDay(), d7 = daysAgo(6), d30 = daysAgo(29);
@@ -46,15 +69,15 @@ export async function statsPage(env, pack) {
   // by age group and by club, from the league slug in each team key
   const ageOfSlug = new Map((pack?.lg || []).map(l => [l[1], l[2]]));
   const ageName = new Map((pack?.ages || []).map(a => [a[0], a[1] + (a[2] === 'F' ? ' (בנות)' : '')]));
-  const byAge = new Map(), byClub = new Map();
+  const byAge = new Map(), names = new Map();
   for (const f of allFollows) {
     if (f.kind !== 'full') continue;
     const [slug, name] = f.team.split('|');
     const age = ageName.get(ageOfSlug.get(slug)) || 'לא ידוע';
     byAge.set(age, (byAge.get(age) || 0) + 1);
-    const club = name.split(' ').slice(0, 2).join(' ');
-    byClub.set(club, (byClub.get(club) || 0) + 1);
+    names.set(name, (names.get(name) || 0) + 1);
   }
+  const byClub = groupClubs(names);
   const leagueName = new Map((pack?.lg || []).map(l => [l[1], l[0]]));
 
   // 30-day bars
@@ -116,7 +139,7 @@ ${tile(fbCount?.c, 'הודעות מהורים', '30 ימים אחרונים. ה�
 
 <div class="cols">
 <div class="card"><h2>הקבוצות הכי נעקבות</h2>${table(topTeams, [r => esc(r.team.split('|')[1]) + `<div class="sub">${esc(leagueName.get(r.team.split('|')[0]) || '')}</div>`, r => fmt(r.c)])}</div>
-<div class="card"><h2>לפי מועדון</h2>${table(sortMap(byClub).slice(0, 12), [r => esc(r[0]), r => fmt(r[1])])}
+<div class="card"><h2>לפי מועדון</h2><p class="sub">שמות שונים של אותו מועדון נספרים יחד</p>${table(sortMap(byClub).slice(0, 12), [r => esc(r[0]), r => fmt(r[1])])}
 <h2 style="margin-top:14px">לפי גיל</h2>${table(sortMap(byAge), [r => esc(r[0]), r => fmt(r[1])])}</div>
 </div>
 

@@ -113,13 +113,16 @@ export async function fetchSeason({ season = '2026', userAgent = 'TipOff/1.0' } 
  */
 export async function fetchHistory(leagueIds, { userAgent = 'TipOff/1.0' } = {}) {
   const hist = [], failed = [];
-  await pool(leagueIds, 6, async id => {
-    try {
-      const r = await fetch(`${SITE}/?feed=xlsx&league_id=${id}`, { headers: { 'User-Agent': userAgent } });
-      if (!r.ok || !/sheet|octet|zip/.test(r.headers.get('content-type') || '')) throw new Error('HTTP ' + r.status);
-      hist.push(...histRows(id, await readXlsx(await r.arrayBuffer())));
-    } catch (e) { failed.push(id); }
-  });
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const one = async id => {
+    const r = await fetch(`${SITE}/?feed=xlsx&league_id=${id}`, { headers: { 'User-Agent': userAgent } });
+    if (!r.ok || !/sheet|octet|zip/.test(r.headers.get('content-type') || '')) throw new Error('HTTP ' + r.status);
+    return histRows(id, await readXlsx(await r.arrayBuffer()));
+  };
+  // gently: 2 at a time with a short pause, then one more try for leagues that failed
+  let retry = [];
+  await pool(leagueIds, 2, async id => { try { hist.push(...await one(id)); } catch (e) { retry.push(id); } await wait(150); });
+  if (retry.length) { await wait(3000); await pool(retry, 1, async id => { try { hist.push(...await one(id)); } catch (e) { failed.push(id); } await wait(400); }); }
   return { hist, failed };
 }
 export function histRows(leagueId, rows) {
