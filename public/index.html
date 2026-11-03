@@ -397,6 +397,21 @@ body.locked{overflow:hidden}
 .tblock .list{border-top-color:var(--tc)}
 .stabs{flex-wrap:wrap;overflow:visible;margin-inline:0;padding-inline:0}
 .stabs .chip{padding:8px 14px;font-size:14.5px}
+/* add-to-home-screen guide */
+.howto2{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:14px;counter-reset:h}
+.howto2 li{display:flex;gap:12px;align-items:flex-start;counter-increment:h}
+.howto2 li.one{display:block;counter-increment:none}
+.howto2 .hi{position:relative;flex:none;width:44px;height:44px;border-radius:12px;background:var(--fill);display:grid;place-items:center;color:#0A84FF}
+.howto2 .hi svg{width:24px;height:24px}
+.howto2 .hi::after{content:counter(h);position:absolute;top:-6px;inset-inline-start:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:11.5px;font-weight:700;display:grid;place-items:center}
+.howto2 .hm{font-size:20px;color:var(--ink)}
+.howto2 .ht{display:flex;flex-direction:column;gap:2px;padding-top:2px;min-width:0}
+.howto2 .ht b{font-size:16px;font-weight:600}
+.howto2 .ht .btn{align-self:flex-start;margin-top:6px;gap:6px}
+.howto2 .ht .btn svg{width:16px;height:16px}
+.ios-arrow{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--accent);font-size:13px;font-weight:600;margin-top:2px}
+.ios-arrow svg{width:22px;height:22px;transform:rotate(90deg)}
+@media (prefers-reduced-motion:no-preference){.ios-arrow svg{animation:bob 1.2s ease-in-out infinite}@keyframes bob{50%{transform:rotate(90deg) translateX(5px)}}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .privacy-box{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -480,6 +495,12 @@ const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.2 10.8l7.6-4M8.2 13.2l7.6 4"/></svg>',
  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+ dots:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9.5"/><circle cx="7.6" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="16.4" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>',
+ addhome:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>',
+ kebab:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5.5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="18.5" r="1.8"/></svg>',
+ toggle:'<svg viewBox="0 0 24 24"><rect x="2" y="6.5" width="20" height="11" rx="5.5" fill="#34C759"/><circle cx="16.5" cy="12" r="4.2" fill="#fff"/></svg>',
+ copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8.5" y="8.5" width="12" height="12" rx="2.5"/><path d="M15.5 5.5v-1A1.5 1.5 0 0 0 14 3H5A1.5 1.5 0 0 0 3.5 4.5V14A1.5 1.5 0 0 0 5 15.5h1"/></svg>',
+ safari:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9.5"/><path d="M15.8 8.2l-2.4 5.2-5.2 2.4 2.4-5.2z" fill="currentColor" stroke="none"/></svg>',
  ishare:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5v10h14V11h-1"/></svg>',
  go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
  shirt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 3l-5 3 2 5 2-1v11h10V10l2 1 2-5-5-3c-.5 1.6-2 2.5-4 2.5S8.5 4.6 8 3z"/></svg>',
@@ -721,6 +742,7 @@ S.onb=store.get('tipoff.onb',{});
 S.welcome=!S.invite&&!touched&&!S.onb.welcomed;
 S.bip=null;S.det=new Set();S.monthMode=store.get('tipoff.monthMode','team');S.seasonF='all';S.menu=null;S.menuConfirm=false;S.forgetAsk=false;
 const justDeleted=params.get('deleted')==='1';
+S.howto=false;S.installed=false;
 const saveOnb=()=>store.set('tipoff.onb',S.onb);
 
 function sheet(inner,label){return `<div class="scrim" data-closesheet="1"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${label}">${inner}</div>`}
@@ -736,7 +758,54 @@ function inviteSheet(){const t=TEAMS[KEY[S.invite]];const nx=t.games.find(g=>!is
   <button class="btn wide" data-invite="yes">עקבו אחרי ${esc(t.name)}</button>
   <button class="linkbtn sh-skip" data-invite="no">לא עכשיו</button>`,'הזמנה לקבוצה')}
 
-const iosSafari=()=>IOS&&/Safari/.test(UA)&&!/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram|WhatsApp|Line\//.test(UA);
+const iosSafari=()=>IOS&&/Safari/.test(UA)&&!/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram|WhatsApp|Line\/|TikTok|musical_ly|GSA\//.test(UA);
+/* ---------- "add to home screen": one guide, only the steps for this phone ---------- */
+const safariV=()=>+((UA.match(/Version\/(\d+)/)||[])[1]||0);
+function installKind(){
+  if(STANDALONE)return 'done';
+  if(IOS)return !iosSafari()?'ios-other':safariV()>=26?'ios26':'ios';
+  if(/Android/i.test(UA))return window.__bip?'android-prompt':/SamsungBrowser/.test(UA)?'samsung':'android';
+  return 'desktop'}
+function howtoSheet(){
+  const k=installKind();
+  const st=(icon,b,sub='')=>`<li><span class="hi" aria-hidden="true">${icon}</span><span class="ht"><b>${b}</b>${sub?`<span class="sub">${sub}</span>`:''}</span></li>`;
+  const done=st(header().match(/<svg[\s\S]*?<\/svg>/)[0],'פותחים את טיפ-אוף מהאייקון החדש','מעכשיו נכנסים רק משם. הקבוצות שלכם כבר יהיו בפנים.');
+  let title='מוסיפים את טיפ-אוף למסך הבית',intro='חצי דקה, פעם אחת. כך היא נפתחת כמו אפליקציה ויכולה לשלוח התראות.',steps='',after='',arrow=false;
+  if(k==='done'){title='טיפ-אוף כבר במסך הבית ✓';intro='פתחתם אותה מהאייקון, אז הכול מוכן.'}
+  else if(k==='ios26'){arrow=true;
+    steps=st(ic.dots,'לוחצים על ⋯','הכפתור עם שלוש הנקודות, ליד שורת הכתובת למטה')+st(ic.ishare,'בוחרים "שיתוף"')+
+      st(ic.addhome,'גוללים ובוחרים "הוספה למסך הבית"')+st(ic.toggle,'משאירים את המתג דולק (ירוק)','המתג שמתחת לשם. כך היא נפתחת כאפליקציה ולא כאתר רגיל.')+st('<b class="hm">✓</b>','לוחצים "הוספה" למעלה')+done;
+    after='<p class="note">מופיע אצלכם כפתור השיתוף <span class="kbd">'+ic.ishare+'</span> ישר בשורה למטה? לוחצים עליו וממשיכים מ"הוספה למסך הבית".</p>'}
+  else if(k==='ios'){arrow=true;
+    steps=st(ic.ishare,'לוחצים על כפתור השיתוף','הריבוע עם החץ למעלה, בשורה בתחתית ספארי')+st(ic.addhome,'גוללים ובוחרים "הוספה למסך הבית"')+st('<b class="hm">✓</b>','לוחצים "הוספה" למעלה')+done;
+    after='<p class="note">התראות באייפון דורשות iOS 16.4 ומעלה (הגדרות ← כללי ← אודות).</p>'}
+  else if(k==='ios-other'){
+    intro=`פתחתם את הקישור ב${esc(BROWSER)}. באייפון מוסיפים למסך הבית רק מספארי, אז קודם עוברים לספארי:`;
+    steps=st(ic.copy,'מעתיקים את הקישור',`<button class="btn sm" data-copyinstall="1">${ic.copy}העתקת הקישור</button>`)+st(ic.safari,'פותחים את ספארי ומדביקים בשורת הכתובת','או: בתפריט של הדפדפן הנוכחי (⋯ או ⇱) בוחרים "פתיחה בספארי"')+st(ic.addhome,'בספארי פותחים את המדריך הזה שוב','בלשונית "התראות ויומן" או בכרטיס ההגדרה');
+    after=S.showInstallLink?`<input class="calurl" readonly value="${esc(location.href)}" onfocus="this.select()" aria-label="הקישור לטיפ-אוף">`:''}
+  else if(k==='android-prompt'){intro='בטלפון הזה זה לחיצה אחת:';
+    steps=`<li class="one"><button class="btn wide" data-install="1">התקנת טיפ-אוף</button></li>`+st(ic.addhome,'מאשרים "התקנה"')+done;
+    after='<p class="note">לא נפתח חלון? בתפריט של כרום (⋮) בוחרים "הוספה למסך הבית" או "התקנת אפליקציה".</p>'}
+  else if(k==='android'||k==='samsung'){
+    steps=(k==='samsung'?st('<b class="hm">☰</b>','לוחצים על התפריט ☰ בתחתית המסך'):st(ic.kebab,'לוחצים על ⋮ למעלה','שלוש הנקודות בפינה של כרום'))+
+      st(ic.addhome,'בוחרים "הוספה למסך הבית"','לפעמים זה נקרא "התקנת אפליקציה" או "הוספת דף ל ← מסך הבית"')+st(ic.addhome,'מאשרים "התקנה" או "הוספה"')+done;
+    after='<p class="note">באנדרואיד ההתראות עובדות גם בלי זה, אבל מהאייקון נוח יותר.</p>'}
+  else{intro='טיפ-אוף בנויה לטלפון. שלחו לעצמכם את הקישור ופתחו אותו שם:';
+    steps=`<li class="one"><a class="btn wide" href="https://wa.me/?text=${encodeURIComponent('טיפ-אוף: '+location.href)}" target="_blank" rel="noopener" data-ev="install_send">שליחת הקישור אליי בוואטסאפ</a></li>`+
+      st(ic.addhome,'בטלפון פותחים את הקישור','באייפון בספארי, באנדרואיד בכרום')+st(ic.addhome,'ושם פותחים את המדריך הזה','הוא יראה בדיוק את הצעדים של אותו טלפון')}
+  const noTeam=!(touched&&S.follows.length)&&k!=='done'&&k!=='desktop'?'<div class="banner">כדאי לבחור קבוצה לפני ההוספה. כך היא כבר תחכה לכם באפליקציה.</div>':'';
+  return sheet(`<h2 tabindex="-1" data-autofocus>${title}</h2><p class="sub">${intro}</p>${noTeam}
+    ${steps?`<ol class="howto2">${steps}</ol>`:''}${after}
+    <button class="${k==='done'?'btn wide':'linkbtn sh-skip'}" data-howto="close">${k==='done'?'סגירה':'סגירה'}</button>
+    ${arrow?`<div class="ios-arrow" aria-hidden="true"><span>הכפתורים של ספארי נמצאים כאן למטה</span>${ic.prev}</div>`:''}`,'הוספה למסך הבית')}
+function installedSheet(){
+  const canPush=S.push!=='on'&&S.push!=='unsupported'&&S.push!=='denied';
+  return sheet(`<div class="sh-ball">${header().match(/<svg[\s\S]*?<\/svg>/)[0]}</div><h2 tabindex="-1" data-autofocus>הצלחתם! טיפ-אוף במסך הבית ✓</h2>
+    <p class="sub">${touched&&S.follows.length?'הקבוצות שלכם כבר כאן.':'עכשיו בוחרים קבוצה, והמשחק הבא מופיע מיד.'}${canPush?' נשאר צעד אחד: התראות, כדי לדעת מיד כשמשחק זז או מחליף אולם.':''}</p>
+    ${canPush?'<button class="btn wide" data-push="on" data-installed="push">הפעלת התראות</button>':''}
+    ${!(touched&&S.follows.length)?'<button class="btn wide" data-installed="find">בחירת קבוצה</button>':''}
+    <button class="linkbtn sh-skip" data-installed="close">${canPush?'אחר כך':'סגירה'}</button>`,'טיפ-אוף במסך הבית')}
+function openHowto(){S.howto=true;track('howto_open');render()}
 function checklist(){
   if(!touched||!S.follows.length||S.onb.doneList)return '';
   const home=STANDALONE,push=S.push==='on';
@@ -744,10 +813,9 @@ function checklist(){
   if(!IOS&&push)return '';
   const stepHome=home?`<li class="ok"><b>נוסף למסך הבית</b></li>`:
     `<li class="cur"><b>מוסיפים למסך הבית</b>${IOS
-      ?(iosSafari()?`<span>לוחצים על <span class="kbd">${ic.ishare}</span> בתחתית ספארי, גוללים ובוחרים <b>"הוספה למסך הבית"</b>. אחר כך פותחים את טיפ-אוף מהאייקון החדש.</span>`
-        :`<span>באייפון צריך לפתוח את הקישור ב<b>ספארי</b>. אם פתחתם מתוך וואטסאפ, לוחצים על <b>⋯</b> או על <b>⇱</b> ובוחרים "פתיחה בספארי".</span>`)
+      ?`<span>${iosSafari()?'חצי דקה, ובלי זה אייפון לא שולח התראות.':'באייפון מוסיפים רק מספארי. נראה לכם איך.'}</span><button class="btn sm" data-howto="1">איך מוסיפים</button>`
       :(window.__bip?`<span>כך טיפ-אוף נפתחת כמו אפליקציה.</span><button class="btn sm" data-install="1">התקנה</button>`
-        :`<span>בתפריט של כרום (<b>⋮</b>) בוחרים <b>"הוספה למסך הבית"</b> או <b>"התקנת אפליקציה"</b>. לא חובה, אבל נוח.</span>`)}</li>`;
+        :`<span>לא חובה, אבל נוח: טיפ-אוף נפתחת כמו אפליקציה.</span><button class="btn sm ghost" data-howto="1">איך מוסיפים</button>`)}</li>`;
   const pushReady=!(IOS&&!home);
   const stepPush=push?`<li class="ok"><b>ההתראות פעילות</b></li>`:
     `<li class="${pushReady?'cur':''}"><b>מפעילים התראות</b>${pushReady
@@ -769,8 +837,8 @@ function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
-function overlay(){return S.forgetAsk?forgetSheet():S.menu?teamMenu():S.invite?inviteSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
-function closeSmall(){S.menu=null;S.menuConfirm=false;S.forgetAsk=false}
+function overlay(){return S.forgetAsk?forgetSheet():S.menu?teamMenu():S.howto?howtoSheet():S.invite?inviteSheet():S.installed?installedSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function closeSmall(){S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
   setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
@@ -940,16 +1008,12 @@ function copyCal(){
   if(navigator.clipboard)navigator.clipboard.writeText(CAL_HTTP).then(done).catch(()=>{S.showCal=true;render()});else{S.showCal=true;render()}}
 
 function viewAlerts(){
-  if(S.dev==null)S.dev=IOS?'ios':'android';
   const sw=(k,t,s)=>`<div class="al"><div><div style="font-weight:600">${t}</div><div class="sub">${s}</div></div><button class="sw" role="switch" data-al="${k}" aria-checked="${!!S.alerts[k]}" aria-label="${t}"></button></div>`;
-  const steps={
-    ios:['פותחים את האתר בספארי (לא בכרום ולא מתוך וואטסאפ).','לוחצים על כפתור השיתוף, הריבוע עם החץ למעלה.','בוחרים "הוספה למסך הבית" ומאשרים.','פותחים את טיפ-אוף מהאייקון החדש במסך הבית.','נכנסים ל"התראות ויומן", לוחצים "הפעלת התראות" ובוחרים "אפשר".'],
-    android:['פותחים את האתר בכרום.','נכנסים ל"התראות ויומן" ולוחצים "הפעלת התראות".','כשהטלפון שואל, בוחרים "אפשר".','מומלץ: בתפריט של כרום (שלוש הנקודות) בוחרים "הוספה למסך הבית".']};
   const box={
     on:`<div class="push on"><div><b>✓ ההתראות פעילות בטלפון הזה</b><div class="sub">נעדכן כשמשהו משתנה במשחקים של הקבוצות שלכם.</div></div>
         <div class="pbtns"><button class="btn ghost" data-testpush="1">שליחת התראת בדיקה</button><button class="linkbtn" data-push="off">כיבוי</button></div></div>`,
     off:`<div class="push"><div><b>ההתראות כבויות</b><div class="sub">מפעילים פעם אחת בכל טלפון.</div></div><button class="btn" data-push="on">הפעלת התראות</button></div>`,
-    install:`<div class="push"><div><b>באייפון: קודם מוסיפים למסך הבית</b><div class="sub">אפל מאפשרת התראות רק לאפליקציה שנפתחת מהמסך הבית. ההוראות למטה, וזה לוקח חצי דקה.</div></div></div>`,
+    install:`<div class="push"><div><b>באייפון: קודם מוסיפים למסך הבית</b><div class="sub">אפל מאפשרת התראות רק לאפליקציה שנפתחת מהמסך הבית. זה לוקח חצי דקה.</div></div><button class="btn" data-howto="1">איך מוסיפים</button></div>`,
     denied:`<div class="push"><div><b>ההתראות חסומות בטלפון הזה</b><div class="sub">${IOS?'פותחים הגדרות ← התראות ← טיפ-אוף ← "לאפשר התראות".':'בכרום: לוחצים על הסמל שליד הכתובת ← הרשאות ← התראות ← "אפשר".'}</div></div></div>`,
     unsupported:`<div class="push"><div><b>הדפדפן הזה לא תומך בהתראות</b><div class="sub">נסו בכרום באנדרואיד או בספארי באייפון.</div></div></div>`,
     checking:`<div class="push"><div><b>בודקים…</b></div></div>`}[S.push];
@@ -964,10 +1028,9 @@ function viewAlerts(){
        <p class="note">ביומן גוגל מוסיפים את הקישור פעם אחת מהמחשב, והוא מופיע גם בטלפון. גוגל מרעננת יומנים כאלה כמה פעמים ביום, אז על שינוי של הרגע האחרון ההתראה תגיע קודם.</p>`
       :'<div class="banner">קודם בוחרים קבוצה, ואז מחברים יומן.</div>'}
    </section>
-   <section class="sec"><h2>איך מפעילים התראות</h2>
-     <div class="seg" role="group" aria-label="סוג טלפון"><button data-dev="ios" aria-pressed="${S.dev==='ios'}">אייפון</button><button data-dev="android" aria-pressed="${S.dev==='android'}">אנדרואיד</button></div>
-     <ol class="howto">${steps[S.dev].map(s=>`<li>${s}</li>`).join('')}</ol>
-     ${S.dev==='ios'?'<p class="note">נדרשת גרסת iOS 16.4 ומעלה. אפשר לבדוק בהגדרות ← כללי ← אודות.</p>':''}
+   <section class="sec"><h2>הוספה למסך הבית</h2>
+     <p class="sub">${STANDALONE?'✓ פתחתם את טיפ-אוף מהאייקון במסך הבית.':IOS?'באייפון זה תנאי להתראות. המדריך מראה בדיוק את הצעדים לטלפון שלכם.':'לא חובה באנדרואיד, אבל נוח: טיפ-אוף נפתחת כמו אפליקציה.'}</p>
+     ${STANDALONE?'':`<button class="season-btn" data-howto="1">${ic.addhome}<span>מדריך ההוספה למסך הבית</span>${ic.next}</button>`}
    </section>`}
 
 /* ---------- help: FAQ, "how can we help", ideas ---------- */
@@ -977,7 +1040,8 @@ const FAQ=[
  ['איך מוסיפים עוד ילד או עוד קבוצה?','ב"המשחקים שלי" לוחצים "+ קבוצה". אפשר לעקוב אחרי כמה קבוצות, ולכל אחת יש צבע משלה ברצועת השבוע.'],
  ['איך מבדילים בין הקבוצות של שני ילדים?','לוחצים על ⋯ בכרטיס של הקבוצה ונותנים לה כינוי, למשל "של דניאל". הכינוי מופיע בכרטיס, בהתראות וביומן, רק בטלפון שלכם. באותו תפריט אפשר גם להסיר קבוצה.'],
  ['לא מוצאים את הקבוצה','נסו לחפש רק את שם העיר או המועדון, למשל "רחובות". טיפ-אוף מציגה ליגות נוער בלבד, מקט-סל ועד נוער. אם עדיין לא מוצאים, כתבו לנו כאן למטה.'],
- ['איך מפעילים התראות באייפון?','אפל מאפשרת התראות רק לאפליקציה שנוספה למסך הבית. פותחים את טיפ-אוף בספארי, לוחצים על כפתור השיתוף, בוחרים "הוספה למסך הבית", פותחים מהאייקון החדש ומפעילים בלשונית "התראות ויומן". נדרשת גרסת iOS 16.4 ומעלה.'],
+ ['איך מוסיפים את טיפ-אוף למסך הבית?','בספארי באייפון: לוחצים על ⋯ ליד שורת הכתובת, בוחרים "שיתוף" ואז "הוספה למסך הבית", ומשאירים את המתג דולק. בגרסאות ישנות יותר כפתור השיתוף נמצא ישר בתחתית המסך. באנדרואיד: בתפריט של כרום (⋮) בוחרים "הוספה למסך הבית". <button class="linkbtn" data-howto="1">למדריך עם הצעדים לטלפון שלכם</button>'],
+ ['איך מפעילים התראות באייפון?','אפל מאפשרת התראות רק לאפליקציה שנוספה למסך הבית. מוסיפים (ראו את השאלה הקודמת), פותחים את טיפ-אוף מהאייקון החדש ולוחצים "הפעלת התראות". נדרשת גרסת iOS 16.4 ומעלה.'],
  ['ההתראות לא מגיעות','בלשונית "התראות ויומן" לוחצים "שליחת התראת בדיקה". אם היא לא מגיעה, בודקים שמצב "ריכוז" או "נא לא להפריע" כבוי, ושבהגדרות הטלפון מותר לטיפ-אוף לשלוח התראות.'],
  ['היומן לא מתעדכן מיד','היומן של הטלפון בודק עדכונים בקצב שלו, ויומן גוגל עושה את זה כמה פעמים ביום. לכן על שינוי של הרגע האחרון ההתראה תגיע לפני היומן.'],
  ['איך יודעים איזה צבע גופייה ללבוש?','האיגוד מפרסם רק אם זה משחק בית או חוץ, לא את צבע הגופייה. טיפ-אוף מזכירה לבדוק, ואת הצבע עצמו כדאי לוודא מול המאמן.'],
@@ -993,7 +1057,7 @@ const TOPICS=[
   tips:'נסו לחפש רק את שם העיר או המועדון. טיפ-אוף מציגה ליגות נוער בלבד, מקט-סל ועד נוער.',
   ph:'שם המועדון, הגיל והעיר'},
  {id:'push',title:'התראות לא מגיעות',sub:'או שאי אפשר להפעיל אותן',
-  tips:'באייפון צריך קודם להוסיף את טיפ-אוף למסך הבית ולפתוח משם. אחר כך שולחים התראת בדיקה מלשונית "התראות ויומן", ובודקים שמצב "ריכוז" כבוי.',
+  tips:'באייפון צריך קודם להוסיף את טיפ-אוף למסך הבית (בספארי: ⋯ ← שיתוף ← הוספה למסך הבית) ולפתוח משם. אחר כך שולחים התראת בדיקה מלשונית "התראות ויומן", ובודקים שמצב "ריכוז" כבוי.',
   go:'alerts',goText:'ללשונית התראות ויומן',
   ph:'איזה טלפון, ומה קורה כשמנסים?'},
  {id:'cal',title:'בעיה ביומן',sub:'המשחקים לא מופיעים או לא מתעדכנים',
@@ -1012,7 +1076,7 @@ const diagInfo=()=>({os:OS,browser:BROWSER,home:STANDALONE?'כן':'לא',push:{o
 function diagBox(){
   const it=(cls,title,body='',act='')=>`<div class="dg ${cls}"><i aria-hidden="true">${cls==='ok'?'✓':cls==='warn'?'!':'i'}</i><div><b>${title}</b>${body?`<span class="sub">${body}</span>`:''}${act}</div></div>`;
   const out=[it('info',`${OS} · ${BROWSER}`,IN_APP?`זה דפדפן שנפתח מתוך אפליקציה אחרת. כדי להתקין ולקבל התראות פותחים ב${IOS?'ספארי':'כרום'}: לוחצים על ⋯ ובוחרים "פתיחה בדפדפן".`:'')];
-  out.push(STANDALONE?it('ok','נפתחה מהמסך הבית'):IOS?it('warn','לא נוספה למסך הבית','באייפון זה נדרש כדי לקבל התראות.',`<button class="linkbtn" data-go="alerts" data-fix="1">איך מוסיפים</button>`):it('info','נפתחה בדפדפן','באנדרואיד זה לא חובה. אפשר להוסיף למסך הבית מתפריט הדפדפן.'));
+  out.push(STANDALONE?it('ok','נפתחה מהמסך הבית'):IOS?it('warn','לא נוספה למסך הבית','באייפון זה נדרש כדי לקבל התראות.',`<button class="linkbtn" data-howto="1" data-fix="1">איך מוסיפים</button>`):it('info','נפתחה בדפדפן','באנדרואיד זה לא חובה. אפשר להוסיף למסך הבית מתפריט הדפדפן.'));
   const p=S.push;
   if(p==='on')out.push(S.me&&S.me.known&&!S.me.push?it('warn','ההתראות פעילות בטלפון, אבל לא רשומות אצלנו','כבו והפעילו אותן שוב בלשונית "התראות ויומן".',`<button class="linkbtn" data-go="alerts" data-fix="1">ללשונית התראות ויומן</button>`):it('ok','ההתראות פעילות','אפשר לשלוח התראת בדיקה מלשונית "התראות ויומן".'));
   else if(p==='denied')out.push(it('warn','ההתראות חסומות',IOS?'פותחים הגדרות ← התראות ← טיפ-אוף ← "לאפשר התראות".':'בכרום: לוחצים על הסמל שליד הכתובת ← הרשאות ← התראות ← "אפשר".'));
@@ -1082,7 +1146,7 @@ function render(){
 }
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);return}
-  if(e.target.closest('.scrim')&&(S.menu||S.forgetAsk)){closeSmall();render();return}
+  if(e.target.closest('.scrim')&&(S.menu||S.forgetAsk||S.howto||S.installed)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
   if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;render();scrollTo(0,0);return}
@@ -1101,6 +1165,9 @@ document.addEventListener('click',e=>{
     S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
     S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
     render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(d.howto){if(d.howto==='close'){closeSmall();render()}else openHowto();return}
+  if(d.copyinstall){track('install_copy');if(navigator.clipboard)navigator.clipboard.writeText(location.href).then(()=>toast('הקישור הועתק. עכשיו פותחים את ספארי')).catch(()=>{S.showInstallLink=true;render()});else{S.showInstallLink=true;render()}return}
+  if(d.installed){const w=d.installed;S.installed=false;S.onb.installedSeen=true;saveOnb();if(w==='find'){S.view='find';render();scrollTo(0,0);return}if(w==='close'){render();return}}
   if(d.closeinv){S.invHidden=[...new Set([...S.invHidden,...S.follows])];store.set('tipoff.invHidden',S.invHidden);track('invite_close');render();toast('אפשר לשתף קבוצה בכל רגע דרך ⋯ בכרטיס שלה');return}
   if(d.mm){S.monthMode=d.mm;store.set('tipoff.monthMode',d.mm);render();return}
   if(d.sf){S.seasonF=d.sf;render();return}
@@ -1137,11 +1204,11 @@ document.addEventListener('click',e=>{
   else if(d.welcome==='go'){S.welcome=false;S.onb.welcomed=true;saveOnb();S.view='find';render();scrollTo(0,0)}
   else if(d.welcome==='skip'||d.closesheet){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();track('onboard_skip');render()}
   else if(d.donelist){S.onb.doneList=true;saveOnb();render()}
-  else if(d.install){const e=window.__bip;if(e){e.prompt();e.userChoice.then(c=>{if(c.outcome==='accepted'){track('install');toast('טיפ-אוף נוספה ✓')}window.__bip=null;render()})}}
+  else if(d.install){const e=window.__bip;S.howto=false;if(e){e.prompt();e.userChoice.then(c=>{if(c.outcome==='accepted'){track('install');toast('טיפ-אוף נוספה ✓')}window.__bip=null;render()})}}
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.menu||S.forgetAsk)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.menu||S.forgetAsk||S.howto||S.installed)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
   if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
 document.addEventListener('submit',e=>{
   const n=e.target.closest('form.nick');if(n){e.preventDefault();const k=S.menu,v=n.elements.nick.value.replace(/[<>]/g,'').trim().slice(0,20);
@@ -1154,6 +1221,8 @@ document.addEventListener('change',e=>{
 });
 window.__onbip=()=>{if(S.view==='my')render()};
 if(S.invite)track('invite_open');
+S.installed=STANDALONE&&!S.onb.installedSeen&&!S.invite; // first open from the home-screen icon
+if(S.installed)track('installed_open');
 render();
 if(justDeleted)toast('המידע נמחק');
 syncState('open');
