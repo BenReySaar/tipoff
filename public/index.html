@@ -941,7 +941,8 @@ function practiceSheet(){
       <label for="pf-note"><span>מה להביא <span class="sub">(לא חובה, יופיע בתזכורת)</span></span><input id="pf-note" data-pf="note" maxlength="60" placeholder="למשל: מים, נעליים" value="${v('note')}" autocomplete="off"></label>
       ${S.pErr?`<p class="fb-err" role="alert">${S.pErr}</p>`:''}
       <button class="btn wide" type="submit">שמירה</button></form>
-    <button class="linkbtn sh-skip" data-pcancel="1">ביטול</button>`,'אימון קבוע')}
+    <button class="linkbtn sh-skip" data-pcancel="1">ביטול</button>
+    ${S.pdemo?demoVideo():'<button class="linkbtn demo-link" data-pdemo="1">איך זה עובד? סרטון קצר</button>'}`,'אימון קבוע')}
   const list=pracOf(t.key).map(p=>S.pdelAsk===p.id
     ?`<div class="ed-row conf"><span class="ed-n"><b>למחוק את האימון?</b><span class="sub">${pracDays(p)} ב־${p.start}</span></span><span class="ed-b"><button class="btn sm danger" data-pdel="${p.id}">מחיקה</button><button class="linkbtn" data-pdelno="1">ביטול</button></span></div>`
     :`<div class="ed-row"><span class="ed-n"><b>${pracDays(p)}, ${p.start}${p.end?' עד '+p.end:''}</b><span class="sub">${p.place?esc(p.place)+' · ':''}תזכורת: ${REMIND_TXT[String(p.remind)]}${p.note?' · להביא: '+esc(p.note):''}</span></span>
@@ -950,7 +951,7 @@ function practiceSheet(){
     <p class="sub">מוסיפים את ימי ושעות האימון, ומקבלים תזכורת לטלפון. האימונים נכנסים גם ליומן המתעדכן.</p>
     ${list?`<div class="ed-list">${list}</div>`:''}
     <button class="btn wide${list?' ghost':''}" data-padd="1">+ הוספת אימון</button>
-    ${S.pdemo?demoVideo():'<button class="linkbtn demo-link" data-pdemo="1">איך זה עובד? סרטון של 10 שניות</button>'}
+    ${S.pdemo?demoVideo():'<button class="linkbtn demo-link" data-pdemo="1">איך זה עובד? סרטון קצר</button>'}
     <p class="note">נשמר רק בטלפון הזה. האימונים לא מגיעים מהאיגוד, ולכן אם אימון בוטל או זז, מעדכנים כאן, או מסמנים "אין אימון השבוע" ברצועת השבוע.</p>
     <button class="linkbtn sh-skip" data-pclose="1">סגירה</button>`,'אימונים קבועים')}
 function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק את המידע שלכם?</h2>
