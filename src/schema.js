@@ -10,6 +10,7 @@ export const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS feedback_ts ON feedback(ts)`,
   `CREATE TABLE IF NOT EXISTS pushlog (day TEXT NOT NULL, kind TEXT NOT NULL, sent INTEGER DEFAULT 0, failed INTEGER DEFAULT 0, PRIMARY KEY (day, kind))`,
   `CREATE TABLE IF NOT EXISTS nicks (device TEXT NOT NULL, team TEXT NOT NULL, nick TEXT NOT NULL, PRIMARY KEY (device, team))`,
+  `CREATE TABLE IF NOT EXISTS practices (device TEXT PRIMARY KEY, data TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS pending (device TEXT NOT NULL, kind TEXT NOT NULL, ts INTEGER NOT NULL, msg TEXT NOT NULL)`,
 ];
 // Columns added after launch. Running them again fails harmlessly ("duplicate column"), so errors are ignored.

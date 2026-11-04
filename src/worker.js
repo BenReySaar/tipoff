@@ -226,6 +226,66 @@ async function eveningReminders(env) {
   return deliver(env, per, 'eve');
 }
 
+/* ---------------- regular practices (entered by the family, kept per phone) ---------------- */
+
+const REMIND = [0, 30, 60, 120, -1]; // minutes before; -1 = the evening before at 20:00; 0 = none
+const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const clean = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
+export function cleanPractices(list, skips, teams) {
+  const out = [];
+  for (const p of Array.isArray(list) ? list.slice(0, 20) : []) {
+    if (!p || !teams.has(p.team) || !HM.test(p.start || '')) continue;
+    const days = [...new Set((Array.isArray(p.days) ? p.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+    if (!days.length) continue;
+    out.push({ id: clean(p.id, 12) || Math.random().toString(36).slice(2, 10), team: p.team, days, start: p.start,
+      end: HM.test(p.end || '') ? p.end : '', place: clean(p.place, 60), note: clean(p.note, 60),
+      remind: REMIND.includes(+p.remind) ? +p.remind : 60 });
+  }
+  const ids = new Set(out.map(p => p.id)), sk = {};
+  for (const [id, dates] of Object.entries(skips && typeof skips === 'object' ? skips : {})) {
+    if (!ids.has(id) || !Array.isArray(dates)) continue;
+    const d = dates.filter(x => DAY.test(x)).sort().slice(-20); if (d.length) sk[id] = d;
+  }
+  return { list: out, skips: sk };
+}
+// Israel-time calendar helpers
+const ilParts = (d = new Date()) => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map(x => [x.type, x.value]));
+const addDay = (ymdStr, n) => { const [y, m, d] = ymdStr.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+const dowOf = ymdStr => { const [y, m, d] = ymdStr.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); };
+const remindWord = r => r === -1 ? 'מחר' : r === 30 ? 'בעוד חצי שעה' : r === 120 ? 'בעוד שעתיים' : 'בעוד שעה';
+
+/** Reminders whose time fell in the last 15 minutes (cron every 15 minutes). */
+export async function practiceReminders(env, now = new Date()) {
+  const P = ilParts(now), today = `${P.year}-${P.month}-${P.day}`, nowMin = +P.hour * 60 + +P.minute;
+  const { results } = await env.DB.prepare('SELECT p.device, p.data, d.push FROM practices p JOIN devices d ON d.id=p.device WHERE d.push IS NOT NULL').all();
+  const per = new Map();
+  for (const row of results) {
+    let data; try { data = JSON.parse(row.data); } catch (e) { continue; }
+    const nicks = new Map();
+    for (const p of data.list || []) {
+      if (!p.remind) continue;
+      for (const off of [0, 1]) {
+        const date = addDay(today, off);
+        if (!p.days.includes(dowOf(date)) || (data.skips?.[p.id] || []).includes(date)) continue;
+        const [h, m] = p.start.split(':').map(Number);
+        const at = p.remind === -1 ? (off - 1) * 1440 + 20 * 60 : off * 1440 + h * 60 + m - p.remind; // minutes from today's midnight
+        if (at > nowMin || at <= nowMin - 15) continue;
+        const tod = ((at % 1440) + 1440) % 1440; if (tod >= 23 * 60 || tod < 8 * 60) continue; // quiet hours
+        const key = `pr:${row.device}:${p.id}:${date}`;
+        if (await env.KV.get(key)) continue;
+        await env.KV.put(key, '1', { expirationTtl: 2 * 86400 });
+        if (!nicks.size) { const r = await env.DB.prepare('SELECT team, nick FROM nicks WHERE device=?').bind(row.device).all(); r.results.forEach(x => nicks.set(x.team, x.nick)); nicks.set('', ''); }
+        const name = p.team.split('|')[1], nick = nicks.get(p.team);
+        if (!per.has(row.device)) per.set(row.device, { device: row.device, push: row.push, msgs: [] });
+        per.get(row.device).msgs.push({ title: `⏰ אימון ${remindWord(p.remind)}: ${nick ? `${name} (${nick})` : name}`,
+          body: `${p.start}${p.end ? ' עד ' + p.end : ''}${p.place ? ' · ' + p.place : ''}${p.note ? '\nלהביא: ' + p.note : ''}` });
+      }
+    }
+  }
+  return per.size ? deliver(env, per, 'practice') : 0;
+}
+
 /* ---------------- retention (what the privacy page promises) ---------------- */
 
 export async function cleanup(env, now = Date.now()) {
@@ -239,13 +299,14 @@ export async function cleanup(env, now = Date.now()) {
     env.DB.prepare('DELETE FROM pending WHERE ts < ?').bind(now - 2 * 864e5),
     env.DB.prepare('DELETE FROM follows WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo), // a phone unused for a year
     env.DB.prepare('DELETE FROM nicks WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo),
+    env.DB.prepare('DELETE FROM practices WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo),
     env.DB.prepare('DELETE FROM devices WHERE last_seen < ?').bind(yearAgo),
   ]);
 }
 
 // "מחיקת המידע שלי": everything tied to this phone's random id.
 async function forgetDevice(env, device) {
-  await env.DB.batch(['devices WHERE id', 'follows WHERE device', 'nicks WHERE device', 'pending WHERE device', 'activity WHERE device', 'feedback WHERE device']
+  await env.DB.batch(['devices WHERE id', 'follows WHERE device', 'nicks WHERE device', 'practices WHERE device', 'pending WHERE device', 'activity WHERE device', 'feedback WHERE device']
     .map(t => env.DB.prepare(`DELETE FROM ${t}=?`).bind(device)));
 }
 
@@ -279,6 +340,12 @@ async function saveState(env, b) {
         const n = String(b.nicks[k] || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 20);
         if (n) stmts.push(nk.bind(b.device, k, n));
       }
+    }
+    if (Array.isArray(b.practices)) {
+      const pr = cleanPractices(b.practices, b.pskips, new Set(full));
+      stmts.push(pr.list.length
+        ? env.DB.prepare('INSERT INTO practices(device,data) VALUES(?,?) ON CONFLICT(device) DO UPDATE SET data=excluded.data').bind(b.device, JSON.stringify(pr))
+        : env.DB.prepare('DELETE FROM practices WHERE device=?').bind(b.device));
     }
   }
   const act = env.DB.prepare('INSERT INTO activity(day,device,type,n) VALUES(?,?,?,1) ON CONFLICT(day,device,type) DO UPDATE SET n=n+1');
@@ -345,6 +412,20 @@ export default {
         ]);
         return json({ known: !!d, push: !!d?.push, calDay: cal?.day || null }, 200, { 'cache-control': 'no-store' });
       }
+      if (p === '/api/restore' && req.method === 'GET') { // the iPhone home-screen app picks up what was set up in Safari
+        const device = url.searchParams.get('device') || '';
+        if (!DEVICE.test(device)) return json({ error: 'device' }, 400);
+        const [d, f, n, pr] = await Promise.all([
+          env.DB.prepare('SELECT prefs FROM devices WHERE id=?').bind(device).first(),
+          env.DB.prepare('SELECT team, kind FROM follows WHERE device=?').bind(device).all(),
+          env.DB.prepare('SELECT team, nick FROM nicks WHERE device=?').bind(device).all(),
+          env.DB.prepare('SELECT data FROM practices WHERE device=?').bind(device).first(),
+        ]);
+        if (!d) return json({ known: false }, 200, { 'cache-control': 'no-store' });
+        const data = pr ? JSON.parse(pr.data) : { list: [], skips: {} };
+        return json({ known: true, prefs: JSON.parse(d.prefs || '{}'), full: f.results.filter(r => r.kind === 'full').map(r => r.team), res: f.results.filter(r => r.kind === 'res').map(r => r.team),
+          nicks: Object.fromEntries(n.results.map(r => [r.team, r.nick])), practices: data.list, pskips: data.skips }, 200, { 'cache-control': 'no-store' });
+      }
       if (p === '/api/forget' && req.method === 'POST') {
         const b = await readJSON(req);
         if (!DEVICE.test(b.device || '')) return json({ error: 'device' }, 400);
@@ -366,11 +447,11 @@ export default {
       }
       const cal = p.match(/^\/cal\/([a-f0-9-]{36})\.ics$/);
       if (cal) {
-        const [pack, follows, nicks] = await Promise.all([getPack(env), env.DB.prepare("SELECT team FROM follows WHERE device=? AND kind='full'").bind(cal[1]).all(),
-          env.DB.prepare('SELECT team, nick FROM nicks WHERE device=?').bind(cal[1]).all()]);
+        const [pack, follows, nicks, prac] = await Promise.all([getPack(env), env.DB.prepare("SELECT team FROM follows WHERE device=? AND kind='full'").bind(cal[1]).all(),
+          env.DB.prepare('SELECT team, nick FROM nicks WHERE device=?').bind(cal[1]).all(), env.DB.prepare('SELECT data FROM practices WHERE device=?').bind(cal[1]).first()]);
         if (!pack) return new Response('no data', { status: 503 });
         ctx.waitUntil(track(env, cal[1], 'cal_fetch').catch(() => {}));
-        return new Response(icsFor(pack, follows.results.map(r => r.team), url.host, Object.fromEntries(nicks.results.map(r => [r.team, r.nick]))), {
+        return new Response(icsFor(pack, follows.results.map(r => r.team), url.host, Object.fromEntries(nicks.results.map(r => [r.team, r.nick])), prac ? JSON.parse(prac.data) : null), {
           headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'public, max-age=900', 'content-disposition': 'inline; filename="tipoff.ics"' },
         });
       }
@@ -394,6 +475,7 @@ export default {
         await env.KV.put('dev:quiet', url.searchParams.get('on') || '0');
         if (url.searchParams.get('flush')) return json({ sent: await flushPending(env) });
         if (url.searchParams.get('cleanup')) { await cleanup(env); return json({ ok: true }); }
+        if (url.searchParams.get('practice')) return json({ sent: await practiceReminders(env, new Date(url.searchParams.get('practice'))) });
         return json({ ok: true });
       }
       if (p.startsWith('/api/')) return json({ error: 'not found' }, 404);
@@ -405,6 +487,7 @@ export default {
 
   async scheduled(event, env, ctx) {
     await ensureSchema(env);
+    if (event.cron === '*/15 * * * *') { await practiceReminders(env); return; }
     if (event.cron === env.EVENING_CRON || event.cron === '0 17,18 * * *') {
       if (ilHour() === 20) { await eveningReminders(env); await cleanup(env); }
       return;

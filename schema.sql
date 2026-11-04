@@ -62,3 +62,9 @@ CREATE TABLE IF NOT EXISTS pending (
   ts     INTEGER NOT NULL,
   msg    TEXT NOT NULL
 );
+
+-- regular practices a family entered for their teams (only for that phone), as JSON {list, skips}
+CREATE TABLE IF NOT EXISTS practices (
+  device TEXT PRIMARY KEY,
+  data   TEXT NOT NULL
+);

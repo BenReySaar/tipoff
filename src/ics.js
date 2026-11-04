@@ -33,7 +33,7 @@ function fold(line) {
 }
 
 /** pack: the app pack. teamKeys: ["slug|name", ...]. host: e.g. "tipoff.co.il" */
-export function icsFor(pack, teamKeys, host = 'tipoff', nicks = {}) {
+export function icsFor(pack, teamKeys, host = 'tipoff', nicks = {}, practices = null) {
   const keyOf = ti => pack.lg[pack.tm[ti][1]][1] + '|' + pack.tm[ti][0];
   const want = new Set(teamKeys);
   const changed = new Map((pack.ch || []).map(c => [c[1], c]));
@@ -60,6 +60,29 @@ export function icsFor(pack, teamKeys, host = 'tipoff', nicks = {}) {
     desc.push('לוח המשחקים מאתר איגוד הכדורסל. בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן.');
     lines.push('BEGIN:VEVENT', `UID:${id}@${host}`, `DTSTAMP:${now}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
       `SUMMARY:${esc(title)}`, `LOCATION:${esc(pack.vn[v])}`, `DESCRIPTION:${esc(desc.join('\n'))}`, 'END:VEVENT');
+  }
+  // regular practices the family entered: each week from 2 weeks ago to 10 weeks ahead, cancelled weeks left out
+  if (practices?.list?.length) {
+    const il = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date());
+    const [y0, m0, d0] = il.split('-').map(Number);
+    for (const p of practices.list) {
+      if (!want.has(p.team)) continue;
+      const name = p.team.split('|')[1], nick = nicks[p.team];
+      const [h, mi] = p.start.split(':').map(Number);
+      const [eh, emi] = (p.end || '').split(':').map(Number);
+      for (let k = -14; k <= 70; k++) {
+        const day = new Date(Date.UTC(y0, m0 - 1, d0 + k));
+        if (!p.days.includes(day.getUTCDay())) continue;
+        const date = day.toISOString().slice(0, 10);
+        if ((practices.skips?.[p.id] || []).includes(date)) continue;
+        const start = ilToUtc(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate(), h, mi);
+        const end = p.end ? ilToUtc(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate(), eh, emi) : new Date(start.getTime() + 90 * 60e3);
+        const desc = ['אימון קבוע שהוספתם בטיפ-אוף.'];
+        if (p.note) desc.push('להביא: ' + p.note);
+        lines.push('BEGIN:VEVENT', `UID:p-${p.id}-${date}@${host}`, `DTSTAMP:${now}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
+          `SUMMARY:${esc(`🏃 אימון: ${nick ? `${name} (${nick})` : name}`)}`, ...(p.place ? [`LOCATION:${esc(p.place)}`] : []), `DESCRIPTION:${esc(desc.join('\n'))}`, 'END:VEVENT');
+      }
+    }
   }
   lines.push('END:VCALENDAR');
   return lines.map(fold).join('\r\n') + '\r\n';
