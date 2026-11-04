@@ -398,7 +398,16 @@ body.locked{overflow:hidden}
 .stabs{flex-wrap:wrap;overflow:visible;margin-inline:0;padding-inline:0}
 .stabs .chip{padding:8px 14px;font-size:14.5px}
 /* add-to-home-screen guide */
-.pt-btns{display:flex;gap:8px}
+.ptitle{flex-wrap:wrap;row-gap:12px}
+.pt-btns{display:flex;gap:8px;flex-wrap:wrap}
+.pick-team{display:flex;align-items:center;gap:8px;width:100%;text-align:start;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 0;color:inherit}
+.pick-team svg{width:16px;height:16px;color:var(--muted);flex:none;transform:rotate(180deg)}
+.new-tag{align-self:flex-start;margin:0 0 -6px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:12.5px;border-radius:999px;padding:2px 10px}
+.demo{margin:0;display:flex;flex-direction:column;gap:10px;align-items:center}
+.demo video{height:min(356px,40vh);width:auto;max-width:100%;aspect-ratio:9/16;border-radius:16px;border:1px solid var(--line-2);background:var(--fill);object-fit:cover}
+.demo figcaption{align-self:stretch}
+.demo-steps{margin:0;padding:0 20px 0 0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.demo-link{align-self:center;font-size:14px;font-weight:500}
 .dots i.pd{background:transparent!important;border:1.5px solid;width:7px;height:7px}
 .wk-key{display:flex;align-items:center;gap:6px}.wk-key i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-inline-start:6px}
 .wk-key .key-g{background:var(--muted)}.wk-key .key-p{border:1.5px solid var(--muted)}
@@ -583,9 +592,9 @@ function hero(g,t){
    <div class="h-league">${esc(LEAGUES[g.lg].full)}</div></section>`}
 
 function pracFact(t){if(!(touched&&S.follows.includes(t.key)))return '';const n=nextPractice(t);
-  return n?`<div class="fact">${ic.run}<span><b>אימון הבא:</b> ${pracWhen(n.p,n.d)}</span></div>`:`<div class="fact">${ic.run}<span><button class="linkbtn" data-popen="${esc(t.key)}">+ הוספת אימונים קבועים</button> <span class="sub" style="display:inline">ותזכורת לפני כל אימון</span></span></div>`}
+  return n?`<div class="fact">${ic.run}<span><b>אימון הבא:</b> ${pracWhen(n.p,n.d)}</span></div>`:''}
 function pracKit(t){if(!(touched&&S.follows.includes(t.key)))return '';const n=nextPractice(t);
-  return n?`<div class="nx-kit">${ic.run}אימון הבא: ${pracWhen(n.p,n.d)}</div>`:`<div class="nx-kit">${ic.run}<button class="linkbtn" data-popen="${esc(t.key)}">+ אימונים קבועים</button></div>`}
+  return n?`<div class="nx-kit">${ic.run}אימון הבא: ${pracWhen(n.p,n.d)}</div>`:''}
 /* ---------- ⋯ team menu button, details vs. the opponent, "something wrong?" ---------- */
 const menuBtn=t=>touched&&S.follows.includes(t.key)?`<button class="dots-btn" data-menu-open="${esc(t.key)}" aria-label="אפשרויות: ${esc(t.name)}" aria-haspopup="dialog">⋯</button>`:'';
 function moreRow(g,t){const open=S.det.has(g.i);
@@ -906,6 +915,17 @@ function afterFirstTeam(){
   S.onb.nudged=true;saveOnb();
   if(IOS&&!STANDALONE){S.howto=true;S.howtoAuto=true;track('howto_auto')}
   else if(PUSH_OK&&S.push==='off'){S.pushAsk=true;track('pushask_show')}}
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function demoVideo(){return `<figure class="demo"><video src="/media/practice-demo.mp4" poster="/media/practice-demo.jpg" muted loop playsinline ${RM?'controls':'autoplay'} aria-label="סרטון קצר: הוספת אימון קבוע ותזכורת לטלפון" width="540" height="960"></video>
+  <figcaption><ol class="demo-steps"><li>לוחצים <b>"+ אימון"</b> בראש העמוד</li><li>בוחרים ימים ושעה, ושומרים</li><li>מקבלים תזכורת לטלפון לפני כל אימון</li></ol></figcaption></figure>`}
+function promoSheet(){return sheet(`<p class="new-tag">חדש</p><h2 tabindex="-1" data-autofocus>תזכורת לאימונים</h2>
+  <p class="sub">מוסיפים את ימי האימון של הקבוצה, ומקבלים תזכורת לטלפון שעה לפני. האימונים נכנסים גם ליומן.</p>
+  ${demoVideo()}<button class="btn wide" data-promo="go">להוספת אימון</button><button class="linkbtn sh-skip" data-promo="no">לא עכשיו</button>`,'חדש: תזכורת לאימונים')}
+function pracPickSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>לאיזו קבוצה האימון?</h2>
+  <div class="ed-list">${S.follows.map(k=>{const t=TEAMS[KEY[k]];if(!t)return '';const n=nickOf(k),c=pracOf(k).length;
+    return `<button class="pick-team" data-pnew="${esc(k)}">${dot(k)}<span class="ed-n"><b>${esc(t.name)}</b><span class="sub">${n?esc(n)+' · ':''}${ageLabel(t.lg)}${c?` · ${c===1?'אימון אחד':c+' אימונים'}`:''}</span></span>${ic.prev}</button>`}).join('')}</div>
+  <button class="linkbtn sh-skip" data-pickclose="1">ביטול</button>`,'בחירת קבוצה לאימון')}
+const newDraft=()=>({days:[],start:'',end:'',place:'',remind:60,note:''});
 function practiceSheet(){
   const t=TEAMS[KEY[S.pracTeam]];if(!t){S.pracTeam=null;return ''}
   const dr=S.pracDraft;
@@ -913,10 +933,10 @@ function practiceSheet(){
     return sheet(`<p class="sub" style="margin-bottom:-8px">${esc(t.name)} · ${ageLabel(t.lg)}</p><h2 tabindex="-1" data-autofocus>${dr.id?'עריכת אימון':'אימון קבוע חדש'}</h2>
     <form class="pform" data-pform="1" novalidate>
       <fieldset class="pdays"><legend>באילו ימים?</legend><div class="pd-row">${DSHORT.map((n,i)=>`<button type="button" class="pday" data-pday="${i}" aria-pressed="${dr.days.includes(i)}" aria-label="יום ${DAYS[i]}">${n}</button>`).join('')}</div></fieldset>
-      <div class="prow2"><label for="pf-start">שעת התחלה<input id="pf-start" type="time" data-pf="start" value="${v('start')}"></label><label for="pf-end">שעת סיום <span class="sub">(לא חובה)</span><input id="pf-end" type="time" data-pf="end" value="${v('end')}"></label></div>
-      <label for="pf-place">מקום <span class="sub">(לא חובה)</span><input id="pf-place" data-pf="place" maxlength="60" placeholder="למשל: אולם התיכון" value="${v('place')}" autocomplete="off"></label>
+      <div class="prow2"><label for="pf-start">שעת התחלה<input id="pf-start" type="time" data-pf="start" value="${v('start')}"></label><label for="pf-end"><span>שעת סיום <span class="sub">(לא חובה)</span></span><input id="pf-end" type="time" data-pf="end" value="${v('end')}"></label></div>
+      <label for="pf-place"><span>מקום <span class="sub">(לא חובה)</span></span><input id="pf-place" data-pf="place" maxlength="60" placeholder="למשל: אולם התיכון" value="${v('place')}" autocomplete="off"></label>
       <label for="pf-remind">תזכורת לטלפון<select id="pf-remind" data-pf="remind">${['30','60','120','-1','0'].map(k=>`<option value="${k}"${String(dr.remind)===k?' selected':''}>${REMIND_TXT[k]}</option>`).join('')}</select></label>
-      <label for="pf-note">מה להביא <span class="sub">(לא חובה, יופיע בתזכורת)</span><input id="pf-note" data-pf="note" maxlength="60" placeholder="למשל: מים, נעליים" value="${v('note')}" autocomplete="off"></label>
+      <label for="pf-note"><span>מה להביא <span class="sub">(לא חובה, יופיע בתזכורת)</span></span><input id="pf-note" data-pf="note" maxlength="60" placeholder="למשל: מים, נעליים" value="${v('note')}" autocomplete="off"></label>
       ${S.pErr?`<p class="fb-err" role="alert">${S.pErr}</p>`:''}
       <button class="btn wide" type="submit">שמירה</button></form>
     <button class="linkbtn sh-skip" data-pcancel="1">ביטול</button>`,'אימון קבוע')}
@@ -928,14 +948,15 @@ function practiceSheet(){
     <p class="sub">מוסיפים את ימי ושעות האימון, ומקבלים תזכורת לטלפון. האימונים נכנסים גם ליומן המתעדכן.</p>
     ${list?`<div class="ed-list">${list}</div>`:''}
     <button class="btn wide${list?' ghost':''}" data-padd="1">+ הוספת אימון</button>
+    ${S.pdemo?demoVideo():'<button class="linkbtn demo-link" data-pdemo="1">איך זה עובד? סרטון של 10 שניות</button>'}
     <p class="note">נשמר רק בטלפון הזה. האימונים לא מגיעים מהאיגוד, ולכן אם אימון בוטל או זז, מעדכנים כאן, או מסמנים "אין אימון השבוע" ברצועת השבוע.</p>
     <button class="linkbtn sh-skip" data-pclose="1">סגירה</button>`,'אימונים קבועים')}
 function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק את המידע שלכם?</h2>
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, האימונים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
-function overlay(){return S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
-function closeSmall(){if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
+function overlay(){return S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function closeSmall(){if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
   setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
@@ -987,7 +1008,7 @@ function viewSeason(){
      <div class="list">${gr.items.map(x=>row(x.g,x.t,multi)).join('')}</div></section>`).join('')}`}
 
 function viewMy(){
-  const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><span class="pt-btns">${touched&&S.follows.length?'<button class="addbtn ghost" data-edit="1">עריכה</button>':''}<button class="addbtn" data-go="find">+ קבוצה</button></span></div>`;
+  const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><div class="pt-btns">${touched&&S.follows.length?'<button class="addbtn ghost" data-edit="1">עריכה</button><button class="addbtn ghost" data-paddtop="1">+ אימון</button>':''}<button class="addbtn" data-go="find">+ קבוצה</button></div></div>`;
   if(!S.follows.length) return `${title}<div class="empty"><h2>עוד לא בחרתם קבוצה</h2><p class="sub">מחפשים את הקבוצה של הילד, והמשחק הבא מופיע כאן.</p><button class="btn" data-go="find">מציאת קבוצה</button></div>${resultsBlock()}${ideaBox()}${footer()}`;
   const keys=S.filter==='all'?S.follows:[S.filter];const ts=keys.map(k=>TEAMS[KEY[k]]);
   const all=S.follows.map(k=>TEAMS[KEY[k]]);
@@ -1241,6 +1262,7 @@ function render(){
   const tab=(S.view==='find'||S.view==='season')?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   const open=!!ovHTML;document.body.classList.toggle('locked',open);
   app.inert=open;document.querySelector('nav.tabs').inert=open;
+  ovEl.querySelectorAll('video[autoplay]').forEach(v=>{v.muted=true;const p=v.play();if(p)p.catch(()=>{})});
   if(open&&!ovEl.contains(document.activeElement)){const f=ovEl.querySelector('[data-autofocus]')||ovEl.querySelector('.btn');if(f)f.focus()}
   if(S.view==='help'&&!S.me)loadMe();
   if(!S.invite)syncURL();
@@ -1250,7 +1272,7 @@ function render(){
 }
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);return}
-  if(e.target.closest('.scrim')&&(S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam)){closeSmall();render();return}
+  if(e.target.closest('.scrim')&&(S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite)track('invite_dismiss');if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
   if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;if(S.view==='my')afterFirstTeam();render();scrollTo(0,0);return}
@@ -1269,6 +1291,12 @@ document.addEventListener('click',e=>{
     S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
     S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
     render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(d.paddtop){track('practice_top');if(S.follows.length===1){S.pracTeam=S.follows[0];S.pracDraft=newDraft();S.pErr=''}else S.pracPick=true;render();return}
+  if(d.pnew){S.pracPick=false;S.pracTeam=d.pnew;S.pracDraft=newDraft();S.pErr='';render();return}
+  if(d.pickclose){S.pracPick=false;render();return}
+  if(d.pdemo){S.pdemo=true;track('demo_play');render();return}
+  if(d.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();if(d.promo==='no'){track('promo_no');render();return}
+    track('promo_go');if(S.follows.length===1){S.pracTeam=S.follows[0];S.pracDraft=newDraft()}else S.pracPick=true;render();return}
   if(d.popen){S.pracTeam=d.popen;S.pracDraft=null;S.pdelAsk=null;S.pErr='';render();return}
   if(d.padd||d.pedit){const p=d.pedit?S.prac.find(x=>x.id===d.pedit):null;S.pErr='';S.pracDraft=p?{...p,days:[...p.days]}:{days:[],start:'',end:'',place:'',remind:60,note:''};render();return}
   if(d.pday!=null&&S.pracDraft){const i=+d.pday,ds=S.pracDraft.days;S.pracDraft.days=ds.includes(i)?ds.filter(x=>x!==i):[...ds,i].sort();render();const nb=document.querySelector(`[data-pday="${i}"]`);if(nb)nb.focus();return}
@@ -1327,7 +1355,7 @@ document.addEventListener('click',e=>{
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
   if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
 document.addEventListener('submit',e=>{
   const pf=e.target.closest('form.pform');if(pf){e.preventDefault();const dr=S.pracDraft;if(!dr)return;
@@ -1348,6 +1376,9 @@ document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.pf=
 window.__onbip=()=>{if(S.view==='my')render()};
 if(S.invite)track('invite_open');
 S.installed=STANDALONE&&!S.onb.installedSeen&&!S.invite; // first open from the home-screen icon
+S.onb.visits=(S.onb.visits||0)+1;saveOnb();
+S.promo=touched&&S.follows.length>0&&!S.prac.length&&!S.onb.promoPrac&&S.onb.visits>=2&&!S.invite&&!S.installed&&!S.welcome; // "new: practice reminders", once
+if(S.promo)track('promo_show');
 if(S.installed)track('installed_open');
 render();
 if(justDeleted)toast('המידע נמחק');
