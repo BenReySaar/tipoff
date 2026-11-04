@@ -1093,8 +1093,8 @@ function viewFind(){
     return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
   const crumbs=S.age?`<div class="steps"><button data-back="age">כל הגילאים</button> ‹ ${S.league!=null?`<button data-back="league">${ageOf(S.age).name}</button> ‹ <span>${esc(LEAGUES[S.league].full)}</span>`:'<span>'+ageOf(S.age).name+'</span>'}</div>`:'';
   let body;
-  if(!S.age){const ages=AGES.filter(a=>a.g===S.gender&&!a.adult),adults=AGES.filter(a=>a.g===S.gender&&a.adult&&LEAGUES.some(l=>l.age===a.id&&!l.cup));
-    const ageBtn=a=>`<button class="age" data-age="${a.id}"><b>${a.name}</b><span>${LEAGUES.filter(l=>l.age===a.id&&!l.cup).length} ליגות</span></button>`;
+  if(!S.age){const ages=AGES.filter(a=>a.g===S.gender&&!a.adult),adults=AGES.filter(a=>a.g===S.gender&&a.adult&&LEAGUES.some(l=>l.age===a.id&&!l.cup&&l.teams.length));
+    const ageBtn=a=>`<button class="age" data-age="${a.id}"><b>${a.name}</b><span>${LEAGUES.filter(l=>l.age===a.id&&!l.cup&&l.teams.length).length} ליגות</span></button>`;
     body=`<div class="seg" role="group" aria-label="בנים או בנות"><button data-gender="M" aria-pressed="${S.gender==='M'}">בנים</button><button data-gender="F" aria-pressed="${S.gender==='F'}">בנות</button></div>
     <div class="ages">${ages.map(ageBtn).join('')}</div>${adults.length?`<h2 class="ages-h">${S.gender==='F'?'בוגרות':'בוגרים'}</h2><div class="ages">${adults.map(ageBtn).join('')}</div>`:''}`}
   else if(S.league==null){
@@ -1103,7 +1103,7 @@ function viewFind(){
     const TIERS=['על','לאומית','ארצית','מחוזית','אזוריות'];
     const tier=l=>{const s=l.short;return s.startsWith('על')?0:s.startsWith('לאומית')?1:s.startsWith('ארצית')?2:s.startsWith('מחוזית')?3:4};
     const num=l=>parseInt(l.slug,10)||0;
-    const ls=LEAGUES.filter(l=>l.age===S.age&&!l.cup).sort(TIERED?((x,y)=>tier(x)-tier(y)||num(x)-num(y)):((x,y)=>x.short.localeCompare(y.short,'he')));
+    const ls=LEAGUES.filter(l=>l.age===S.age&&!l.cup&&l.teams.length).sort(TIERED?((x,y)=>tier(x)-tier(y)||num(x)-num(y)):((x,y)=>x.short.localeCompare(y.short,'he')));
     const item=l=>`<button class="pick" data-lg="${l.i}"><span><span class="ttl">${esc(TIERS.includes(l.short)?l.full:l.short)}</span><br><span class="sm">${l.teams.length} קבוצות</span></span><span aria-hidden="true" style="color:var(--muted)">‹</span></button>`;
     let html='',last=-1;
     for(const l of ls){if(TIERED&&tier(l)!==last){last=tier(l);html+=`<h3 class="lg-grp">${TIERS[last]}</h3>`}html+=item(l)}
