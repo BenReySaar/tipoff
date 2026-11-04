@@ -11,6 +11,17 @@ assert.deepEqual(classify('קט סל א בנות עמק חפר').slice(0, 1), ['
 assert.deepEqual(classify('קט סל א עמק חפר').slice(0, 1), ['ks-a']);
 assert.deepEqual(classify('גביע המדינה לנערות ב').slice(0, 2), ['gnb', true]);
 assert.equal(classify('ליגת על'), null);
+assert.deepEqual(classify('א דן'), ['la', false, 'דן']);
+assert.deepEqual(classify('א נשים שרון').slice(0, 1), ['wla']);
+assert.deepEqual(classify('ארצית צפון').slice(0, 1), ['ar']);
+assert.deepEqual(classify('ארצית נשים חיפה').slice(0, 1), ['war']);
+assert.deepEqual(classify('ארצית - א בית צפון'), ['ar', false, 'א בית צפון']);
+assert.deepEqual(classify('ב פתח תקווה').slice(0, 1), ['lb']);
+assert.deepEqual(classify('גביע האיגוד ליגה ב').slice(0, 2), ['lb', true]);
+assert.equal(classify('לאומית'), null);
+assert.equal(classify('ליגת על נשים'), null);
+assert.equal(classify('גביע האיגוד לגברים'), null);
+assert.equal(classify('NBA JR'), null);
 
 // change detection
 const now = new Date('2026-10-28T13:00:00Z');

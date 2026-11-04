@@ -5,7 +5,6 @@ import { readXlsx } from './xlsx.js';
 
 const SITE = 'https://ibasketball.co.il';
 const BASE = SITE + '/wp-json/sportspress/v2';
-const YOUTH = /ילד|נער|נוער|קט/;
 
 // Age groups, youngest first. id, display name, gender, league-name prefix used by the association.
 export const AGES = [
@@ -13,13 +12,17 @@ export const AGES = [
   ['ya', 'ילדים א׳', 'M', 'ילדים א'], ['nb', 'נערים ב׳', 'M', 'נערים ב'], ['na', 'נערים א׳', 'M', 'נערים א'], ['nr', 'נוער', 'M', 'נוער'],
   ['gks-b', 'קט-סל ב׳', 'F', 'קט סל ב בנות'], ['gks-a', 'קט-סל א׳', 'F', 'קט סל א בנות'], ['gyb', 'ילדות ב׳', 'F', 'ילדות ב'],
   ['gya', 'ילדות א׳', 'F', 'ילדות א'], ['gnb', 'נערות ב׳', 'F', 'נערות ב'], ['gna', 'נערות א׳', 'F', 'נערות א'],
+  // adults (5th field = adult): ליגה ארצית / א׳ / ב׳, men and women
+  ['ar', 'ליגה ארצית', 'M', 'ארצית', 1], ['la', 'ליגה א׳', 'M', 'א', 1], ['lb', 'ליגה ב׳', 'M', 'ב', 1],
+  ['war', 'ליגה ארצית', 'F', 'ארצית נשים', 1], ['wla', 'ליגה א׳', 'F', 'א נשים', 1],
 ];
 
-/** Returns [ageId, isCup, shortName] for a league name, or null if it is not a youth league we show. */
+/** Returns [ageId, isCup, shortName] for a league name, or null if it is not a league we show. */
 export function classify(name) {
   const cup = name.match(/^גביע (?:המדינה|האיגוד) ל(.+)$/);
   if (cup) {
-    const a = AGES.find(x => x[3] === cup[1].trim());
+    const s = cup[1].trim();
+    const a = AGES.find(x => x[3] === s) || (s === 'יגה ב' ? AGES.find(x => x[0] === 'lb') : null); // "גביע האיגוד ליגה ב"
     return a ? [a[0], true, name] : null;
   }
   const byLen = [...AGES].sort((x, y) => y[3].length - x[3].length);
@@ -27,7 +30,7 @@ export function classify(name) {
     if (!name.startsWith(p + ' ')) continue;
     // "קט סל א בנות ..." must not fall into the boys' "קט סל א" group
     if (p.startsWith('קט סל') && !p.includes('בנות') && (' ' + name + ' ').includes(' בנות ')) continue;
-    return [id, false, name.slice(p.length + 1).trim()];
+    return [id, false, name.slice(p.length + 1).replace(/^[\s-]+/, '').trim()];
   }
   return null;
 }
@@ -71,7 +74,7 @@ export async function fetchSeason({ season = '2026', userAgent = 'TipOff/1.0' } 
     const r = await getJSON(`${BASE}/leagues?parent=${parent}&per_page=100&page=${page}&_fields=id,name,slug,count`, userAgent);
     leagues = leagues.concat(r.body); pages = r.pages; page++;
   } while (page <= pages);
-  leagues = leagues.filter(l => YOUTH.test(decodeEntities(l.name)) && classify(decodeEntities(l.name)));
+  leagues = leagues.filter(l => classify(decodeEntities(l.name)));
   const lgSet = new Set(leagues.map(l => l.id));
 
   // Events: ask for 20 leagues at a time, then page through.
@@ -156,7 +159,9 @@ export function buildPack(raw, gen = new Date().toISOString()) {
   for (const [id, name, slug] of raw.leagues) {
     const c = classify(name); if (!c) continue;
     lgIdx.set(id, lgRows.length);
-    lgRows.push([name, String(slug).replace(/^\d{4}-/, ''), c[0], c[1] ? 1 : 0, c[2]]);
+    const adult = AGES.find(x => x[0] === c[0])[4];
+    const full = adult && !c[1] && !name.startsWith('ליגה') ? 'ליגה ' + name.replace(/^([אב]) /, '$1׳ ') : name; // "ב שרון" → "ליגה ב׳ שרון"
+    lgRows.push([full, String(slug).replace(/^\d{4}-/, ''), c[0], c[1] ? 1 : 0, c[2]]);
   }
   const venues = raw.venues.slice();
   const ageOfLg = id => lgRows[lgIdx.get(id)][2];
@@ -188,7 +193,7 @@ export function buildPack(raw, gen = new Date().toISOString()) {
     if (e[8] != null && e[9] != null) row.push(e[8], e[9]);
     return row;
   });
-  return { v: 2, gen, ages: AGES.map(([id, n, gg]) => [id, n, gg]), lg: lgRows, tm, vn, g };
+  return { v: 2, gen, ages: AGES.map(([id, n, gg, , ad]) => ad ? [id, n, gg, 1] : [id, n, gg]), lg: lgRows, tm, vn, g };
 }
 
 /**

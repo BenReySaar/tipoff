@@ -101,6 +101,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .day.today .dn{color:var(--accent)}
 .day[aria-pressed="true"] .dn{background:var(--sel);color:var(--sel-ink)}
 .day.today[aria-pressed="true"] .dn{background:var(--accent);color:var(--accent-ink)}
+.day.clash .dn{box-shadow:inset 0 0 0 2px var(--warn)}
 .dots{display:flex;gap:3px;height:6px;align-items:center}
 .dots i{width:6px;height:6px;border-radius:50%}
 .wk-panel{display:flex;flex-direction:column}
@@ -190,6 +191,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--fill);border-radius:12px;padding:3px;gap:3px}
 .seg button{border:0;background:none;border-radius:9px;padding:9px;font-weight:600;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--bg);color:var(--ink);box-shadow:0 0 0 1px var(--line-2)}
+.ages-h{font-size:15px;font-weight:600;color:var(--muted);margin:18px 2px 8px}
 .ages{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .age{background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r);padding:16px 8px 14px;display:flex;flex-direction:column;align-items:center;gap:2px}
 .age:last-child:nth-child(3n+1){grid-column:1/-1}
@@ -478,7 +480,7 @@ catch(e){appEl.innerHTML='<div class="empty" style="margin-top:40px"><h2>לא ה
 document.documentElement.setAttribute('dir','rtl');
 
 /* ---------- data model ---------- */
-const AGES=DATA.ages.map(([id,name,g])=>({id,name,g}));
+const AGES=DATA.ages.map(([id,name,g,a])=>({id,name,g,adult:!!a}));
 const fixName=s=>String(s).replace(/(לאומית|ארצית|מחוזית)(?=[^\s])/g,'$1 ');
 const LEAGUES=DATA.lg.map(([full,slug,age,cup,short],i)=>({i,full:fixName(full),slug,age,cup:!!cup,short:fixName(short)}));
 const VEN=DATA.vn.map(s=>{const p=s.split(',').map(x=>x.trim()).filter(Boolean);return {full:s,name:p[0],addr:p.slice(1).join(', ')}});
@@ -661,6 +663,15 @@ function clashes(ts){
     const hrs=(b.g.date-a.g.date)/36e5,same=a.g.v===b.g.v;
     out.push({a,b,lvl:same?'same':hrs<2?'overlap':'sameday'})}
   return out}
+function dayOverlap(ts,d){
+  const it=[];ts.forEach(t=>t.games.forEach(g=>{if(sameDay(g.date,d))it.push({k:t.key,m:g.date.getHours()*60+g.date.getMinutes(),pr:0,v:g.v})}));
+  if(touched)pracOn(ts,d).filter(x=>!x.skip).forEach(x=>{const[h,m]=x.start.split(':').map(Number);it.push({k:x.t.key,m:h*60+m,pr:1})});
+  let best=null;
+  for(let i=0;i<it.length;i++)for(let j=i+1;j<it.length;j++){const a=it[i],b=it[j];
+    if(a.k===b.k||Math.abs(a.m-b.m)>=120)continue;
+    if(!a.pr&&!b.pr&&a.v===b.v)continue; // same hall: not a clash
+    const n=a.pr+b.pr;if(!best||n<best)best=n}
+  return best==null?null:['שני משחקים באותה שעה','משחק ואימון באותה שעה','שני אימונים באותה שעה'][best]}
 function clashBlock(list){
   const lbl={overlap:['res l','חופפים'],sameday:['res p','באותו יום'],same:['res w','אותו אולם']};
   const line=x=>`<div class="clash-g"><span class="tm">${hm(x.g.date)}</span><span>${dot(x.t.key)}<b>${esc(x.t.name)}</b> · ${esc(VEN[x.g.v].name)}</span></div>`;
@@ -723,15 +734,17 @@ function weekStrip(ts){
   const label=S.weekOff===0?'השבוע':S.weekOff===1?'שבוע הבא':S.weekOff===-1?'שבוע שעבר':'';
   const multi=ts.length>1;let anyPr=false;
   const days=[...Array(7)].map((_,i)=>{const d=addDays(start,i);const gs=games.filter(x=>sameDay(x.g.date,d)),ps=prOf(d).filter(x=>!x.skip);if(ps.length)anyPr=true;
-    const cls=[sameDay(d,NOW)?'today':'',gs.length||ps.length?'has':''].join(' ');
-    return `<button class="day ${cls}" data-day="${dkey(d)}" aria-pressed="${S.day===dkey(d)}" aria-label="יום ${DAYS[i]} ${dm(d)}${gs.length?', '+gs.length+' משחקים':''}${ps.length?', '+(ps.length===1?'אימון':ps.length+' אימונים'):''}">
+    const ov=multi&&(gs.length+ps.length>1)?dayOverlap(ts,d):null;
+    const cls=[sameDay(d,NOW)?'today':'',gs.length||ps.length?'has':'',ov?'clash':''].join(' ');
+    return `<button class="day ${cls}" data-day="${dkey(d)}" aria-pressed="${S.day===dkey(d)}" aria-label="יום ${DAYS[i]} ${dm(d)}${gs.length?', '+(gs.length===1?'משחק':gs.length+' משחקים'):''}${ps.length?', '+(ps.length===1?'אימון':ps.length+' אימונים'):''}${ov?', '+ov:''}">
       <span class="dw">${sameDay(d,NOW)?'היום':DSHORT[i]}</span><span class="dn">${d.getDate()}</span>
       <span class="dots">${gs.map(x=>`<i style="background:${tcolor(x.t.key)}"></i>`).join('')}${ps.map(x=>`<i class="pd" style="border-color:${tcolor(x.t.key)}"></i>`).join('')}</span></button>`}).join('');
   const sel=games.filter(x=>dkey(x.g.date)===S.day);
   const selDay=S.day?[...Array(7)].map((_,i)=>addDays(start,i)).find(d=>dkey(d)===S.day):null;
   const selPr=selDay?prOf(selDay):[];
   const cl=sel.length>1?clashes(sel.map(x=>x.t)).filter(c=>dkey(c.a.g.date)===S.day):[];
-  const lvl=cl.find(c=>c.lvl==='overlap')?['res l','שני משחקים חופפים בשעה, באולמות שונים']:cl.find(c=>c.lvl==='sameday')?['res p','שני משחקים באותו יום']:cl.length?['res w','שני משחקים באותו אולם']:null;
+  const ovSel=selDay&&multi?dayOverlap(ts,selDay):null;
+  const lvl=ovSel?['res l',ovSel]:cl.find(c=>c.lvl==='overlap')?['res l','שני משחקים חופפים בשעה, באולמות שונים']:cl.find(c=>c.lvl==='sameday')?['res p','שני משחקים באותו יום']:cl.length?['res w','שני משחקים באותו אולם']:null;
   const prRow=x=>`<button class="row prow${x.skip?' skipped':''}${multi?' tagged':''}"${multi?` style="--tc:${tcolor(x.t.key)}"`:''} data-pdayopen="${x.p.id}" data-porig="${x.orig}" data-pdate="${isoD(selDay)}" aria-label="אימון, יום ${DAYS[selDay.getDay()]} ${dm(selDay)} ב־${x.start}${x.skip?', בוטל':''}. לשינוי"><div class="date"><span class="dn">${DAYS[selDay.getDay()]}</span><span class="dd">${dm(selDay)}</span></div>
     <div class="mid">${multi?`<span class="who">${dot(x.t.key)}${esc(x.t.name)}</span>`:''}<span class="vs">אימון${x.skip?' <span class="pill-warn">בוטל</span>':''}</span>${x.place?`<span class="meta">${esc(x.place)}</span>`:''}</div>
     <div class="right pr-r"><span class="tm">${x.start}</span>${ic.prev}</div></button>`;
@@ -1080,9 +1093,10 @@ function viewFind(){
     return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
   const crumbs=S.age?`<div class="steps"><button data-back="age">כל הגילאים</button> ‹ ${S.league!=null?`<button data-back="league">${ageOf(S.age).name}</button> ‹ <span>${esc(LEAGUES[S.league].full)}</span>`:'<span>'+ageOf(S.age).name+'</span>'}</div>`:'';
   let body;
-  if(!S.age){const ages=AGES.filter(a=>a.g===S.gender);
+  if(!S.age){const ages=AGES.filter(a=>a.g===S.gender&&!a.adult),adults=AGES.filter(a=>a.g===S.gender&&a.adult&&LEAGUES.some(l=>l.age===a.id&&!l.cup));
+    const ageBtn=a=>`<button class="age" data-age="${a.id}"><b>${a.name}</b><span>${LEAGUES.filter(l=>l.age===a.id&&!l.cup).length} ליגות</span></button>`;
     body=`<div class="seg" role="group" aria-label="בנים או בנות"><button data-gender="M" aria-pressed="${S.gender==='M'}">בנים</button><button data-gender="F" aria-pressed="${S.gender==='F'}">בנות</button></div>
-    <div class="ages">${ages.map(a=>`<button class="age" data-age="${a.id}"><b>${a.name}</b><span>${LEAGUES.filter(l=>l.age===a.id&&!l.cup).length} ליגות</span></button>`).join('')}</div>`}
+    <div class="ages">${ages.map(ageBtn).join('')}</div>${adults.length?`<h2 class="ages-h">${S.gender==='F'?'בוגרות':'בוגרים'}</h2><div class="ages">${adults.map(ageBtn).join('')}</div>`:''}`}
   else if(S.league==null){
     // from ילדים א׳ up: highest tier first (על, לאומית, ארצית, מחוזית, then regional), north to south inside a tier
     const TIERED=['ya','nb','na','nr','gya','gnb','gna'].includes(S.age);
