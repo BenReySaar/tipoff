@@ -6,6 +6,7 @@ import { icsFor } from './ics.js';
 import { statsPage } from './stats.js';
 import { ensureSchema } from './schema.js';
 import { b64u } from './push.js';
+import { occOn } from './practice.js';
 
 const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const DEVICE = /^[a-f0-9-]{36}$/;
@@ -232,27 +233,33 @@ const REMIND = [0, 30, 60, 120, -1]; // minutes before; -1 = the evening before 
 const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const clean = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
-export function cleanPractices(list, skips, teams) {
+export function cleanPractices(list, skips, teams, moves) {
   const out = [];
-  for (const p of Array.isArray(list) ? list.slice(0, 20) : []) {
+  for (const p of Array.isArray(list) ? list.slice(0, 40) : []) {
     if (!p || !teams.has(p.team) || !HM.test(p.start || '')) continue;
-    const days = [...new Set((Array.isArray(p.days) ? p.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+    const once = DAY.test(p.once || '') ? p.once : '';
+    const days = once ? [dowOf(once)] : [...new Set((Array.isArray(p.days) ? p.days : []).map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
     if (!days.length) continue;
-    out.push({ id: clean(p.id, 12) || Math.random().toString(36).slice(2, 10), team: p.team, days, start: p.start,
+    out.push({ id: clean(p.id, 12) || Math.random().toString(36).slice(2, 10), team: p.team, days, start: p.start, ...(once ? { once } : {}),
       end: HM.test(p.end || '') ? p.end : '', place: clean(p.place, 60), note: clean(p.note, 60),
       remind: REMIND.includes(+p.remind) ? +p.remind : 60 });
   }
-  const ids = new Set(out.map(p => p.id)), sk = {};
+  const ids = new Set(out.map(p => p.id)), sk = {}, mv = {};
   for (const [id, dates] of Object.entries(skips && typeof skips === 'object' ? skips : {})) {
     if (!ids.has(id) || !Array.isArray(dates)) continue;
-    const d = dates.filter(x => DAY.test(x)).sort().slice(-20); if (d.length) sk[id] = d;
+    const d = dates.filter(x => DAY.test(x)).sort().slice(-30); if (d.length) sk[id] = d;
   }
-  return { list: out, skips: sk };
+  for (const [id, m] of Object.entries(moves && typeof moves === 'object' ? moves : {})) {
+    if (!ids.has(id) || !m || typeof m !== 'object') continue;
+    const e = Object.entries(m).filter(([o, x]) => DAY.test(o) && x && DAY.test(x.date || '') && HM.test(x.start || '')).sort().slice(-30);
+    if (e.length) mv[id] = Object.fromEntries(e.map(([o, x]) => [o, { date: x.date, start: x.start, end: HM.test(x.end || '') ? x.end : '', place: clean(x.place, 60) }]));
+  }
+  return { list: out, skips: sk, moves: mv };
 }
 // Israel-time calendar helpers
 const ilParts = (d = new Date()) => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map(x => [x.type, x.value]));
 const addDay = (ymdStr, n) => { const [y, m, d] = ymdStr.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
-const dowOf = ymdStr => { const [y, m, d] = ymdStr.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); };
+const dowOf = ymdStr => { const [y, m, d] = ymdStr.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); }; // (same as practice.js)
 const remindWord = r => r === -1 ? 'מחר' : r === 30 ? 'בעוד חצי שעה' : r === 120 ? 'בעוד שעתיים' : 'בעוד שעה';
 
 /** Reminders whose time fell in the last 15 minutes (cron every 15 minutes). */
@@ -263,23 +270,23 @@ export async function practiceReminders(env, now = new Date()) {
   for (const row of results) {
     let data; try { data = JSON.parse(row.data); } catch (e) { continue; }
     const nicks = new Map();
-    for (const p of data.list || []) {
-      if (!p.remind) continue;
-      for (const off of [0, 1]) {
-        const date = addDay(today, off);
-        if (!p.days.includes(dowOf(date)) || (data.skips?.[p.id] || []).includes(date)) continue;
-        const [h, m] = p.start.split(':').map(Number);
+    for (const off of [0, 1]) {
+      const date = addDay(today, off);
+      for (const o of occOn(data, date)) {
+        const p = o.p;
+        if (!p.remind) continue;
+        const [h, m] = o.start.split(':').map(Number);
         const at = p.remind === -1 ? (off - 1) * 1440 + 20 * 60 : off * 1440 + h * 60 + m - p.remind; // minutes from today's midnight
         if (at > nowMin || at <= nowMin - 15) continue;
         const tod = ((at % 1440) + 1440) % 1440; if (tod >= 23 * 60 || tod < 8 * 60) continue; // quiet hours
-        const key = `pr:${row.device}:${p.id}:${date}`;
+        const key = `pr:${row.device}:${p.id}:${o.orig}:${date}:${o.start}`;
         if (await env.KV.get(key)) continue;
         await env.KV.put(key, '1', { expirationTtl: 2 * 86400 });
         if (!nicks.size) { const r = await env.DB.prepare('SELECT team, nick FROM nicks WHERE device=?').bind(row.device).all(); r.results.forEach(x => nicks.set(x.team, x.nick)); nicks.set('', ''); }
         const name = p.team.split('|')[1], nick = nicks.get(p.team);
         if (!per.has(row.device)) per.set(row.device, { device: row.device, push: row.push, msgs: [] });
         per.get(row.device).msgs.push({ title: `⏰ אימון ${remindWord(p.remind)}: ${nick ? `${name} (${nick})` : name}`,
-          body: `${p.start}${p.end ? ' עד ' + p.end : ''}${p.place ? ' · ' + p.place : ''}${p.note ? '\nלהביא: ' + p.note : ''}` });
+          body: `${o.start}${o.end ? ' עד ' + o.end : ''}${o.place ? ' · ' + o.place : ''}${p.note ? '\nלהביא: ' + p.note : ''}` });
       }
     }
   }
@@ -342,7 +349,7 @@ async function saveState(env, b) {
       }
     }
     if (Array.isArray(b.practices)) {
-      const pr = cleanPractices(b.practices, b.pskips, new Set(full));
+      const pr = cleanPractices(b.practices, b.pskips, new Set(full), b.pmoves);
       stmts.push(pr.list.length
         ? env.DB.prepare('INSERT INTO practices(device,data) VALUES(?,?) ON CONFLICT(device) DO UPDATE SET data=excluded.data').bind(b.device, JSON.stringify(pr))
         : env.DB.prepare('DELETE FROM practices WHERE device=?').bind(b.device));
@@ -424,7 +431,7 @@ export default {
         if (!d) return json({ known: false }, 200, { 'cache-control': 'no-store' });
         const data = pr ? JSON.parse(pr.data) : { list: [], skips: {} };
         return json({ known: true, prefs: JSON.parse(d.prefs || '{}'), full: f.results.filter(r => r.kind === 'full').map(r => r.team), res: f.results.filter(r => r.kind === 'res').map(r => r.team),
-          nicks: Object.fromEntries(n.results.map(r => [r.team, r.nick])), practices: data.list, pskips: data.skips }, 200, { 'cache-control': 'no-store' });
+          nicks: Object.fromEntries(n.results.map(r => [r.team, r.nick])), practices: data.list, pskips: data.skips, pmoves: data.moves || {} }, 200, { 'cache-control': 'no-store' });
       }
       if (p === '/api/forget' && req.method === 'POST') {
         const b = await readJSON(req);

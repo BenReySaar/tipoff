@@ -551,19 +551,26 @@ const ic={nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow');syncURL()}
-S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.invHidden=store.get('tipoff.invHidden',[]);
+S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
 const nickOf=k=>S.nicks[k]||'';
 /* ---------- regular practices (entered by the family, only on this phone) ---------- */
 const isoD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
 const REMIND_TXT={'30':'חצי שעה לפני','60':'שעה לפני','120':'שעתיים לפני','-1':'בערב שלפני, 20:00','0':'בלי תזכורת'};
 const pracOf=key=>S.prac.filter(p=>p.team===key);
 const skipped=(p,d)=>(S.pskips[p.id]||[]).includes(isoD(d));
-function savePrac(){store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);syncState('practice')}
-function pracOn(ts,d){const keys=new Set(ts.map(t=>t.key));return S.prac.filter(p=>keys.has(p.team)&&p.days.includes(d.getDay())).map(p=>({p,t:TEAMS[KEY[p.team]],skip:skipped(p,d)})).filter(x=>x.t).sort((a,b)=>a.p.start<b.p.start?-1:1)}
+function savePrac(){store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);store.set('tipoff.pmoves',S.pmoves);syncState('practice')}
+const fromIso=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+/* the practices that happen on day d: weekly ones (unless that date was changed), one-off ones, and single dates moved here. skip = cancelled for that date */
+function pracOn(ts,d){const keys=new Set(ts.map(t=>t.key)),date=isoD(d),out=[];
+  for(const p of S.prac){if(!keys.has(p.team))continue;const t=TEAMS[KEY[p.team]];if(!t)continue;const sk=S.pskips[p.id]||[],mv=S.pmoves[p.id]||{};
+    if(p.once){if(p.once===date)out.push({p,t,orig:date,start:p.start,end:p.end,place:p.place,skip:sk.includes(date)});continue}
+    if(p.days.includes(d.getDay())&&!mv[date])out.push({p,t,orig:date,start:p.start,end:p.end,place:p.place,skip:sk.includes(date)});
+    for(const [o,m] of Object.entries(mv))if(m.date===date)out.push({p,t,orig:o,start:m.start,end:m.end??p.end,place:m.place??p.place,skip:sk.includes(o)})}
+  return out.sort((a,b)=>a.start<b.start?-1:1)}
 function nextPractice(t){const today=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()),nowHM=hm(NOW);
-  for(let k=0;k<15;k++){const d=addDays(today,k);const l=pracOn([t],d).filter(x=>!x.skip&&(k>0||x.p.start>nowHM));if(l.length)return {p:l[0].p,d}}return null}
-const pracWhen=(p,d)=>`${rel(d)==='היום'||rel(d)==='מחר'?rel(d)+', ':''}יום ${DAYS[d.getDay()]} ${dm(d)} ב־${p.start}${p.place?' · '+esc(p.place):''}`;
-const pracDays=p=>p.days.length===7?'כל יום':p.days.map(x=>DAYS[x]).join(', ');
+  for(let k=0;k<15;k++){const d=addDays(today,k);const l=pracOn([t],d).filter(x=>!x.skip&&(k>0||x.start>nowHM));if(l.length)return {o:l[0],d}}return null}
+const pracWhen=(o,d)=>`${rel(d)==='היום'||rel(d)==='מחר'?rel(d)+', ':''}יום ${DAYS[d.getDay()]} ${dm(d)} ב־${o.start}${o.place?' · '+esc(o.place):''}`;
+const pracDays=p=>p.once?`פעם אחת, יום ${DAYS[fromIso(p.once).getDay()]} ${dm(fromIso(p.once))}`:p.days.length===7?'כל יום':p.days.map(x=>DAYS[x]).join(', ');
 function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
   setFollows(f);if(S.filter!=='all'&&!f.includes(S.filter))S.filter='all';S.justAdded=f.includes(key)?key:null;S.dayWeek=null;
@@ -598,9 +605,9 @@ function hero(g,t){
    <div class="h-league">${esc(LEAGUES[g.lg].full)}</div></section>`}
 
 function pracFact(t){if(!(touched&&S.follows.includes(t.key)))return '';const n=nextPractice(t);
-  return n?`<div class="fact">${ic.run}<span><b>אימון הבא:</b> ${pracWhen(n.p,n.d)}</span></div>`:''}
+  return n?`<div class="fact">${ic.run}<span><b>אימון הבא:</b> ${pracWhen(n.o,n.d)}</span></div>`:''}
 function pracKit(t){if(!(touched&&S.follows.includes(t.key)))return '';const n=nextPractice(t);
-  return n?`<div class="nx-kit">${ic.run}אימון הבא: ${pracWhen(n.p,n.d)}</div>`:''}
+  return n?`<div class="nx-kit">${ic.run}אימון הבא: ${pracWhen(n.o,n.d)}</div>`:''}
 /* ---------- ⋯ team menu button, details vs. the opponent, "something wrong?" ---------- */
 const menuBtn=t=>touched&&S.follows.includes(t.key)?`<button class="dots-btn" data-menu-open="${esc(t.key)}" aria-label="אפשרויות: ${esc(t.name)}" aria-haspopup="dialog">⋯</button>`:'';
 function moreRow(g,t){const open=S.det.has(g.i);
@@ -725,9 +732,9 @@ function weekStrip(ts){
   const selPr=selDay?prOf(selDay):[];
   const cl=sel.length>1?clashes(sel.map(x=>x.t)).filter(c=>dkey(c.a.g.date)===S.day):[];
   const lvl=cl.find(c=>c.lvl==='overlap')?['res l','שני משחקים חופפים בשעה, באולמות שונים']:cl.find(c=>c.lvl==='sameday')?['res p','שני משחקים באותו יום']:cl.length?['res w','שני משחקים באותו אולם']:null;
-  const prRow=x=>`<button class="row prow${x.skip?' skipped':''}${multi?' tagged':''}"${multi?` style="--tc:${tcolor(x.t.key)}"`:''} data-pdayopen="${x.p.id}" data-pdate="${isoD(selDay)}" aria-label="אימון, יום ${DAYS[selDay.getDay()]} ${dm(selDay)} ב־${x.p.start}${x.skip?', בוטל':''}. לשינוי"><div class="date"><span class="dn">${DAYS[selDay.getDay()]}</span><span class="dd">${dm(selDay)}</span></div>
-    <div class="mid">${multi?`<span class="who">${dot(x.t.key)}${esc(x.t.name)}</span>`:''}<span class="vs">אימון${x.skip?' <span class="pill-warn">בוטל</span>':''}</span>${x.p.place?`<span class="meta">${esc(x.p.place)}</span>`:''}</div>
-    <div class="right pr-r"><span class="tm">${x.p.start}</span>${ic.prev}</div></button>`;
+  const prRow=x=>`<button class="row prow${x.skip?' skipped':''}${multi?' tagged':''}"${multi?` style="--tc:${tcolor(x.t.key)}"`:''} data-pdayopen="${x.p.id}" data-porig="${x.orig}" data-pdate="${isoD(selDay)}" aria-label="אימון, יום ${DAYS[selDay.getDay()]} ${dm(selDay)} ב־${x.start}${x.skip?', בוטל':''}. לשינוי"><div class="date"><span class="dn">${DAYS[selDay.getDay()]}</span><span class="dd">${dm(selDay)}</span></div>
+    <div class="mid">${multi?`<span class="who">${dot(x.t.key)}${esc(x.t.name)}</span>`:''}<span class="vs">אימון${x.skip?' <span class="pill-warn">בוטל</span>':''}</span>${x.place?`<span class="meta">${esc(x.place)}</span>`:''}</div>
+    <div class="right pr-r"><span class="tm">${x.start}</span>${ic.prev}</div></button>`;
   const panel=sel.length||selPr.length?`<div class="wk-panel">${lvl?`<div class="wk-warn"><span class="${lvl[0]}">${lvl[1]}</span></div>`:''}${sel.map(x=>row(x.g,x.t,multi)).join('')}${selPr.map(prRow).join('')}</div>`
     :games.length||anyPr?`<div class="wk-empty">אין משחק או אימון ביום הזה</div>`:`<div class="wk-empty">אין משחקים בשבוע הזה</div>`;
   return `<section class="wk" aria-label="לוח השבוע">
@@ -936,9 +943,11 @@ function practiceSheet(){
   const t=TEAMS[KEY[S.pracTeam]];if(!t){S.pracTeam=null;return ''}
   const dr=S.pracDraft;
   if(dr){const v=k=>esc(dr[k]||'');
-    return sheet(`<p class="sub" style="margin-bottom:-8px">${esc(t.name)} · ${ageLabel(t.lg)}</p><h2 tabindex="-1" data-autofocus>${dr.id?'עריכת אימון':'אימון קבוע חדש'}</h2>
+    return sheet(`<p class="sub" style="margin-bottom:-8px">${esc(t.name)} · ${ageLabel(t.lg)}</p><h2 tabindex="-1" data-autofocus>${dr.id?(dr.once?'עריכת האימון':'עריכת כל האימונים'):'אימון חדש'}</h2>
     <form class="pform" data-pform="1" novalidate>
-      <fieldset class="pdays"><legend>באילו ימים?</legend><div class="pd-row">${DSHORT.map((n,i)=>`<button type="button" class="pday" data-pday="${i}" aria-pressed="${dr.days.includes(i)}" aria-label="יום ${DAYS[i]}">${n}</button>`).join('')}</div></fieldset>
+      ${dr.id?'':`<div class="seg small" role="group" aria-label="סוג האימון"><button type="button" data-pkind="week" aria-pressed="${!dr.once}">כל שבוע</button><button type="button" data-pkind="once" aria-pressed="${!!dr.once}">פעם אחת</button></div>`}
+      ${dr.once?`<label for="pf-once">תאריך<input id="pf-once" type="date" data-pf="once" value="${v('once')}"></label>`
+        :`<fieldset class="pdays"><legend>באילו ימים?</legend><div class="pd-row">${DSHORT.map((n,i)=>`<button type="button" class="pday" data-pday="${i}" aria-pressed="${dr.days.includes(i)}" aria-label="יום ${DAYS[i]}">${n}</button>`).join('')}</div></fieldset>`}
       <div class="prow2"><label for="pf-start">שעת התחלה<input id="pf-start" type="time" data-pf="start" value="${v('start')}"></label><label for="pf-end"><span>שעת סיום <span class="sub">(לא חובה)</span></span><input id="pf-end" type="time" data-pf="end" value="${v('end')}"></label></div>
       <label for="pf-place"><span>מקום <span class="sub">(לא חובה)</span></span><input id="pf-place" data-pf="place" maxlength="60" placeholder="למשל: אולם התיכון" value="${v('place')}" autocomplete="off"></label>
       <label for="pf-remind">תזכורת לטלפון<select id="pf-remind" data-pf="remind">${['30','60','120','-1','0'].map(k=>`<option value="${k}"${String(dr.remind)===k?' selected':''}>${REMIND_TXT[k]}</option>`).join('')}</select></label>
@@ -955,19 +964,30 @@ function practiceSheet(){
     ${list?`<div class="ed-list">${list}</div>`:''}
     <button class="btn wide${list?' ghost':''}" data-padd="1">+ הוספת אימון</button>
     <button class="linkbtn sh-skip" data-pclose="1">סגירה</button>`,'אימונים קבועים')}
-function pdaySheet(){const p=S.prac.find(x=>x.id===S.pday.id);if(!p){S.pday=null;return ''}
-  const [y,m,dd]=S.pday.date.split('-').map(Number),d=new Date(y,m-1,dd),t=TEAMS[KEY[p.team]],sk=skipped(p,d);
-  return sheet(`<p class="sub" style="margin-bottom:-8px">${t?esc(t.name):''}${p.place?' · '+esc(p.place):''}</p><h2 tabindex="-1" data-autofocus>אימון · יום ${DAYS[d.getDay()]} ${dm(d)} · ${p.start}</h2>
-    ${sk?'<p class="sub">סימנתם שאין אימון בתאריך הזה.</p>':''}
-    <button class="btn wide${sk?'':' ghost'}" data-pskip="${p.id}" data-pdate="${S.pday.date}">${sk?'יש אימון בכל זאת':'אין אימון בתאריך הזה'}</button>
-    <button class="btn wide ghost" data-pdayedit="${p.id}">עריכת האימון הקבוע</button>
+function occOf(id,orig){const p=S.prac.find(x=>x.id===id);if(!p)return null;const m=(S.pmoves[id]||{})[orig];
+  return m?{p,orig,date:m.date,start:m.start,end:m.end??p.end,place:m.place??p.place}:{p,orig,date:p.once||orig,start:p.start,end:p.end,place:p.place}}
+function pdaySheet(){const o=occOf(S.pday.id,S.pday.orig);if(!o){S.pday=null;return ''}
+  const p=o.p,d=fromIso(o.date),t=TEAMS[KEY[p.team]],sk=(S.pskips[p.id]||[]).includes(o.orig);
+  if(S.occ){const v=k=>esc(S.occ[k]||'');
+    return sheet(`<p class="sub" style="margin-bottom:-8px">${t?esc(t.name):''}</p><h2 tabindex="-1" data-autofocus>עריכת האימון הזה</h2>
+    <form class="pform" data-oform="1" novalidate>
+      <label for="of-date">תאריך<input id="of-date" type="date" data-of="date" value="${v('date')}"></label>
+      <div class="prow2"><label for="of-start">שעת התחלה<input id="of-start" type="time" data-of="start" value="${v('start')}"></label><label for="of-end"><span>שעת סיום <span class="sub">(לא חובה)</span></span><input id="of-end" type="time" data-of="end" value="${v('end')}"></label></div>
+      <label for="of-place"><span>מקום <span class="sub">(לא חובה)</span></span><input id="of-place" data-of="place" maxlength="60" value="${v('place')}" autocomplete="off"></label>
+      ${S.pErr?`<p class="fb-err" role="alert">${S.pErr}</p>`:''}
+      <button class="btn wide" type="submit">שמירה</button></form>
+    <button class="linkbtn sh-skip" data-occcancel="1">ביטול</button>`,'עריכת האימון הזה')}
+  return sheet(`<p class="sub" style="margin-bottom:-8px">${t?esc(t.name):''}${o.place?' · '+esc(o.place):''}</p><h2 tabindex="-1" data-autofocus>אימון · יום ${DAYS[d.getDay()]} ${dm(d)} · ${o.start}</h2>
+    <button class="btn wide ghost" data-occedit="1">עריכת האימון הזה</button>
+    <button class="btn wide ghost" data-pskip="${p.id}" data-pdate="${o.orig}">${sk?'יש אימון בכל זאת':'אין אימון בתאריך הזה'}</button>
+    ${p.once?`<button class="btn wide ghost danger-t" data-oncedel="${p.id}">מחיקת האימון</button>`:`<button class="btn wide ghost" data-pdayedit="${p.id}">עריכת כל האימונים הקבועים</button>`}
     <button class="linkbtn sh-skip" data-pdayclose="1">סגירה</button>`,'אימון')}
 function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק את המידע שלכם?</h2>
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, האימונים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
 function overlay(){return S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
-function closeSmall(){if(S.pday){S.pday=null;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
+function closeSmall(){if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
   setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
@@ -1102,7 +1122,7 @@ const post=(p,b)=>fetch(p,{method:'POST',headers:{'content-type':'application/js
 function syncState(type){const full=touched?S.follows:[];
   const pr=S.prac.filter(p=>full.includes(p.team));
   return post('/api/state',{device:DEV,type,platform:PLATFORM,standalone:STANDALONE,full,res:S.res,prefs:S.alerts,nicks:Object.fromEntries(full.filter(k=>S.nicks[k]).map(k=>[k,S.nicks[k]])),
-    practices:pr,pskips:Object.fromEntries(Object.entries(S.pskips).filter(([id])=>pr.some(p=>p.id===id)))})}
+    practices:pr,pskips:Object.fromEntries(Object.entries(S.pskips).filter(([id])=>pr.some(p=>p.id===id))),pmoves:Object.fromEntries(Object.entries(S.pmoves).filter(([id])=>pr.some(p=>p.id===id)))})}
 const track=type=>post('/api/event',{device:DEV,type});
 
 const PUSH_OK='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -1265,7 +1285,7 @@ async function sendFeedback(form){
 
 function render(){
   const app=document.getElementById('app');
-  const ae=document.activeElement,aid=ae&&ae.id&&(app.contains(ae)||/^pf-/.test(ae.id))&&/^(fb|fbc|nick|pf)-/.test(ae.id)?ae.id:null,sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
+  const ae=document.activeElement,aid=ae&&ae.id&&(app.contains(ae)||/^(pf|of)-/.test(ae.id))&&/^(fb|fbc|nick|pf|of)-/.test(ae.id)?ae.id:null,sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   const ovEl=document.getElementById('ov'),ovHTML=overlay();
   ovEl.innerHTML=ovHTML;
   app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():S.view==='season'?viewSeason():viewAlerts())+
@@ -1277,7 +1297,7 @@ function render(){
   if(open&&!ovEl.contains(document.activeElement)){const f=ovEl.querySelector('[data-autofocus]')||ovEl.querySelector('.btn');if(f)f.focus()}
   if(S.view==='help'&&!S.me)loadMe();
   if(!S.invite)syncURL();
-  if(aid&&(!open||/^pf-/.test(aid))){const n=document.getElementById(aid);if(n){n.focus({preventScroll:true});if(sel)try{n.setSelectionRange(sel[0],sel[1])}catch(e){}}}
+  if(aid&&(!open||/^(pf|of)-/.test(aid))){const n=document.getElementById(aid);if(n){n.focus({preventScroll:true});if(sel)try{n.setSelectionRange(sel[0],sel[1])}catch(e){}}}
   const q=document.getElementById('q');
   if(q)q.addEventListener('input',e=>{S.q=e.target.value;const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
 }
@@ -1302,7 +1322,11 @@ document.addEventListener('click',e=>{
     S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
     S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
     render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
-  if(d.pdayopen){S.pday={id:d.pdayopen,date:d.pdate};render();return}
+  if(d.pdayopen){S.pday={id:d.pdayopen,orig:d.porig,date:d.pdate};S.occ=null;render();return}
+  if(d.occedit){const o=occOf(S.pday.id,S.pday.orig);if(o){S.occ={date:o.date,start:o.start,end:o.end||'',place:o.place||''};S.pErr=''}render();return}
+  if(d.occcancel){S.occ=null;S.pErr='';render();return}
+  if(d.oncedel){S.prac=S.prac.filter(p=>p.id!==d.oncedel);delete S.pskips[d.oncedel];delete S.pmoves[d.oncedel];S.pday=null;savePrac();toast('האימון נמחק');render();return}
+  if(d.pkind&&S.pracDraft){S.pracDraft.once=d.pkind==='once'?(S.pracDraft.once||isoD(NOW)):'';render();return}
   if(d.pdayclose){S.pday=null;render();return}
   if(d.pdayedit){const p=S.prac.find(x=>x.id===d.pdayedit);S.pday=null;if(p){S.pracTeam=p.team;S.pracDraft={...p,days:[...p.days]};S.pErr=''}render();return}
   if(d.paddtop){track('practice_top');if(S.follows.length===1){S.pracTeam=S.follows[0];S.pracDraft=newDraft();S.pErr=''}else S.pracPick=true;render();return}
@@ -1318,7 +1342,7 @@ document.addEventListener('click',e=>{
   if(d.pclose){closeSmall();render();return}
   if(d.pdelask){S.pdelAsk=d.pdelask;render();return}
   if(d.pdelno){S.pdelAsk=null;render();return}
-  if(d.pdel){S.prac=S.prac.filter(p=>p.id!==d.pdel);delete S.pskips[d.pdel];S.pdelAsk=null;savePrac();toast('האימון נמחק');render();return}
+  if(d.pdel){S.prac=S.prac.filter(p=>p.id!==d.pdel);delete S.pskips[d.pdel];delete S.pmoves[d.pdel];S.pdelAsk=null;savePrac();toast('האימון נמחק');render();return}
   if(d.pskip){S.pday=null;const id=d.pskip,dt=d.pdate,l=S.pskips[id]||[];S.pskips[id]=l.includes(dt)?l.filter(x=>x!==dt):[...l,dt];if(!S.pskips[id].length)delete S.pskips[id];
     savePrac();if(S.pskips[id]?.includes(dt)){track('practice_skip');toast('האימון בוטל לתאריך הזה')}else toast('האימון חזר');render();return}
   if(d.edit){if(d.edit==='close'){closeSmall();render()}else if(d.edit==='add'){closeSmall();S.view='find';render();scrollTo(0,0)}else{S.edit=true;S.editConfirm=null;track('edit_open');render()}return}
@@ -1372,19 +1396,31 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
   if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
 document.addEventListener('submit',e=>{
+  const of=e.target.closest('form[data-oform]');if(of){e.preventDefault();const x=S.occ,id=S.pday.id,orig=S.pday.orig,p=S.prac.find(q=>q.id===id);if(!x||!p)return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')){S.pErr='בחרו תאריך';render();return}
+    if(!/^\d{2}:\d{2}$/.test(x.start||'')){S.pErr='חסרה שעת התחלה';render();return}
+    if(x.end&&x.end<=x.start){S.pErr='שעת הסיום צריכה להיות אחרי שעת ההתחלה';render();return}
+    const place=(x.place||'').trim().slice(0,60);
+    if(p.once){Object.assign(p,{once:x.date,days:[fromIso(x.date).getDay()],start:x.start,end:x.end||'',place})}
+    else{const mv=S.pmoves[id]||{};if(x.date===orig&&x.start===p.start&&(x.end||'')===(p.end||'')&&place===(p.place||''))delete mv[orig];else mv[orig]={date:x.date,start:x.start,end:x.end||'',place};
+      if(Object.keys(mv).length)S.pmoves[id]=mv;else delete S.pmoves[id]}
+    S.pskips[id]=(S.pskips[id]||[]).filter(z=>z!==orig);if(!S.pskips[id].length)delete S.pskips[id];
+    S.occ=null;S.pday=null;S.pErr='';savePrac();track('practice_one');
+    const nd=fromIso(x.date);S.weekOff=Math.round((weekStart(nd)-weekStart(NOW))/(7*864e5));S.day=dkey(nd);S.dayWeek=S.weekOff;render();toast('האימון עודכן');return}
   const pf=e.target.closest('form.pform');if(pf){e.preventDefault();const dr=S.pracDraft;if(!dr)return;
-    if(!dr.days.length){S.pErr='בחרו לפחות יום אחד';render();return}
+    if(dr.once?!/^\d{4}-\d{2}-\d{2}$/.test(dr.once):!dr.days.length){S.pErr=dr.once?'בחרו תאריך':'בחרו לפחות יום אחד';render();return}
     if(!/^\d{2}:\d{2}$/.test(dr.start||'')){S.pErr='חסרה שעת התחלה';render();const n=document.getElementById('pf-start');if(n)n.focus();return}
     if(dr.end&&dr.end<=dr.start){S.pErr='שעת הסיום צריכה להיות אחרי שעת ההתחלה';render();return}
-    const rec={id:dr.id||Math.random().toString(36).slice(2,10),team:S.pracTeam,days:dr.days,start:dr.start,end:dr.end||'',place:(dr.place||'').trim().slice(0,60),remind:+dr.remind,note:(dr.note||'').trim().slice(0,60)};
+    const rec={id:dr.id||Math.random().toString(36).slice(2,10),team:S.pracTeam,days:dr.once?[fromIso(dr.once).getDay()]:dr.days,...(dr.once?{once:dr.once}:{}),start:dr.start,end:dr.end||'',place:(dr.place||'').trim().slice(0,60),remind:+dr.remind,note:(dr.note||'').trim().slice(0,60)};
     const isNew=!dr.id;S.prac=isNew?[...S.prac,rec]:S.prac.map(p=>p.id===rec.id?rec:p);S.pracDraft=null;S.pErr='';savePrac();if(isNew)track('practice_add');
     S.pracTeam=null; // back to the page: the result shows in the card and the week strip
     render();toast(rec.remind?`האימון נשמר. תזכורת ${REMIND_TXT[String(rec.remind)]}`:'האימון נשמר');return}
   const n=e.target.closest('form.nick');if(n){e.preventDefault();const k=S.menu,v=n.elements.nick.value.replace(/[<>]/g,'').trim().slice(0,20);
     if(v)S.nicks[k]=v;else delete S.nicks[k];saveNicks();syncState('nick');if(S.edit){S.menu=null}else closeSmall();render();toast(v?'הכינוי נשמר':'הכינוי הוסר');return}
   const f=e.target.closest('form.fb');if(!f)return;e.preventDefault();sendFeedback(f)});
-document.addEventListener('input',e=>{const pf=e.target.dataset&&e.target.dataset.pf;if(pf&&S.pracDraft){S.pracDraft[pf]=pf==='remind'?+e.target.value:e.target.value;return}const f=e.target.closest('form.fb');if(!f)return;const k=f.dataset.fb+f.dataset.src;S.drafts[k]={text:f.elements.text.value,contact:f.elements.contact?.value||''}});
-document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.pf==='remind'&&S.pracDraft){S.pracDraft.remind=+e.target.value;return}
+document.addEventListener('input',e=>{const of=e.target.dataset&&e.target.dataset.of;if(of&&S.occ){S.occ[of]=e.target.value;return}
+  const pf=e.target.dataset&&e.target.dataset.pf;if(pf&&S.pracDraft){S.pracDraft[pf]=pf==='remind'?+e.target.value:e.target.value;return}const f=e.target.closest('form.fb');if(!f)return;const k=f.dataset.fb+f.dataset.src;S.drafts[k]={text:f.elements.text.value,contact:f.elements.contact?.value||''}});
+document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.of&&S.occ){S.occ[e.target.dataset.of]=e.target.value;return}if(e.target.dataset&&e.target.dataset.pf==='once'&&S.pracDraft){S.pracDraft.once=e.target.value;return}if(e.target.dataset&&e.target.dataset.pf==='remind'&&S.pracDraft){S.pracDraft.remind=+e.target.value;return}
   if(e.target.id==='selAge'){S.age=e.target.value||null;S.league=null;render()}
   else if(e.target.id==='selLg'){S.league=e.target.value===''?null:+e.target.value;render()}
 });
@@ -1401,7 +1437,7 @@ if(window.__adopted){try{const r=await fetch('/api/restore?device='+DEV).then(r=
   if(r.known){if(r.full&&r.full.length){touched=true;store.set('tipoff.touched',true);S.follows=r.full.filter(k=>k in KEY);store.set('tipoff.follows',S.follows)}
     S.res=(r.res||[]).filter(k=>k in KEY);store.set('tipoff.res',S.res);S.nicks=r.nicks||{};store.set('tipoff.nicks',S.nicks);
     if(r.prefs&&Object.keys(r.prefs).length){S.alerts={...S.alerts,...r.prefs};store.set('tipoff.alerts',S.alerts)}
-    S.prac=r.practices||[];S.pskips=r.pskips||{};store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);track('restore');render()}}catch(e){}}
+    S.prac=r.practices||[];S.pskips=r.pskips||{};S.pmoves=r.pmoves||{};store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);store.set('tipoff.pmoves',S.pmoves);track('restore');render()}}catch(e){}}
 syncState('open');
 if(!S.invite)syncURL();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
