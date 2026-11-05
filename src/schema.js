@@ -12,6 +12,10 @@ export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS nicks (device TEXT NOT NULL, team TEXT NOT NULL, nick TEXT NOT NULL, PRIMARY KEY (device, team))`,
   `CREATE TABLE IF NOT EXISTS practices (device TEXT PRIMARY KEY, data TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS pending (device TEXT NOT NULL, kind TEXT NOT NULL, ts INTEGER NOT NULL, msg TEXT NOT NULL)`,
+  // a team's practice schedule as the last parent who changed it entered it (days, times, places only)
+  `CREATE TABLE IF NOT EXISTS team_prac (team TEXT PRIMARY KEY, data TEXT NOT NULL, by TEXT NOT NULL, at INTEGER NOT NULL)`,
+  // "how did it end?": a final score a parent reported before the association published one
+  `CREATE TABLE IF NOT EXISTS reports (game INTEGER NOT NULL, device TEXT NOT NULL, hs INTEGER NOT NULL, aws INTEGER NOT NULL, ts INTEGER NOT NULL, PRIMARY KEY (game, device))`,
 ];
 // Columns added after launch. Running them again fails harmlessly ("duplicate column"), so errors are ignored.
 export const MIGRATIONS = [

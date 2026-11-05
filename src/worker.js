@@ -1,6 +1,6 @@
 // טיפ-אוף server: serves the app, syncs the schedule every hour, sends push notifications,
 // serves each family's calendar feed, and counts usage.
-import { fetchSeason, fetchHistory, buildPack, diffPacks, attachChangeLog, ymd } from './ibba.js';
+import { fetchSeason, fetchHistory, buildPack, diffPacks, attachChangeLog, ymd, gameInfo } from './ibba.js';
 import { sendPush } from './push.js';
 import { icsFor } from './ics.js';
 import { statsPage } from './stats.js';
@@ -157,6 +157,12 @@ async function deliver(env, perDevice, kind) {
 
 async function notifyChanges(env, changes) {
   if (!changes.length) return 0;
+  const resIds = changes.filter(c => c.kind === 'result').map(c => c.game.id);
+  if (resIds.length) { // parents already got the score from a report that turned out right
+    const rep = await reportsFor(env, resIds.slice(0, 90));
+    changes = changes.filter(c => !(c.kind === 'result' && rep[c.game.id] && rep[c.game.id].hs === c.game.hs && rep[c.game.id].as === c.game.as));
+    if (!changes.length) return 0;
+  }
   const keys = changes.flatMap(c => [c.game.homeKey, c.game.awayKey]);
   const rows = await devicesFollowing(env, keys);
   const per = { change: new Map(), result: new Map() };
@@ -233,6 +239,54 @@ const REMIND = [0, 30, 60, 120, -1]; // minutes before; -1 = the evening before 
 const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const clean = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
+/** The part of a family's practices that other parents of the team may copy: no notes, no reminder choice. */
+export function teamPart(pr, team) {
+  const list = pr.list.filter(p => p.team === team).map(p => ({ id: p.id, days: p.days, start: p.start, end: p.end, place: p.place, ...(p.once ? { once: p.once } : {}) }));
+  const ids = new Set(list.map(p => p.id)), pick = o => Object.fromEntries(Object.entries(o || {}).filter(([id]) => ids.has(id)));
+  return { list, skips: pick(pr.skips), moves: pick(pr.moves) };
+}
+
+/** A score a parent reports: allowed from 60 minutes after the start until 36 hours after, if the association has no result yet. */
+const minsSince = (d, now) => { const P = ilParts(now); const t = s => Date.UTC(2000 + +s.slice(0, 2), +s.slice(2, 4) - 1, +s.slice(4, 6), +s.slice(6, 8), +s.slice(8, 10));
+  return (Date.UTC(+P.year, +P.month - 1, +P.day, +P.hour, +P.minute) - t(d)) / 60000; };
+export async function reportScore(env, b, now = new Date()) {
+  if (!DEVICE.test(b.device || '')) return { status: 400, error: 'device' };
+  const hs = Number(b.hs), as = Number(b.as);
+  if (![hs, as].every(n => Number.isInteger(n) && n >= 0 && n <= 250) || hs === as) return { status: 400, error: 'score' };
+  const pack = await getPack(env), row = pack?.g.find(r => r[0] === Number(b.game));
+  if (!row) return { status: 404, error: 'game' };
+  const g = gameInfo(pack, row), m = minsSince(g.d, now);
+  if (g.hs != null) return { status: 409, error: 'official' };
+  if (m < 60 || m > 36 * 60) return { status: 409, error: 'time' };
+  const follows = await env.DB.prepare('SELECT 1 FROM follows WHERE device=? AND team IN (?,?)').bind(b.device, g.homeKey, g.awayKey).first();
+  if (!follows) return { status: 403, error: 'follow' };
+  const before = await env.DB.prepare('SELECT COUNT(*) c FROM reports WHERE game=?').bind(g.id).first();
+  await env.DB.prepare('INSERT INTO reports(game,device,hs,aws,ts) VALUES(?,?,?,?,?) ON CONFLICT(game,device) DO UPDATE SET hs=excluded.hs, aws=excluded.aws, ts=excluded.ts')
+    .bind(g.id, b.device, hs, as, now.getTime()).run();
+  await track(env, b.device, 'report');
+  let pushed = 0;
+  if (!before.c) { // the first report goes out like a result, to the parents who asked for results
+    const rows = await devicesFollowing(env, [g.homeKey, g.awayKey]);
+    const per = { change: new Map(), result: new Map() };
+    for (const r of rows) {
+      if (r.device === b.device || !JSON.parse(r.prefs || '{}').result || per.result.has(r.device)) continue;
+      const mine = r.team === g.homeKey, my = mine ? hs : as, op = mine ? as : hs, team = withNick(mine ? g.home : g.away, r.nick);
+      per.result.set(r.device, { device: r.device, push: r.push, msgs: [{ title: `🏀 ${team} ${my > op ? 'ניצחה' : 'הפסידה'} ${my}–${op}`, body: `נגד ${mine ? g.away : g.home}. לפי דיווח של הורה מהמגרש` }] });
+    }
+    pushed = (await isQuiet(env)) ? await holdForMorning(env, per) : await deliver(env, per.result, 'report');
+  }
+  return { status: 200, ok: true, first: !before.c, pushed };
+}
+
+/** The score most parents reported for each game (earliest report breaks a tie). */
+export async function reportsFor(env, ids) {
+  if (!ids.length) return {};
+  const { results } = await env.DB.prepare(`SELECT game, hs, aws, COUNT(*) n, MIN(ts) t FROM reports WHERE game IN (${ids.map(() => '?').join(',')}) GROUP BY game, hs, aws ORDER BY n DESC, t ASC`).bind(...ids).all();
+  const out = {};
+  for (const r of results) if (!out[r.game]) out[r.game] = { hs: r.hs, as: r.aws, n: r.n };
+  return out;
+}
+
 export function cleanPractices(list, skips, teams, moves) {
   const out = [];
   for (const p of Array.isArray(list) ? list.slice(0, 40) : []) {
@@ -242,7 +296,7 @@ export function cleanPractices(list, skips, teams, moves) {
     if (!days.length) continue;
     out.push({ id: clean(p.id, 12) || Math.random().toString(36).slice(2, 10), team: p.team, days, start: p.start, ...(once ? { once } : {}),
       end: HM.test(p.end || '') ? p.end : '', place: clean(p.place, 60), note: clean(p.note, 60),
-      remind: REMIND.includes(+p.remind) ? +p.remind : 60 });
+      remind: REMIND.includes(+p.remind) ? +p.remind : 60, ...(p.src === 'team' ? { src: 'team' } : {}) });
   }
   const ids = new Set(out.map(p => p.id)), sk = {}, mv = {};
   for (const [id, dates] of Object.entries(skips && typeof skips === 'object' ? skips : {})) {
@@ -308,12 +362,14 @@ export async function cleanup(env, now = Date.now()) {
     env.DB.prepare('DELETE FROM nicks WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo),
     env.DB.prepare('DELETE FROM practices WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo),
     env.DB.prepare('DELETE FROM devices WHERE last_seen < ?').bind(yearAgo),
+    env.DB.prepare('DELETE FROM reports WHERE ts < ?').bind(now - 30 * 864e5),          // parents' score reports: 30 days
+    env.DB.prepare('DELETE FROM team_prac WHERE at < ?').bind(now - 180 * 864e5),       // team schedules nobody touched for half a year
   ]);
 }
 
 // "מחיקת המידע שלי": everything tied to this phone's random id.
 async function forgetDevice(env, device) {
-  await env.DB.batch(['devices WHERE id', 'follows WHERE device', 'nicks WHERE device', 'practices WHERE device', 'pending WHERE device', 'activity WHERE device', 'feedback WHERE device']
+  await env.DB.batch(['devices WHERE id', 'follows WHERE device', 'nicks WHERE device', 'practices WHERE device', 'pending WHERE device', 'activity WHERE device', 'feedback WHERE device', 'team_prac WHERE by', 'reports WHERE device']
     .map(t => env.DB.prepare(`DELETE FROM ${t}=?`).bind(device)));
 }
 
@@ -353,6 +409,12 @@ async function saveState(env, b) {
       stmts.push(pr.list.length
         ? env.DB.prepare('INSERT INTO practices(device,data) VALUES(?,?) ON CONFLICT(device) DO UPDATE SET data=excluded.data').bind(b.device, JSON.stringify(pr))
         : env.DB.prepare('DELETE FROM practices WHERE device=?').bind(b.device));
+      // the teams whose practices this parent just changed become that team's shared schedule (others get an offer)
+      const up = env.DB.prepare('INSERT INTO team_prac(team,data,by,at) VALUES(?,?,?,?) ON CONFLICT(team) DO UPDATE SET data=excluded.data, by=excluded.by, at=excluded.at');
+      for (const k of (Array.isArray(b.pteams) ? b.pteams : []).filter(k => full.includes(k)).slice(0, 30)) {
+        const tp = teamPart(pr, k);
+        if (tp.list.length) stmts.push(up.bind(k, JSON.stringify(tp), b.device, now));
+      }
     }
   }
   const act = env.DB.prepare('INSERT INTO activity(day,device,type,n) VALUES(?,?,?,1) ON CONFLICT(day,device,type) DO UPDATE SET n=n+1');
@@ -432,6 +494,22 @@ export default {
         const data = pr ? JSON.parse(pr.data) : { list: [], skips: {} };
         return json({ known: true, prefs: JSON.parse(d.prefs || '{}'), full: f.results.filter(r => r.kind === 'full').map(r => r.team), res: f.results.filter(r => r.kind === 'res').map(r => r.team),
           nicks: Object.fromEntries(n.results.map(r => [r.team, r.nick])), practices: data.list, pskips: data.skips, pmoves: data.moves || {} }, 200, { 'cache-control': 'no-store' });
+      }
+      if (p === '/api/teamprac' && req.method === 'POST') { // the shared practice schedules of the teams this parent follows
+        const b = await readJSON(req);
+        if (!DEVICE.test(b.device || '')) return json({ error: 'device' }, 400);
+        const keys = (Array.isArray(b.teams) ? b.teams : []).filter(k => TEAM.test(k)).slice(0, 30);
+        if (!keys.length) return json({});
+        const { results } = await env.DB.prepare(`SELECT team, data, by, at FROM team_prac WHERE team IN (${keys.map(() => '?').join(',')})`).bind(...keys).all();
+        return json(Object.fromEntries(results.map(r => [r.team, { ...JSON.parse(r.data), at: r.at, mine: r.by === b.device }])), 200, { 'cache-control': 'no-store' });
+      }
+      if (p === '/api/report' && req.method === 'POST') {
+        const r = await reportScore(env, await readJSON(req));
+        return json(r, r.status);
+      }
+      if (p === '/api/reports' && req.method === 'GET') {
+        const ids = (url.searchParams.get('games') || '').split(',').map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 60);
+        return json(await reportsFor(env, ids), 200, { 'cache-control': 'no-store' });
       }
       if (p === '/api/forget' && req.method === 'POST') {
         const b = await readJSON(req);
