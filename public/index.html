@@ -510,7 +510,7 @@ function sampleFollows(){ // two real teams with a game in the coming days, show
 let touched=store.get('tipoff.touched',false);
 const S={view:'my',dev:null,pushTried:false,weekOff:0,day:null,dayWeek:null,findMode:'full',justAdded:null,res:store.get('tipoff.res',[]).filter(k=>k in KEY),follows:(touched?store.get('tipoff.follows',[]):sampleFollows()).filter(k=>k in KEY),
   filter:'all',gender:'M',age:null,league:null,q:'',showUp:6,
-  alerts:store.get('tipoff.alerts',{change:true,eve:true,result:false})};
+  alerts:store.get('tipoff.alerts',{change:true,eve:true,result:!touched})}; // results on for new families; families from before keep what they had
 
 /* ---------- helpers ---------- */
 const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];

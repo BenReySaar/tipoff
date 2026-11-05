@@ -386,7 +386,7 @@ async function saveState(env, b) {
   const existed = await env.DB.prepare('SELECT 1 FROM devices WHERE id=?').bind(b.device).first();
   const prefs = b.prefs && typeof b.prefs === 'object' ? JSON.stringify({ change: !!b.prefs.change, eve: !!b.prefs.eve, result: !!b.prefs.result }) : null;
   const platform = ['ios', 'android', 'other'].includes(b.platform) ? b.platform : 'other';
-  const stmts = [env.DB.prepare(`INSERT INTO devices(id,created,last_seen,platform,standalone,prefs) VALUES(?,?,?,?,?,COALESCE(?,'{"change":true,"eve":true,"result":false}'))
+  const stmts = [env.DB.prepare(`INSERT INTO devices(id,created,last_seen,platform,standalone,prefs) VALUES(?,?,?,?,?,COALESCE(?,'{"change":true,"eve":true,"result":true}'))
     ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen, platform=excluded.platform, standalone=MAX(devices.standalone,excluded.standalone), prefs=COALESCE(?,devices.prefs)`)
     .bind(b.device, now, now, platform, b.standalone ? 1 : 0, prefs, prefs)];
   if (Array.isArray(b.full) || Array.isArray(b.res)) {
