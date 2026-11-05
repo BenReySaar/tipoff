@@ -1015,7 +1015,7 @@ function demoVideo(){return `<figure class="demo"><video src="/media/practice-de
 function promoSheet(){return sheet(`<p class="new-tag">חדש</p><h2 tabindex="-1" data-autofocus>תזכורת לאימונים</h2>
   <p class="sub">מוסיפים את ימי האימון של הקבוצה, ומקבלים תזכורת לטלפון שעה לפני. האימונים נכנסים גם ליומן.</p>
   ${demoVideo()}<button class="btn wide" data-promo="go">להוספת אימון</button><button class="linkbtn sh-skip" data-promo="no">לא עכשיו</button>`,'חדש: תזכורת לאימונים')}
-function pracPickSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>לאיזו קבוצה האימון?</h2>
+function pracPickSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>${S.prac.some(p=>S.follows.includes(p.team))?'האימונים של איזו קבוצה?':'לאיזו קבוצה האימון?'}</h2>
   <div class="ed-list">${S.follows.map(k=>{const t=TEAMS[KEY[k]];if(!t)return '';const n=nickOf(k),c=pracOf(k).length;
     return `<button class="pick-team" data-pnew="${esc(k)}">${dot(k)}<span class="ed-n"><b>${esc(t.name)}</b><span class="sub">${n?esc(n)+' · ':''}${ageLabel(t.lg)}${c?` · ${c===1?'אימון אחד':c+' אימונים'}`:''}</span></span>${ic.prev}</button>`}).join('')}</div>
   <button class="linkbtn sh-skip" data-pickclose="1">ביטול</button>`,'בחירת קבוצה לאימון')}
@@ -1061,14 +1061,17 @@ function pdaySheet(){const o=occOf(S.pday.id,S.pday.orig);if(!o){S.pday=null;ret
   return sheet(`<p class="sub" style="margin-bottom:-8px">${t?esc(t.name):''}${o.place?' · '+esc(o.place):''}</p><h2 tabindex="-1" data-autofocus>אימון · יום ${DAYS[d.getDay()]} ${dm(d)} · ${o.start}</h2>
     <button class="btn wide ghost" data-occedit="1">עריכת האימון הזה</button>
     <button class="btn wide ghost" data-pskip="${p.id}" data-pdate="${o.orig}">${sk?'יש אימון בכל זאת':'אין אימון בתאריך הזה'}</button>
-    ${p.once?`<button class="btn wide ghost danger-t" data-oncedel="${p.id}">מחיקת האימון</button>`:`<button class="btn wide ghost" data-pdayedit="${p.id}">עריכת כל האימונים הקבועים</button>`}
+    ${p.once?`<button class="btn wide ghost danger-t" data-oncedel="${p.id}">מחיקת האימון</button>`:`<button class="btn wide ghost" data-pdayedit="${p.id}">עריכת כל האימונים הקבועים</button>
+    ${S.pdayDel?`<div class="ed-row conf"><span class="ed-n"><b>למחוק את האימון הקבוע?</b><span class="sub">${pracDays(p)} ${p.start}. הוא יימחק מכל השבועות, עם התזכורות.</span></span>
+      <span class="ed-b"><button class="btn sm danger" data-pdaydel="${p.id}">מחיקה</button><button class="linkbtn" data-pdaydelno="1">ביטול</button></span></div>`
+      :`<button class="linkbtn danger-t" data-pdaydelask="1">מחיקת האימון הקבוע</button>`}`}
     <button class="linkbtn sh-skip" data-pdayclose="1">סגירה</button>`,'אימון')}
 function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק את המידע שלכם?</h2>
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, האימונים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
 function overlay(){return S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
-function closeSmall(){if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
+function closeSmall(){if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
   setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
@@ -1120,7 +1123,7 @@ function viewSeason(){
      <div class="list">${gr.items.map(x=>row(x.g,x.t,multi)).join('')}</div></section>`).join('')}`}
 
 function viewMy(){
-  const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><div class="pt-btns">${touched&&S.follows.length?'<button class="addbtn ghost" data-edit="1">עריכה</button><button class="addbtn ghost" data-paddtop="1">+ אימון</button>':''}<button class="addbtn" data-go="find">+ קבוצה</button></div></div>`;
+  const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><div class="pt-btns">${touched&&S.follows.length?'<button class="addbtn ghost" data-edit="1">עריכה</button><button class="addbtn ghost" data-paddtop="1">'+(S.prac.some(p=>S.follows.includes(p.team))?'אימונים':'+ אימון')+'</button>':''}<button class="addbtn" data-go="find">+ קבוצה</button></div></div>`;
   if(!S.follows.length) return `${title}<div class="empty"><h2>עוד לא בחרתם קבוצה</h2><p class="sub">מחפשים את הקבוצה של הילד, והמשחק הבא מופיע כאן.</p><button class="btn" data-go="find">מציאת קבוצה</button></div>${resultsBlock()}${ideaBox()}${footer()}`;
   const keys=S.filter==='all'?S.follows:[S.filter];const ts=keys.map(k=>TEAMS[KEY[k]]);
   const all=S.follows.map(k=>TEAMS[KEY[k]]);
@@ -1410,15 +1413,15 @@ document.addEventListener('click',e=>{
     S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
     S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
     render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
-  if(d.pdayopen){S.pday={id:d.pdayopen,orig:d.porig,date:d.pdate};S.occ=null;render();return}
+  if(d.pdayopen){S.pday={id:d.pdayopen,orig:d.porig,date:d.pdate};S.occ=null;S.pdayDel=false;render();return}
   if(d.occedit){const o=occOf(S.pday.id,S.pday.orig);if(o){S.occ={date:o.date,start:o.start,end:o.end||'',place:o.place||''};S.pErr=''}render();return}
   if(d.occcancel){S.occ=null;S.pErr='';render();return}
   if(d.oncedel){S.prac=S.prac.filter(p=>p.id!==d.oncedel);delete S.pskips[d.oncedel];delete S.pmoves[d.oncedel];S.pday=null;savePrac();toast('האימון נמחק');render();return}
   if(d.pkind&&S.pracDraft){S.pracDraft.once=d.pkind==='once'?(S.pracDraft.once||isoD(NOW)):'';render();return}
   if(d.pdayclose){S.pday=null;render();return}
   if(d.pdayedit){const p=S.prac.find(x=>x.id===d.pdayedit);S.pday=null;if(p){S.pracTeam=p.team;S.pracDraft={...p,days:[...p.days]};S.pErr=''}render();return}
-  if(d.paddtop){track('practice_top');if(S.follows.length===1){S.pracTeam=S.follows[0];S.pracDraft=newDraft();S.pErr=''}else S.pracPick=true;render();return}
-  if(d.pnew){S.pracPick=false;S.pracTeam=d.pnew;S.pracDraft=newDraft();S.pErr='';render();return}
+  if(d.paddtop){track('practice_top');if(S.follows.length===1){S.pracTeam=S.follows[0];S.pracDraft=pracOf(S.pracTeam).length?null:newDraft();S.pdelAsk=null;S.pErr=''}else S.pracPick=true;render();return}
+  if(d.pnew){S.pracPick=false;S.pracTeam=d.pnew;S.pracDraft=pracOf(d.pnew).length?null:newDraft();S.pdelAsk=null;S.pErr='';render();return}
   if(d.pickclose){S.pracPick=false;render();return}
   if(d.pdemo){S.pdemo=true;track('demo_play');render();return}
   if(d.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();if(d.promo==='no'){track('promo_no');render();return}
@@ -1430,6 +1433,9 @@ document.addEventListener('click',e=>{
   if(d.pclose){closeSmall();render();return}
   if(d.pdelask){S.pdelAsk=d.pdelask;render();return}
   if(d.pdelno){S.pdelAsk=null;render();return}
+  if(d.pdaydelask){S.pdayDel=true;render();return}
+  if(d.pdaydelno){S.pdayDel=false;render();return}
+  if(d.pdaydel){const id=d.pdaydel;S.prac=S.prac.filter(p=>p.id!==id);delete S.pskips[id];delete S.pmoves[id];S.pday=null;S.pdayDel=false;savePrac();toast('האימון נמחק');render();return}
   if(d.pdel){S.prac=S.prac.filter(p=>p.id!==d.pdel);delete S.pskips[d.pdel];delete S.pmoves[d.pdel];S.pdelAsk=null;savePrac();toast('האימון נמחק');render();return}
   if(d.pskip){S.pday=null;const id=d.pskip,dt=d.pdate,l=S.pskips[id]||[];S.pskips[id]=l.includes(dt)?l.filter(x=>x!==dt):[...l,dt];if(!S.pskips[id].length)delete S.pskips[id];
     savePrac();if(S.pskips[id]?.includes(dt)){track('practice_skip');toast('האימון בוטל לתאריך הזה')}else toast('האימון חזר');render();return}
