@@ -743,7 +743,7 @@ function weekStrip(ts){
   const selDay=S.day?[...Array(7)].map((_,i)=>addDays(start,i)).find(d=>dkey(d)===S.day):null;
   const selPr=selDay?prOf(selDay):[];
   const cl=sel.length>1?clashes(sel.map(x=>x.t)).filter(c=>dkey(c.a.g.date)===S.day):[];
-  const ovSel=selDay&&multi?dayOverlap(ts,selDay):null;
+  const ovSel=selDay&&multi?dayOverlap(ts,selDay):null;if(ovSel&&!window.__cs){window.__cs=1;setTimeout(()=>track('clash_seen'))}
   const lvl=ovSel?['res l',ovSel]:cl.find(c=>c.lvl==='overlap')?['res l','שני משחקים חופפים בשעה, באולמות שונים']:cl.find(c=>c.lvl==='sameday')?['res p','שני משחקים באותו יום']:cl.length?['res w','שני משחקים באותו אולם']:null;
   const prRow=x=>`<button class="row prow${x.skip?' skipped':''}${multi?' tagged':''}"${multi?` style="--tc:${tcolor(x.t.key)}"`:''} data-pdayopen="${x.p.id}" data-porig="${x.orig}" data-pdate="${isoD(selDay)}" aria-label="אימון, יום ${DAYS[selDay.getDay()]} ${dm(selDay)} ב־${x.start}${x.skip?', בוטל':''}. לשינוי"><div class="date"><span class="dn">${DAYS[selDay.getDay()]}</span><span class="dd">${dm(selDay)}</span></div>
     <div class="mid">${multi?`<span class="who">${dot(x.t.key)}${esc(x.t.name)}</span>`:''}<span class="vs">אימון${x.skip?' <span class="pill-warn">בוטל</span>':''}</span>${x.place?`<span class="meta">${esc(x.place)}</span>`:''}</div>
