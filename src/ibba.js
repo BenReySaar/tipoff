@@ -120,13 +120,17 @@ export async function fetchHistory(leagueIds, { userAgent = 'TipOff/1.0' } = {})
   const one = async id => {
     const r = await fetch(`${SITE}/?feed=xlsx&league_id=${id}`, { headers: { 'User-Agent': userAgent } });
     if (!r.ok || !/sheet|octet|zip/.test(r.headers.get('content-type') || '')) throw new Error('HTTP ' + r.status);
-    return histRows(id, await readXlsx(await r.arrayBuffer()));
+    const buf = await r.arrayBuffer();
+    if (buf.byteLength === 0) return null; // a league with no games yet: the association sends an empty file
+    return histRows(id, await readXlsx(buf));
   };
   // gently: 2 at a time with a short pause, then one more try for leagues that failed
   let retry = [];
-  await pool(leagueIds, 2, async id => { try { hist.push(...await one(id)); } catch (e) { retry.push(id); } await wait(150); });
-  if (retry.length) { await wait(3000); await pool(retry, 1, async id => { try { hist.push(...await one(id)); } catch (e) { failed.push(id); } await wait(400); }); }
-  return { hist, failed };
+  const empty = [];
+  const take = (id, rows) => { if (rows) hist.push(...rows); else empty.push(id); };
+  await pool(leagueIds, 2, async id => { try { take(id, await one(id)); } catch (e) { retry.push(id); } await wait(150); });
+  if (retry.length) { await wait(3000); await pool(retry, 1, async id => { try { take(id, await one(id)); } catch (e) { failed.push(id); } await wait(400); }); }
+  return { hist, failed, empty };
 }
 export function histRows(leagueId, rows) {
   const head = rows[0] || [];

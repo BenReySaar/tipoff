@@ -153,7 +153,7 @@ ${fb.length ? `<div class="fbl">${fb.map(f => {
 
 <div class="card"><h2>סנכרון מול אתר האיגוד</h2>
 ${sync ? `<p><span class="st ${sync.ok ? 'ok' : 'bad'}">${sync.ok ? 'תקין' : 'נכשל'}</span> ריצה אחרונה ${when(sync.at)} (${esc(sync.source)})${sync.ok ? ` · ${fmt(sync.games)} משחקים · ${fmt(sync.changes)} שינויים · ${fmt(sync.pushed)} התראות` : `<br><span class="sub">${esc(sync.error)}</span>`}</p>` : '<p>עוד לא רץ סנכרון.</p>'}
-${sync?.histAt ? `<p class="sub">משחקים קודמים בעונה (מקבצי האקסל של האיגוד): ${fmt(sync.histRows)} שורות מ־${fmt(sync.histLeagues)} ליגות, עודכן ${when(sync.histAt)}${sync.histFailed ? ` · ${fmt(sync.histFailed)} ליגות לא נטענו` : ''}</p>` : ''}
+${sync?.histAt ? `<p class="sub">משחקים קודמים בעונה (מקבצי האקסל של האיגוד): ${fmt(sync.histRows)} שורות מ־${fmt(sync.histLeagues)} ליגות${sync.histEmpty ? ` (ועוד ${fmt(sync.histEmpty)} ליגות שעדיין אין בהן משחקים)` : ''}, עודכן ${when(sync.histAt)}${sync.histFailed ? ` · ${fmt(sync.histFailed)} ליגות לא נטענו` : ''}</p>` : ''}
 ${sync?.histError ? `<p class="sub">${esc(sync.histError)}</p>` : ''}
 ${lastOk && !sync?.ok ? `<p class="sub">סנכרון תקין אחרון: ${when(lastOk.at)}. האפליקציה ממשיכה להציג את הנתונים ממנו.</p>` : ''}
 </div>

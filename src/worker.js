@@ -70,14 +70,14 @@ export async function runSync(env, { raw = null, source = 'cron' } = {}) {
         if (got.hist.length) {
           const failed = new Set(got.failed);
           const keep = (hist?.rows || []).filter(r => failed.has(r[0])); // leagues that failed this time keep their last rows
-          hist = { at: Date.now(), rows: got.hist.concat(keep), leagues: ids.length - got.failed.length, failed: got.failed.length };
+          hist = { at: Date.now(), rows: got.hist.concat(keep), leagues: ids.length - got.failed.length - (got.empty || []).length, failed: got.failed.length, empty: (got.empty || []).length };
           await env.KV.put('hist', JSON.stringify(hist));
         } else if (hist) hist.error = 'קבצי האקסל לא נטענו (' + got.failed.length + ' ליגות)';
         else status.histError = 'קבצי האקסל של האיגוד לא נטענו';
       } catch (e) { status.histError = 'קבצי האקסל: ' + String(e && e.message || e); }
     }
     raw = { ...raw, hist: hist?.rows || [] };
-    if (hist) Object.assign(status, { histAt: hist.at, histRows: hist.rows.length, histLeagues: hist.leagues, histFailed: hist.failed });
+    if (hist) Object.assign(status, { histAt: hist.at, histRows: hist.rows.length, histLeagues: hist.leagues, histFailed: hist.failed, histEmpty: hist.empty || 0 });
     const next = buildPack(raw);
     const { changes, guard } = diffPacks(prev, next);
     if (guard) throw new Error('נעצר כדי לא לשמור נתונים חסרים: ' + guard);
