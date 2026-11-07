@@ -621,7 +621,7 @@ function tpTake(key,T){const old=new Map(pracOf(key).map(p=>[p.id,p]));
   savePrac()}
 function tpCards(ts){if(!touched)return '';const multi=S.follows.length>1;
   return ts.map(t=>{const o=tpOffer(t);if(!o)return '';const who=multi?`<span class="tp-who">${dot(t.key)}${esc(t.name)}</span>`:'';
-    if(o.kind==='add')return `<section class="tp" aria-label="לוז אימונים מהקבוצה">${who}<h2>הורה מהקבוצה כבר הזין אימונים</h2><ul>${o.T.list.slice(0,4).map(p=>`<li>${esc(tpDesc(p))}</li>`).join('')}</ul>
+    if(o.kind==='add')return `<section class="tp" aria-label="לו״ז אימונים מהקבוצה">${who}<h2>הורה מהקבוצה כבר הזין אימונים</h2><ul>${o.T.list.slice(0,4).map(p=>`<li>${esc(tpDesc(p))}</li>`).join('')}</ul>
       <div class="tp-btns"><button class="btn" data-tpadd="${esc(t.key)}">להוסיף אצלי</button><button class="linkbtn" data-tpno="${esc(t.key)}">לא תודה</button></div></section>`;
     return `<section class="tp" aria-label="עדכון לאימונים מהקבוצה">${who}<h2>עדכון מהקבוצה</h2><ul>${o.lines.slice(0,3).map(l=>`<li>${esc(l)}</li>`).join('')}${o.lines.length>3?`<li>ועוד ${o.lines.length-3} שינויים</li>`:''}</ul>
       <div class="tp-btns"><button class="btn" data-tpupd="${esc(t.key)}">לעדכן אצלי</button><button class="linkbtn" data-tpno="${esc(t.key)}">להשאיר כמו שזה</button></div></section>`}).join('')}
@@ -662,7 +662,7 @@ function hero(g,t){
   return `<section class="hero" aria-label="המשחק הבא">
    <div class="h-when"><span class="h-rel">${rel(g.date)}</span><span>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</span>${menuBtn(t)}</div>
    <div class="h-time">${hm(g.date)}</div>
-   <div class="h-teams"><span>${esc(t.name)}</span>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:''}<span class="vs">נגד</span><button class="opp-link" data-opp="${o.i}" data-oppf="${t.i}" aria-label="הלוז של ${esc(o.name)}">${esc(o.name)}${ic.prev}</button>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
+   <div class="h-teams"><span>${esc(t.name)}</span>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:''}<span class="vs">נגד</span><button class="opp-link" data-opp="${o.i}" data-oppf="${t.i}" aria-label="הלו״ז של ${esc(o.name)}">${esc(o.name)}${ic.prev}</button>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
    <div class="facts">
      <div class="fact">${ic.pin}<span><b>${esc(V.name)}</b>${V.addr?`<span class="sub">${esc(V.addr)}</span>`:''}</span></div>
      <div class="fact">${ic.shirt}<span><b>${kitText(g,t)}</b>. שימו לב לצבע הגופייה</span></div>
@@ -707,7 +707,7 @@ function details(g,t){
     <tr><th scope="row">מקום בטבלה</th><td>${A.pos}</td><td>${B.pos}</td></tr>
     <tr><th scope="row">מאזן</th><td>${A.rec}</td><td>${B.rec}</td></tr>
     <tr><th scope="row">משחק אחרון</th><td>${A.last}</td><td>${B.last}</td></tr></tbody></table>
-    <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">ללוז של ${esc(o.name)}</button><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
+    <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">ללו״ז של ${esc(o.name)}</button><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
 /* ---------- a peek at the opponent's schedule: opens only on demand, nothing to follow ---------- */
 function oppRow(g,o,mine){const op=TEAMS[g.h===o.i?g.a:g.h],home=g.h===o.i,ours=mine!=null&&(g.h===mine||g.a===mine);
   let right;if(played(g)){const my=home?g.hs:g.as,them=home?g.as:g.hs;right=`<span class="res ${my>them?'w':'l'}">${my>them?'ניצחון':'הפסד'}</span> <span class="score">${my}–${them}</span>`}
@@ -722,7 +722,7 @@ function oppSheet(){const o=TEAMS[S.opp.ti];if(!o){S.opp=null;return ''}
     ${past.length?`<h3 class="op-h">משחקים אחרונים</h3><ul class="op-list">${past.slice(0,3).map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:''}
     ${next.length?`<h3 class="op-h">משחקים הבאים</h3><ul class="op-list">${next.slice(0,2).map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:''}
     ${gs.length>5?`<button class="btn wide ghost" data-oppall="1">כל המשחקים של העונה (${gs.length})</button>`:''}`}
-    <button class="linkbtn sh-skip" data-oppclose="1">סגירה</button>`,'הלוז של '+o.name)}
+    <button class="linkbtn sh-skip" data-oppclose="1">סגירה</button>`,'הלו״ז של '+o.name)}
 
 function row(g,t,showTeam){
   const home=g.h===t.i,o=TEAMS[home?g.a:g.h];let right;
@@ -788,7 +788,7 @@ function nextCard(g,t){
   return `<div class="nx">
    <div class="nx-h">${dot(t.key)}<b>${esc(t.name)}</b>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:`<span class="sub">${ageLabel(t.lg)}</span>`}<span class="nx-rel">${rel(g.date)}</span>${menuBtn(t)}</div>
    <div class="nx-b"><span class="nx-t">${hm(g.date)}</span><div class="nx-d">
-     <div><b>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</b>. נגד <button class="opp-link sm" data-opp="${o.i}" data-oppf="${t.i}" aria-label="הלוז של ${esc(o.name)}">${esc(o.name)}${ic.prev}</button>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
+     <div><b>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</b>. נגד <button class="opp-link sm" data-opp="${o.i}" data-oppf="${t.i}" aria-label="הלו״ז של ${esc(o.name)}">${esc(o.name)}${ic.prev}</button>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
      <div class="sub">${esc(V.name)}${V.addr?', '+esc(V.addr):''}</div>
      <div class="nx-kit">${ic.shirt}${kitText(g,t)}. שימו לב לצבע הגופייה</div>${pracKit(t)}${repFact(g,t)}${CH.has(g.id)?`<div class="nx-kit warn">${ic.warn}${chText(g)}</div>`:''}</div></div>
    <div class="nx-a four"><a href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav" aria-label="ניווט ב-Waze">${ic.go}Waze</a><a href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="gmaps">גוגל מפות</a><button data-gocal="1">${ic.cal}ליומן</button><a href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="share_game">${ic.share}שיתוף</a></div>
