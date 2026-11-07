@@ -103,7 +103,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .day.today[aria-pressed="true"] .dn{background:var(--accent);color:var(--accent-ink)}
 .opp-link{background:none;border:0;padding:0 0 1px;font:inherit;color:inherit;font-weight:inherit;display:inline-flex;align-items:center;gap:2px;border-bottom:1.5px dotted currentColor;cursor:pointer;min-height:32px}
 .opp-link svg{width:14px;height:14px;opacity:.7}.opp-link.sm{min-height:28px}
-.opp-more{margin:2px 0 6px;display:inline-flex;align-items:center;gap:4px}
+.opp-more{display:block;margin:4px 0 8px;margin-inline-start:0;padding:0;min-height:40px;font-size:15px;font-weight:600;text-align:start}
 .op-h{font-size:14px;color:var(--muted);font-weight:600;margin:14px 0 6px}
 .op-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .op-row{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
@@ -707,7 +707,7 @@ function details(g,t){
     <tr><th scope="row">מקום בטבלה</th><td>${A.pos}</td><td>${B.pos}</td></tr>
     <tr><th scope="row">מאזן</th><td>${A.rec}</td><td>${B.rec}</td></tr>
     <tr><th scope="row">משחק אחרון</th><td>${A.last}</td><td>${B.last}</td></tr></tbody></table>
-    <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">הלוז של ${esc(o.name)}${ic.prev}</button><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
+    <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">ללוז של ${esc(o.name)}</button><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
 /* ---------- a peek at the opponent's schedule: opens only on demand, nothing to follow ---------- */
 function oppRow(g,o,mine){const op=TEAMS[g.h===o.i?g.a:g.h],home=g.h===o.i,ours=mine!=null&&(g.h===mine||g.a===mine);
   let right;if(played(g)){const my=home?g.hs:g.as,them=home?g.as:g.hs;right=`<span class="res ${my>them?'w':'l'}">${my>them?'ניצחון':'הפסד'}</span> <span class="score">${my}–${them}</span>`}
