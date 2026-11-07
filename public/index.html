@@ -101,6 +101,13 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .day.today .dn{color:var(--accent)}
 .day[aria-pressed="true"] .dn{background:var(--sel);color:var(--sel-ink)}
 .day.today[aria-pressed="true"] .dn{background:var(--accent);color:var(--accent-ink)}
+.opp-link{background:none;border:0;padding:0 0 1px;font:inherit;color:inherit;font-weight:inherit;display:inline-flex;align-items:center;gap:2px;border-bottom:1.5px dotted currentColor;cursor:pointer;min-height:32px}
+.opp-link svg{width:14px;height:14px;opacity:.7}.opp-link.sm{min-height:28px}
+.opp-more{margin:2px 0 6px;display:inline-flex;align-items:center;gap:4px}
+.op-h{font-size:14px;color:var(--muted);font-weight:600;margin:14px 0 6px}
+.op-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.op-row{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
+.op-row:last-child{border-bottom:0}.op-row.ours{font-weight:600}.op-d{color:var(--muted);font-variant-numeric:tabular-nums}.op-t{font-weight:600;font-variant-numeric:tabular-nums}.op-r{white-space:nowrap}
 .tp{border:1px solid var(--line-2);border-radius:var(--r);padding:16px 16px 12px;margin:14px 0;display:flex;flex-direction:column;gap:8px}
 .tp h2{font-size:16px;margin:0}.tp ul{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:2px}.tp-who{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .tp-btns{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:4px}.tp-btns .btn{min-height:44px}
@@ -560,7 +567,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL()}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
-S.tprac={};S.rep={};S.repG=null;S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
+S.opp=null;S.tprac={};S.rep={};S.repG=null;S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
 /* ---------- regular practices (entered by the family, only on this phone) ---------- */
 const isoD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
@@ -655,7 +662,7 @@ function hero(g,t){
   return `<section class="hero" aria-label="המשחק הבא">
    <div class="h-when"><span class="h-rel">${rel(g.date)}</span><span>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</span>${menuBtn(t)}</div>
    <div class="h-time">${hm(g.date)}</div>
-   <div class="h-teams"><span>${esc(t.name)}</span>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:''}<span class="vs">נגד</span><span>${esc(o.name)}</span>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
+   <div class="h-teams"><span>${esc(t.name)}</span>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:''}<span class="vs">נגד</span><button class="opp-link" data-opp="${o.i}" data-oppf="${t.i}" aria-label="הלוז של ${esc(o.name)}">${esc(o.name)}${ic.prev}</button>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
    <div class="facts">
      <div class="fact">${ic.pin}<span><b>${esc(V.name)}</b>${V.addr?`<span class="sub">${esc(V.addr)}</span>`:''}</span></div>
      <div class="fact">${ic.shirt}<span><b>${kitText(g,t)}</b>. שימו לב לצבע הגופייה</span></div>
@@ -700,7 +707,22 @@ function details(g,t){
     <tr><th scope="row">מקום בטבלה</th><td>${A.pos}</td><td>${B.pos}</td></tr>
     <tr><th scope="row">מאזן</th><td>${A.rec}</td><td>${B.rec}</td></tr>
     <tr><th scope="row">משחק אחרון</th><td>${A.last}</td><td>${B.last}</td></tr></tbody></table>
-    <p class="sub">${metTxt}</p><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
+    <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">הלוז של ${esc(o.name)}${ic.prev}</button><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
+/* ---------- a peek at the opponent's schedule: opens only on demand, nothing to follow ---------- */
+function oppRow(g,o,mine){const op=TEAMS[g.h===o.i?g.a:g.h],home=g.h===o.i,ours=mine!=null&&(g.h===mine||g.a===mine);
+  let right;if(played(g)){const my=home?g.hs:g.as,them=home?g.as:g.hs;right=`<span class="res ${my>them?'w':'l'}">${my>them?'ניצחון':'הפסד'}</span> <span class="score">${my}–${them}</span>`}
+  else right=isPast(g)?'<span class="res p">טרם עודכן</span>':`<span class="op-t">${hm(g.date)}</span>`;
+  return `<li class="op-row${ours?' ours':''}"><span class="op-d">${dm(g.date)}</span><span class="op-n">נגד ${esc(op.name)}${ours?' <span class="rep-tag">המשחק שלכם</span>':''}</span><span class="op-r">${right}</span></li>`}
+function oppSheet(){const o=TEAMS[S.opp.ti];if(!o){S.opp=null;return ''}
+  const gs=[...o.games].sort((a,b)=>a.date-b.date),past=gs.filter(played).reverse(),next=gs.filter(g=>!isPast(g));
+  const rows=tableRows(o.lg),pos=rows.findIndex(r=>r.id===o.i),pl=rows[pos]&&rows[pos].p;
+  const all=S.opp.all?`<ul class="op-list">${gs.map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:'';
+  return sheet(`<p class="sub" style="margin-bottom:-8px">${esc(LEAGUES[o.lg].full)}${pl?` · מקום ${pos+1} מתוך ${rows.length}`:''}</p><h2 tabindex="-1" data-autofocus>${esc(o.name)}</h2>
+    ${S.opp.all?`<h3 class="op-h">כל המשחקים של העונה</h3>${all}`:`
+    ${past.length?`<h3 class="op-h">משחקים אחרונים</h3><ul class="op-list">${past.slice(0,3).map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:''}
+    ${next.length?`<h3 class="op-h">משחקים הבאים</h3><ul class="op-list">${next.slice(0,2).map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:''}
+    ${gs.length>5?`<button class="btn wide ghost" data-oppall="1">כל המשחקים של העונה (${gs.length})</button>`:''}`}
+    <button class="linkbtn sh-skip" data-oppclose="1">סגירה</button>`,'הלוז של '+o.name)}
 
 function row(g,t,showTeam){
   const home=g.h===t.i,o=TEAMS[home?g.a:g.h];let right;
@@ -766,7 +788,7 @@ function nextCard(g,t){
   return `<div class="nx">
    <div class="nx-h">${dot(t.key)}<b>${esc(t.name)}</b>${nickOf(t.key)?`<span class="nick-pill">${esc(nickOf(t.key))}</span>`:`<span class="sub">${ageLabel(t.lg)}</span>`}<span class="nx-rel">${rel(g.date)}</span>${menuBtn(t)}</div>
    <div class="nx-b"><span class="nx-t">${hm(g.date)}</span><div class="nx-d">
-     <div><b>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</b>. נגד ${esc(o.name)}${isCup(g)?'<span class="cup">גביע</span>':''}</div>
+     <div><b>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</b>. נגד <button class="opp-link sm" data-opp="${o.i}" data-oppf="${t.i}" aria-label="הלוז של ${esc(o.name)}">${esc(o.name)}${ic.prev}</button>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
      <div class="sub">${esc(V.name)}${V.addr?', '+esc(V.addr):''}</div>
      <div class="nx-kit">${ic.shirt}${kitText(g,t)}. שימו לב לצבע הגופייה</div>${pracKit(t)}${repFact(g,t)}${CH.has(g.id)?`<div class="nx-kit warn">${ic.warn}${chText(g)}</div>`:''}</div></div>
    <div class="nx-a four"><a href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav" aria-label="ניווט ב-Waze">${ic.go}Waze</a><a href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="gmaps">גוגל מפות</a><button data-gocal="1">${ic.cal}ליומן</button><a href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="share_game">${ic.share}שיתוף</a></div>
@@ -1070,8 +1092,8 @@ function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, האימונים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
-function overlay(){return S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
-function closeSmall(){if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
+function overlay(){return S.opp?oppSheet():S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function closeSmall(){if(S.opp){if(S.opp.all){S.opp.all=false;return}S.opp=null;return}if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
   setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
@@ -1390,12 +1412,15 @@ function render(){
 }
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);return}
-  if(e.target.closest('.scrim')&&(S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
+  if(e.target.closest('.scrim')&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite)track('invite_dismiss');if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
   if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;if(S.view==='my')afterFirstTeam();render();scrollTo(0,0);return}
   const d=b.dataset;
   if(d.fix)track('diag_fix');
+  if(d.opp){S.opp={ti:+d.opp,from:d.oppf!=null?+d.oppf:null,all:false};track('opp_open');render();return}
+  if(d.oppall){S.opp.all=true;track('opp_all');render();return}
+  if(d.oppclose){S.opp=null;render();return}
   if(d.rep){S.repG=+d.rep;S.repDraft={};S.pErr='';render();return}
   if(d.repclose){closeSmall();render();return}
   if(d.tpadd||d.tpupd){const k=d.tpadd||d.tpupd,T=S.tprac[k];if(!T)return;tpTake(k,T);track(d.tpadd?'tp_add':'tp_update');render();toast(d.tpadd?'האימונים נוספו, עם תזכורת שעה לפני':'האימונים עודכנו לפי הקבוצה');return}
@@ -1487,7 +1512,7 @@ document.addEventListener('click',e=>{
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
   if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
 document.addEventListener('submit',e=>{
   const rf=e.target.closest('form[data-repform]');if(rf){e.preventDefault();const g=GAMES[S.repG];if(!g)return;
