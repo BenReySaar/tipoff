@@ -140,7 +140,7 @@ export async function statsPage(env, pack) {
     all("SELECT day, COUNT(DISTINCT device) c FROM activity WHERE day>=? AND type='open' GROUP BY day ORDER BY day", d30),
     all("SELECT day, COUNT(*) c FROM activity WHERE day>=? AND type='new' GROUP BY day ORDER BY day", d30),
     all('SELECT type, COUNT(DISTINCT device) devices, SUM(n) times FROM activity WHERE day>=? GROUP BY type ORDER BY devices DESC', d30),
-    all("SELECT team, COUNT(*) c FROM follows WHERE kind='full' GROUP BY team ORDER BY c DESC LIMIT 15"),
+    all("SELECT team, SUM(kind='full') c, SUM(kind='res') r FROM follows GROUP BY team ORDER BY c DESC, r DESC, team"),
     all('SELECT kind, SUM(sent) sent, SUM(failed) failed FROM pushlog WHERE day>=? GROUP BY kind', d30),
     all('SELECT kind, COUNT(*) c FROM changes WHERE ts>? GROUP BY kind', now - 7 * 864e5),
     all("SELECT team, kind FROM follows"),
@@ -265,7 +265,11 @@ ${table(I.cohorts, [c => 'שבוע ' + dmy(c.w), c => fmt(c.n) + ' חדשים', 
 </div>
 
 <div class="cols">
-<div class="card"><h2>הקבוצות הכי נעקבות</h2>${table(topTeams, [r => esc(r.team.split('|')[1]) + `<div class="sub">${esc(leagueName.get(r.team.split('|')[0]) || '')}</div>`, r => fmt(r.c)])}</div>
+<div class="card"><h2>הקבוצות שעוקבים אחריהן (${fmt(topTeams.length)})</h2>${(() => {
+  const anyRes = topTeams.some(r => r.r > 0);
+  const cols = [r => esc(r.team.split('|')[1]) + `<div class="sub">${esc(leagueName.get(r.team.split('|')[0]) || '')}</div>`, r => fmt(r.c) + ' עוקבים', ...(anyRes ? [r => r.r ? fmt(r.r) + ' רק תוצאות' : ''] : [])];
+  return table(topTeams.slice(0, 15), cols) + (topTeams.length > 15 ? `<details style="margin-top:8px"><summary>הצגת כל הקבוצות (${fmt(topTeams.length)})</summary>${table(topTeams.slice(15), cols)}</details>` : '');
+})()}</div>
 <div class="card"><h2>לפי מועדון</h2><p class="sub">שמות שונים של אותו מועדון נספרים יחד</p>${table(sortMap(byClub).slice(0, 12), [r => esc(r[0]), r => fmt(r[1])])}
 <h2 style="margin-top:14px">לפי גיל</h2>${table(sortMap(byAge), [r => esc(r[0]), r => fmt(r[1])])}</div>
 </div>
