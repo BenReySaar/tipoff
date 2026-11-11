@@ -282,17 +282,27 @@ export async function reportScore(env, b, now = new Date()) {
   return { status: 200, ok: true, first: !before.c, pushed };
 }
 
-/** קט-סל: about two hours after a game nobody reported, one nudge to its parents who asked for results. Runs with the hourly sync,
- *  which picks games that started 2 to 3 hours ago, so each game is asked about once. */
-export async function ksAsk(env, now = new Date()) {
+/** קט-סל: reminders to report a game nobody reported yet, to its parents who asked for results.
+ *  'start': 90 minutes after the start (the 15-minute cron picks games that started 90 to 105 minutes ago).
+ *  'morning': at 9:00, for yesterday's games still without a report. Each game is asked about once per kind. */
+export async function ksRemind(env, which, now = new Date()) {
   if (await isQuiet(env)) return 0;
   const pack = await getPack(env);
   if (!pack) return 0;
-  const games = pack.g.filter(r => KS.has(pack.lg[r[2]][2]) && r[6] == null).map(r => gameInfo(pack, r)).filter(g => { const m = minsSince(g.d, now); return m >= 120 && m < 180; });
+  const P = ilParts(new Date(now.getTime() - 864e5)), yest = P.year.slice(2) + P.month + P.day;
+  const games = pack.g.filter(r => KS.has(pack.lg[r[2]][2]) && r[6] == null).map(r => gameInfo(pack, r))
+    .filter(g => { const m = minsSince(g.d, now); return which === 'morning' ? g.d.startsWith(yest) && m > 0 : m >= 90 && m < 105; });
   if (!games.length) return 0;
   const ids = games.map(g => g.id).slice(0, 90);
   const { results } = await env.DB.prepare(`SELECT DISTINCT game FROM reports WHERE game IN (${ids.map(() => '?').join(',')})`).bind(...ids).all();
-  const done = new Set(results.map(r => r.game)), todo = games.filter(g => !done.has(g.id));
+  const done = new Set(results.map(r => r.game)), todo = [];
+  for (const g of games) {
+    if (done.has(g.id) || !ids.includes(g.id)) continue;
+    const k = `ksr:${which}:${g.id}`;
+    if (await env.KV.get(k)) continue;
+    await env.KV.put(k, '1', { expirationTtl: 4 * 86400 });
+    todo.push(g);
+  }
   if (!todo.length) return 0;
   const rows = await devicesFollowing(env, todo.flatMap(g => [g.homeKey, g.awayKey]));
   const per = new Map();
@@ -302,11 +312,28 @@ export async function ksAsk(env, now = new Date()) {
       if (g.homeKey !== r.team && g.awayKey !== r.team) continue;
       const mine = r.team === g.homeKey, team = withNick(mine ? g.home : g.away, r.nick);
       const e = per.get(r.device) || { device: r.device, push: r.push, msgs: [] };
-      if (!e.msgs.some(m => m.game === g.id)) e.msgs.push({ game: g.id, title: `🏀 איך נגמר המשחק של ${team}?`, body: `נגד ${mine ? g.away : g.home}. האיגוד לא מפרסם תוצאות בקט-סל, אפשר לדווח בלחיצה` });
+      if (!e.msgs.some(m => m.game === g.id)) e.msgs.push({ game: g.id,
+        title: which === 'morning' ? `🏀 איך נגמר אתמול המשחק של ${team}?` : `🏀 איך נגמר המשחק של ${team}?`,
+        body: `נגד ${mine ? g.away : g.home}. האיגוד לא מפרסם תוצאות בקט-סל, אפשר לדווח בלחיצה` });
       per.set(r.device, e);
     }
   }
   return per.size ? deliver(env, per, 'ks_ask') : 0;
+}
+
+/** One-time notice to parents who follow a קט-סל team: they can report scores now. Sent once (KV mark), on request. */
+export async function ksAnnounce(env) {
+  if (await env.KV.get('ks:announced')) return { sent: 0, already: true };
+  const pack = await getPack(env);
+  if (!pack) return { sent: 0 };
+  const keys = pack.tm.filter(t => KS.has(pack.lg[t[1]][2])).map(t => pack.lg[t[1]][1] + '|' + t[0]);
+  const rows = await devicesFollowing(env, keys);
+  const per = new Map();
+  for (const r of rows) if (!per.has(r.device)) per.set(r.device, { device: r.device, push: r.push, msgs: [{
+    title: '🏀 חדש: התוצאות בקט-סל',
+    body: 'האיגוד לא מפרסם תוצאות בקט-סל, אז ההורים מדווחים. לוחצים "איך נגמר?" ליד המשחק, וכל ההורים בשתי הקבוצות רואים את התוצאה' }] });
+  await env.KV.put('ks:announced', String(Date.now()));
+  return { sent: per.size ? await deliver(env, per, 'ks_new') : 0 };
 }
 
 /** The score most parents reported or confirmed for each game (earliest report breaks a tie). `ok` once two parents agree
@@ -544,6 +571,10 @@ export default {
         const { results } = await env.DB.prepare(`SELECT team, data, by, at FROM team_prac WHERE team IN (${keys.map(() => '?').join(',')})`).bind(...keys).all();
         return json(Object.fromEntries(results.map(r => [r.team, { ...JSON.parse(r.data), at: r.at, mine: r.by === b.device }])), 200, { 'cache-control': 'no-store' });
       }
+      if (p === '/api/ks-announce' && req.method === 'POST') {
+        if (!keyAllowed(env, url, req)) return json({ error: 'key' }, 403);
+        return json(await ksAnnounce(env));
+      }
       if (p === '/api/report' && req.method === 'POST') {
         const r = await reportScore(env, await readJSON(req));
         return json(r, r.status);
@@ -603,7 +634,7 @@ export default {
         if (url.searchParams.get('flush')) return json({ sent: await flushPending(env) });
         if (url.searchParams.get('cleanup')) { await cleanup(env); return json({ ok: true }); }
         if (url.searchParams.get('practice')) return json({ sent: await practiceReminders(env, new Date(url.searchParams.get('practice'))) });
-        if (url.searchParams.get('ksask')) return json({ sent: await ksAsk(env) });
+        if (url.searchParams.get('ksask')) return json({ sent: await ksRemind(env, url.searchParams.get('ksask')) });
         return json({ ok: true });
       }
       if (p.startsWith('/api/')) return json({ error: 'not found' }, 404);
@@ -615,13 +646,17 @@ export default {
 
   async scheduled(event, env, ctx) {
     await ensureSchema(env);
-    if (event.cron === '*/15 * * * *') { await practiceReminders(env); return; }
+    if (event.cron === '*/15 * * * *') {
+      await practiceReminders(env);
+      await ksRemind(env, 'start').catch(() => {});
+      const P = ilParts(); if (P.hour === '09' && +P.minute < 15) await ksRemind(env, 'morning').catch(() => {});
+      return;
+    }
     if (event.cron === env.EVENING_CRON || event.cron === '0 17,18 * * *') {
       if (ilHour() === 20) { await eveningReminders(env); await cleanup(env); }
       return;
     }
     await runSync(env);
     await flushPending(env); // morning: what was held overnight
-    await ksAsk(env).catch(() => {});
   },
 };

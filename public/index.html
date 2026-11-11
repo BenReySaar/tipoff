@@ -569,7 +569,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL()}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
-S.pshare=null;S.opp=null;S.tprac={};S.rep={};S.ktab={};S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
+S.pshare=null;S.opp=null;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.ksNew=store.get('tipoff.ksnew',false);S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
 /* ---------- regular practices (entered by the family, only on this phone) ---------- */
 const isoD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
@@ -640,6 +640,22 @@ const repAsk=r=>touched&&!r.ok&&!r.my;
 const repSide=(r,g,t)=>{const home=g.h===t.i,my=home?r.hs:r.as,op=home?r.as:r.hs;return {my,op,w:my>op}};
 function repScore(g,t){const r=repOf(g);if(!r||r.alts)return null;return {...repSide(r,g,t),ok:r.ok,ask:repAsk(r)}}
 const repTag=r=>`<span class="rep-tag">${r.ok?'אושר ע״י הורים':'דיווח הורה'}</span>`;
+/* another parent reported: ask the others once, at the top, like the team's practice schedule ("correct?" / "not correct") */
+function repCards(ts){if(!touched)return '';const multi=S.follows.length>1,seen=new Set();
+  return ts.flatMap(t=>t.games.filter(g=>{const r=repOf(g);return r&&!r.my&&!r.ok&&!S.repSeen[g.id]&&NOW-g.date<21*24*36e5}).map(g=>({g,t}))).sort((x,y)=>y.g.date-x.g.date)
+    .filter(({g})=>!seen.has(g.id)&&seen.add(g.id)).slice(0,3).map(({g,t})=>{const r=repOf(g),o=TEAMS[g.h===t.i?g.a:g.h],when=`נגד ${esc(o.name)}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)}`;
+    const who=multi?`<span class="tp-who">${dot(t.key)}${esc(t.name)}</span>`:'',close=`<button class="linkbtn" data-repseen="${g.i}">סגירה</button>`;
+    if(r.alts)return `<section class="tp" aria-label="דיווחים שונים על תוצאה">${who}<h2>יש דיווחים שונים על התוצאה</h2><p class="sub">${when}</p>
+      <div class="tp-btns"><button class="btn" data-repask="${g.i}">מה הייתה התוצאה?</button>${close}</div></section>`;
+    const x=repSide(r,g,t);
+    return `<section class="tp" aria-label="תוצאה שהורה דיווח">${who}<h2>הורה דיווח: ${x.w?'ניצחון':'הפסד'} <span class="score">${x.my}–${x.op}</span></h2><p class="sub">${when}. נכון?</p>
+      <div class="tp-btns"><button class="btn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="btn ghost" data-repno="${g.i}">לא נכון</button>`:''}${close}</div></section>`}).join('')}
+/* once, for parents of a קט-סל team: scores are theirs to report */
+function ksNewCard(ts){if(!touched||S.ksNew)return '';const ks=ts.filter(t=>KS.has(LEAGUES[t.lg].age));if(!ks.length)return '';
+  const last=ks.flatMap(t=>t.games).filter(g=>repOk(g)).sort((a,b)=>b.date-a.date)[0];
+  return `<section class="tp" aria-label="חדש: תוצאות בקט-סל"><h2>חדש: התוצאות בקט-סל אצלכם</h2>
+    <p class="sub">האיגוד לא מפרסם תוצאות בקט-סל, אז ההורים מדווחים. לוחצים "איך נגמר?" ליד המשחק, וכל ההורים בשתי הקבוצות רואים את התוצאה. אפשר לדווח גם על משחקים שכבר היו.</p>
+    <div class="tp-btns">${last?`<button class="btn" data-ksnew="${last.i}">לדווח על המשחק האחרון</button>`:''}<button class="${last?'linkbtn':'btn'}" data-ksnew="0">${last?'סגירה':'הבנתי'}</button></div></section>`}
 function repFact(g,t){const r=repOf(g);
   if(r&&r.alts)return `<div class="fact">${ic.ball}<span><b>יש דיווחים שונים על התוצאה</b> <button class="linkbtn" data-repask="${g.i}">מה הייתה התוצאה?</button></span></div>`;
   const x=repScore(g,t);
@@ -765,29 +781,29 @@ function row(g,t,showTeam){
    <span class="meta">${meta}</span></div><div class="right">${right}</div></div>`}
 
 /* קט-סל table from the scores parents confirmed (two agreeing). Shown once most of the league's games have one; until then the team's record */
-const ksLg=lg=>KS.has(LEAGUES[lg].age);
+const ksLg=lg=>KS.has(LEAGUES[lg].age);const KS_TABLE=false; /* turn on once parents are reporting */
 async function loadKs(lg){if(S.ktab[lg])return;S.ktab[lg]={rep:{},ready:false};
   const ids=GAMES.filter(g=>g.lg===lg&&!played(g)&&NOW>=g.date).map(g=>g.id);
   try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?games='+ids.slice(i,i+90).join(','));if(!r.ok)break;Object.assign(S.ktab[lg].rep,await r.json()||{})}}catch(e){}
   S.ktab[lg].ready=true;render()}
 function ksRows(lg){const K=S.ktab[lg],L=LEAGUES[lg],T={};L.teams.forEach(id=>T[id]={id,p:0,w:0,l:0,f:0,a:0});let done=0,total=0;
-  GAMES.forEach(g=>{if(g.lg!==lg||played(g)||NOW<g.date||!T[g.h]||!T[g.a])return;total++;const r=S.rep[g.id]||K.rep[g.id];if(!r||!r.ok||r.alts)return;done++;
+  GAMES.forEach(g=>{if(g.lg!==lg||played(g)||NOW<g.date||!T[g.h]||!T[g.a])return;total++;const r=S.rep[g.id]||K.rep[g.id];if(!r||r.alts)return;done++;
     const h=T[g.h],a=T[g.a];h.p++;a.p++;h.f+=r.hs;h.a+=r.as;a.f+=r.as;a.a+=r.hs;if(r.hs>r.as){h.w++;a.l++}else{a.w++;h.l++}});
   const rows=Object.values(T).map(r=>({...r,pts:r.w*2+r.l})).sort((x,y)=>y.pts-x.pts||(y.f-y.a)-(x.f-x.a)||TEAMS[x.id].name.localeCompare(TEAMS[y.id].name,'he'));
   return {rows,done,total}}
 function ksStandings(lg,tid){const K=S.ktab[lg];if(!K){loadKs(lg);return ''}if(!K.ready)return '';
   const L=LEAGUES[lg],{rows,done,total}=ksRows(lg);if(!total)return '';const t=TEAMS[tid];
-  const count=`תוצאות שאושרו ע״י הורים: ${done} מתוך ${total} משחקים בליגה.`;
+  const count=`תוצאות שהורים דיווחו: ${done} מתוך ${total} משחקים בליגה.`;
   if(done>=total*0.7)return `<details class="tbl"><summary>טבלה לפי דיווחי הורים</summary><p class="sub tbl-note">האיגוד לא מפרסם טבלה בקט-סל. ${count}</p><div class="tw"><table><thead><tr><th>#</th><th class="tn">קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>הפרש</th><th>נק׳</th></tr></thead><tbody>
    ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${esc(TEAMS[r.id].name)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
    </tbody></table></div></details>`;
   const me=rows.find(r=>r.id===tid);
   return `<section class="ks-rec" aria-label="המאזן לפי דיווחי הורים"><h2>המאזן לפי דיווחי הורים</h2>
-    <p><b>${me&&me.p?`${me.w} ${me.w===1?'ניצחון':'ניצחונות'}, ${me.l} ${me.l===1?'הפסד':'הפסדים'}`:'עוד אין תוצאות מאושרות'}</b></p>
-    <p class="sub">${count} הטבלה של ${esc(L.full)} תופיע כשרוב המשחקים יאושרו.</p>
+    <p><b>${me&&me.p?`${me.w} ${me.w===1?'ניצחון':'ניצחונות'}, ${me.l} ${me.l===1?'הפסד':'הפסדים'}`:'עוד אין תוצאות'}</b></p>
+    <p class="sub">${count} הטבלה של ${esc(L.full)} תופיע כשרוב המשחקים ידווחו.</p>
     <a class="linkbtn" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="ks_invite">להזמין עוד הורים מהקבוצה, כדי שיותר משחקים ידווחו</a></section>`}
 function standings(lg,tid){
-  if(ksLg(lg))return ksStandings(lg,tid);
+  if(ksLg(lg))return KS_TABLE?ksStandings(lg,tid):'';
   const L=LEAGUES[lg],rows=tableRows(lg);
   return `<details class="tbl"><summary>טבלת ${esc(L.full)}</summary><div class="tw"><table><thead><tr><th>#</th><th class="tn">קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>הפרש</th><th>נק׳</th></tr></thead><tbody>
    ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${esc(TEAMS[r.id].name)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
@@ -1220,7 +1236,7 @@ function viewMy(){
      ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
   const demo=!touched?'<div class="banner">אלה שתי קבוצות לדוגמה מהלוח האמיתי. לחצו "+ קבוצה" כדי לבחור את שלכם.</div>':'';
-  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${tpCards(all)}${weekStrip(ts)}`;
+  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${ksNewCard(all)}${tpCards(all)}${repCards(all)}${weekStrip(ts)}`;
   const pastBlock=past.length?`<section class="sec"><h2>תוצאות אחרונות</h2><div class="list">${past.slice(0,4).map(x=>row(x.g,x.t,multi)).join('')}</div></section>`:'';
   if(multi){
     const nexts=ts.map(t=>({t,g:t.games.find(g=>!isPast(g))})).filter(x=>x.g).sort((a,b)=>a.g.date-b.g.date);
@@ -1489,6 +1505,8 @@ document.addEventListener('click',e=>{
   if(d.oppclose){S.opp=null;render();return}
   if(d.rep){S.repG=+d.rep;S.repMode='form';S.repDraft={};S.pErr='';render();return}
   if(d.repask){const g=GAMES[+d.repask],r=g&&repOf(g);if(!r)return;S.repG=+d.repask;S.repMode=r.alts?'pick':'check';S.repDraft={};S.pErr='';track('rep_ask');render();return}
+  if(d.repseen){S.repSeen[GAMES[+d.repseen].id]=1;store.set('tipoff.repseen',S.repSeen);track('rep_card_no');render();return}
+  if(d.ksnew){S.ksNew=true;store.set('tipoff.ksnew',true);track(+d.ksnew?'ks_new_go':'ks_new_no');if(+d.ksnew){S.repG=+d.ksnew;S.repMode='form';S.repDraft={};S.pErr=''}render();return}
   if(d.repno){S.repG=+d.repno;S.repMode='form';S.repDraft={};S.pErr='';render();return}
   if(d.repyes||d.reppick){const [gi,hs,as]=d.reppick?d.reppick.split(':').map(Number):[+d.repyes],g=GAMES[gi],r=g&&repOf(g);if(!r)return;
     repSend(g,d.reppick?hs:r.hs,d.reppick?as:r.as).then(err=>{if(!err){S.repG=null;S.pErr=''}render();toast(err||'תודה! התוצאה אושרה')});return}
