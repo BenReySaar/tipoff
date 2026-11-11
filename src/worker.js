@@ -250,6 +250,7 @@ export function teamPart(pr, team) {
  *  never publishes scores, so the parents' table can fill in), while the association has no result. Confirming a score another parent
  *  already reported is allowed all season. */
 const KS = new Set(['ks-a', 'ks-b', 'gks-a', 'gks-b']);
+const KS_ANNOUNCE_DAY = '2026-11-11';
 const minsSince = (d, now) => { const P = ilParts(now); const t = s => Date.UTC(2000 + +s.slice(0, 2), +s.slice(2, 4) - 1, +s.slice(4, 6), +s.slice(6, 8), +s.slice(8, 10));
   return (Date.UTC(+P.year, +P.month - 1, +P.day, +P.hour, +P.minute) - t(d)) / 60000; };
 export async function reportScore(env, b, now = new Date()) {
@@ -650,6 +651,8 @@ export default {
       await practiceReminders(env);
       await ksRemind(env, 'start').catch(() => {});
       const P = ilParts(); if (P.hour === '09' && +P.minute < 15) await ksRemind(env, 'morning').catch(() => {});
+      // the one-time קט-סל notice, at the time agreed with the owner (sent once: ksAnnounce keeps a KV mark)
+      if (`${P.year}-${P.month}-${P.day}` === KS_ANNOUNCE_DAY && P.hour === '17' && +P.minute < 15) await ksAnnounce(env).catch(() => {});
       return;
     }
     if (event.cron === env.EVENING_CRON || event.cron === '0 17,18 * * *') {
