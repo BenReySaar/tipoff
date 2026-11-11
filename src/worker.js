@@ -246,7 +246,7 @@ export function teamPart(pr, team) {
   return { list, skips: pick(pr.skips), moves: pick(pr.moves) };
 }
 
-/** A score a parent reports: from the start of the game until 36 hours after (any game of the season in קט-סל, where the association
+/** A score a parent reports: from an hour after the start until 36 hours after (any game of the season in קט-סל, where the association
  *  never publishes scores, so the parents' table can fill in), while the association has no result. Confirming a score another parent
  *  already reported is allowed all season. */
 const KS = new Set(['ks-a', 'ks-b', 'gks-a', 'gks-b']);
@@ -265,7 +265,7 @@ export async function reportScore(env, b, now = new Date()) {
   if (!follows) return { status: 403, error: 'follow' };
   const before = await env.DB.prepare('SELECT COUNT(*) c, SUM(hs=? AND aws=? AND device<>?) same, SUM(device=?) mine FROM reports WHERE game=?').bind(hs, as, b.device, b.device, g.id).first();
   const confirm = before.same > 0, win = KS.has(pack.lg[row[2]][2]) ? Infinity : 36 * 60;
-  if (m < 0 || (m > win && !confirm)) return { status: 409, error: 'time' };
+  if (m < 60 || (m > win && !confirm)) return { status: 409, error: 'time' }; // from an hour after the start, about when a קט-סל game ends
   await env.DB.prepare('INSERT INTO reports(game,device,hs,aws,ts) VALUES(?,?,?,?,?) ON CONFLICT(game,device) DO UPDATE SET hs=excluded.hs, aws=excluded.aws, ts=excluded.ts')
     .bind(g.id, b.device, hs, as, now.getTime()).run();
   await track(env, b.device, before.mine > 0 ? 'report_fix' : confirm ? 'report_ok' : 'report');

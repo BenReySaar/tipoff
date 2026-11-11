@@ -569,7 +569,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL()}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
-S.pshare=null;S.opp=null;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.ksNew=store.get('tipoff.ksnew',false);S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
+S.pshare=null;S.opp=null;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.repAsked=store.get('tipoff.repasked',{});S.ksPop=false;S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
 /* ---------- regular practices (entered by the family, only on this phone) ---------- */
 const isoD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
@@ -632,7 +632,7 @@ async function loadTeamPrac(){if(!touched||!S.follows.length)return;
 /* ---------- "how did it end?": a parent reports the score until the association publishes it ---------- */
 /* קט-סל: the association never publishes scores, so parents' reports are the only score, kept and reportable all season */
 const KS=new Set(['ks-a','ks-b','gks-a','gks-b']);const isKs=g=>KS.has(LEAGUES[g.lg].age);
-const repTime=g=>NOW-g.date>=0&&(isKs(g)||NOW-g.date<36*36e5);
+const repTime=g=>NOW-g.date>=36e5&&(isKs(g)||NOW-g.date<36*36e5); /* from an hour after the start, about when a קט-סל game ends */
 const repOk=g=>touched&&!played(g)&&!S.rep[g.id]&&repTime(g);
 /* a parent's report shows for everyone straight away; others can say "correct" / "not correct". Two parents agreeing = confirmed */
 const repOf=g=>{const r=S.rep[g.id];return r&&!played(g)?r:null};
@@ -640,11 +640,11 @@ const repAsk=r=>touched&&!r.ok&&!r.my;
 const repSide=(r,g,t)=>{const home=g.h===t.i,my=home?r.hs:r.as,op=home?r.as:r.hs;return {my,op,w:my>op}};
 /* a game's score: the association's, or else the one parents reported (not while they disagree) */
 function scoreOf(g){if(played(g))return {hs:g.hs,as:g.as,rep:false};const r=S.rep[g.id];return r&&!r.alts&&!played(g)?{hs:r.hs,as:r.as,rep:true,ok:r.ok}:null}
-function repScore(g,t){const r=repOf(g);if(!r||r.alts)return null;return {...repSide(r,g,t),ok:r.ok,ask:repAsk(r),mine:!!r.my}}
+function repScore(g,t){const r=repOf(g);if(!r||r.alts)return null;return {...repSide(r,g,t),ok:r.ok,ask:repAsk(r)&&isKs(g),mine:!!r.my}}
 const repTag=r=>`<span class="rep-tag">${r.ok?'אושר ע״י הורים':'דיווח הורה'}</span>`;
 /* another parent reported: ask the others once, at the top, like the team's practice schedule ("correct?" / "not correct") */
 function repCards(ts){if(!touched)return '';const multi=S.follows.length>1,seen=new Set();
-  return ts.flatMap(t=>t.games.filter(g=>{const r=repOf(g);return r&&!r.my&&!r.ok&&!S.repSeen[g.id]&&NOW-g.date<21*24*36e5}).map(g=>({g,t}))).sort((x,y)=>y.g.date-x.g.date)
+  return ts.flatMap(t=>t.games.filter(g=>{const r=repOf(g);return isKs(g)&&r&&!r.my&&!r.ok&&!S.repSeen[g.id]&&NOW-g.date<21*24*36e5}).map(g=>({g,t}))).sort((x,y)=>y.g.date-x.g.date)
     .filter(({g})=>!seen.has(g.id)&&seen.add(g.id)).slice(0,3).map(({g,t})=>{const r=repOf(g),o=TEAMS[g.h===t.i?g.a:g.h],when=`נגד ${esc(o.name)}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)}`;
     const who=multi?`<span class="tp-who">${dot(t.key)}${esc(t.name)}</span>`:'',close=`<button class="linkbtn" data-repseen="${g.i}">סגירה</button>`;
     if(r.alts)return `<section class="tp" aria-label="דיווחים שונים על תוצאה">${who}<h2>יש דיווחים שונים על התוצאה</h2><p class="sub">${when}</p>
@@ -652,25 +652,34 @@ function repCards(ts){if(!touched)return '';const multi=S.follows.length>1,seen=
     const x=repSide(r,g,t);
     return `<section class="tp" aria-label="תוצאה שהורה דיווח">${who}<h2>הורה דיווח: ${x.w?'ניצחון':'הפסד'} <span class="score">${x.my}–${x.op}</span></h2><p class="sub">${when}. נכון?</p>
       <div class="tp-btns"><button class="btn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="btn ghost" data-repno="${g.i}">לא נכון</button>`:''}${close}</div></section>`}).join('')}
-/* once, for parents of a קט-סל team: scores are theirs to report */
-function ksNewCard(ts){if(!touched||S.ksNew)return '';const ks=ts.filter(t=>KS.has(LEAGUES[t.lg].age));if(!ks.length)return '';
-  const last=ks.flatMap(t=>t.games).filter(g=>repOk(g)).sort((a,b)=>b.date-a.date)[0];
-  return `<section class="tp" aria-label="חדש: תוצאות בקט-סל"><h2>חדש: התוצאות בקט-סל אצלכם</h2>
-    <p class="sub">האיגוד לא מפרסם תוצאות בקט-סל, אז ההורים מדווחים. לוחצים "איך נגמר?" ליד המשחק, וכל ההורים בשתי הקבוצות רואים את התוצאה. אפשר לדווח גם על משחקים שכבר היו.</p>
-    <div class="tp-btns">${last?`<button class="btn" data-ksnew="${last.i}">לדווח על המשחק האחרון</button>`:''}<button class="${last?'linkbtn':'btn'}" data-ksnew="0">${last?'סגירה':'הבנתי'}</button></div></section>`}
+/* once, for any parent following a קט-סל team (their child's or for results): scores are theirs to report */
+const ksTeams=()=>[...S.follows,...S.res].map(k=>TEAMS[KEY[k]]).filter(t=>t&&KS.has(LEAGUES[t.lg].age));
+const ksLast=()=>ksTeams().flatMap(t=>t.games).filter(g=>!played(g)&&!S.rep[g.id]&&repTime(g)).sort((a,b)=>b.date-a.date)[0];
+function ksPopSheet(){const last=ksLast();
+  return sheet(`<h2 tabindex="-1" data-autofocus>חדש: התוצאות בקט-סל אצלכם</h2>
+    <p>האיגוד לא מפרסם תוצאות בקט-סל, אז ההורים מדווחים. לוחצים "איך נגמר?" ליד המשחק, וכל ההורים בשתי הקבוצות רואים את התוצאה.</p>
+    <p class="sub">אפשר לדווח גם על משחקים שכבר היו.</p>
+    ${last?`<button class="btn wide" data-kspop="${last.i}">לדווח על המשחק האחרון</button><button class="linkbtn sh-skip" data-kspop="0">הבנתי</button>`:'<button class="btn wide" data-kspop="0">הבנתי</button>'}`,'חדש: התוצאות בקט-סל')}
+/* קט-סל: opening the app an hour or more after a game nobody reported asks for the score, once per game */
+const overlayOpen=()=>!!overlay()||S.welcome;
+function repPrompt(){if(S.ksPop||S.repG!=null||overlayOpen())return;
+  const g=ksTeams().flatMap(t=>t.games).filter(g=>!played(g)&&!S.rep[g.id]&&repTime(g)&&NOW-g.date<24*36e5&&!S.repAsked[g.id]).sort((a,b)=>b.date-a.date)[0];
+  if(!g)return;S.repAsked[g.id]=1;store.set('tipoff.repasked',S.repAsked);track('rep_prompt');S.repG=g.i;S.repMode='form';S.repDraft={prompt:1};S.pErr='';render()}
 function repFact(g,t){const r=repOf(g);
-  if(r&&r.alts)return `<div class="fact">${ic.ball}<span><b>יש דיווחים שונים על התוצאה</b> <button class="linkbtn" data-repask="${g.i}">מה הייתה התוצאה?</button></span></div>`;
+  if(r&&r.alts&&isKs(g))return `<div class="fact">${ic.ball}<span><b>יש דיווחים שונים על התוצאה</b> <button class="linkbtn" data-repask="${g.i}">מה הייתה התוצאה?</button></span></div>`;
   const x=repScore(g,t);
   if(x)return `<div class="fact">${ic.ball}<span><b>${x.w?'ניצחון':'הפסד'} <span class="score">${x.my}–${x.op}</span></b> ${repTag(x)}${x.mine&&repTime(g)?` <button class="linkbtn rep-fix" data-repfix="${g.i}">לתקן</button>`:''}${x.ask?`<span class="rep-chk">נכון? <button class="linkbtn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="linkbtn" data-repno="${g.i}">לא נכון</button>`:''}</span>`:''}</span></div>`;
   return repOk(g)?`<button class="rep-big" data-rep="${g.i}">איך נגמר? לדווח את התוצאה</button>`:''}
-async function loadReports(){const ids=[...new Set([...S.follows,...S.res].flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
-  if(!ids.length)return;const out={};
-  try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?device='+DEV+'&games='+ids.slice(i,i+90).join(','));if(!r.ok)return;Object.assign(out,await r.json()||{})}
-    S.rep=out;if(S.view==='my')render()}catch(e){}}
+async function loadReports(first){const ids=[...new Set([...S.follows,...S.res].flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
+  const out={};
+  if(ids.length)try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?device='+DEV+'&games='+ids.slice(i,i+90).join(','));if(!r.ok)return;Object.assign(out,await r.json()||{})}
+    S.rep=out;if(S.view==='my')render()}catch(e){}
+  if(!first)return;
+  if(!store.get('tipoff.kspop',false)&&ksTeams().length&&!overlayOpen()){S.ksPop=true;track('ks_pop');render()}else repPrompt()}
 async function repSend(g,hs,as){let r=null;try{r=await fetch('/api/report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV,game:g.id,hs,as})})}catch(x){}
   const j=r?await r.json().catch(()=>({})):{};
   if(r&&r.ok){const old=S.rep[g.id];S.rep[g.id]=old&&old.hs===hs&&old.as===as?{...old,n:old.n+1,ok:true,my:{hs,as}}:{hs,as,n:1,ok:false,...(old&&old.n>1?old:{}),my:{hs,as}};loadReports();return ''}
-  return !r?'אין חיבור לאינטרנט. נסו שוב':j.error==='official'?'האיגוד כבר פרסם את התוצאה':j.error==='time'?(NOW<g.date?'אפשר לדווח מהרגע שהמשחק מתחיל':'עבר הזמן לדיווח על המשחק הזה'):j.error==='follow'?'אפשר לדווח רק על משחק של קבוצה שאתם עוקבים אחריה':'משהו השתבש. נסו שוב'}
+  return !r?'אין חיבור לאינטרנט. נסו שוב':j.error==='official'?'האיגוד כבר פרסם את התוצאה':j.error==='time'?(NOW-g.date<36e5?'אפשר לדווח שעה אחרי תחילת המשחק':'עבר הזמן לדיווח על המשחק הזה'):j.error==='follow'?'אפשר לדווח רק על משחק של קבוצה שאתם עוקבים אחריה':'משהו השתבש. נסו שוב'}
 function repSheet(){const g=GAMES[S.repG],H=TEAMS[g.h],A=TEAMS[g.a],v=k=>esc(S.repDraft[k]??''),r=repOf(g);
   const line=x=>`${esc(H.name)} <span class="score">${x.as}–${x.hs}</span> ${esc(A.name)}`;
   const head=`<h2 tabindex="-1" data-autofocus>איך נגמר?</h2><p class="sub">${esc(H.name)} נגד ${esc(A.name)}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)}</p>`;
@@ -680,7 +689,8 @@ function repSheet(){const g=GAMES[S.repG],H=TEAMS[g.h],A=TEAMS[g.a],v=k=>esc(S.r
   if(S.repMode==='check'&&r&&!r.alts)return sheet(`${head}<p><b>הורה דיווח:</b> ${line(r)}</p><p class="sub">התוצאה נכונה?</p>
     <div class="tp-btns"><button class="btn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="linkbtn" data-repno="${g.i}">לא נכון</button>`:''}</div>
     <button class="linkbtn sh-skip" data-repclose="1">ביטול</button>`,'איך נגמר?');
-  return sheet(`${head.replace('איך נגמר?',S.repDraft.fix?'תיקון התוצאה':'איך נגמר?')}
+  const own=[...S.follows,...S.res].map(k=>TEAMS[KEY[k]]).find(t=>t&&(t.i===g.h||t.i===g.a)),oo=own&&TEAMS[own.i===g.h?g.a:g.h];
+  return sheet(`${S.repDraft.prompt&&own?head.replace('איך נגמר?',`איך נגמר המשחק של ${esc(own.name)} נגד ${esc(oo.name)}?`):head.replace('איך נגמר?',S.repDraft.fix?'תיקון התוצאה':'איך נגמר?')}
     ${NOW-g.date<3*36e5?'<p class="sub">את התוצאה הסופית, בסוף המשחק.</p>':''}
     <form class="pform" data-repform="1" novalidate>
       <div class="prow2"><label for="rp-h"><span>${esc(H.name)}</span><input id="rp-h" type="number" inputmode="numeric" min="0" max="250" data-rp="h" value="${v('h')}"></label>
@@ -688,7 +698,7 @@ function repSheet(){const g=GAMES[S.repG],H=TEAMS[g.h],A=TEAMS[g.a],v=k=>esc(S.r
       ${S.pErr?`<p class="fb-err" role="alert">${S.pErr}</p>`:''}
       <button class="btn wide" type="submit">שליחה</button></form>
     <p class="sub">${isKs(g)?'ההורים בשתי הקבוצות יקבלו את התוצאה.':'ההורים בשתי הקבוצות יקבלו את התוצאה, עד שהאיגוד יפרסם את התוצאה הרשמית.'}</p>
-    <button class="linkbtn sh-skip" data-repclose="1">ביטול</button>`,'איך נגמר?')}
+    <button class="linkbtn sh-skip" data-repclose="1">${S.repDraft.prompt?'אחר כך':'ביטול'}</button>`,'איך נגמר?')}
 function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
   setFollows(f);if(S.filter!=='all'&&!f.includes(S.filter))S.filter='all';S.justAdded=f.includes(key)?key:null;S.dayWeek=null;
@@ -1177,7 +1187,7 @@ function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, האימונים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
-function overlay(){return S.opp?oppSheet():S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function overlay(){return S.ksPop?ksPopSheet():S.opp?oppSheet():S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
 function closeSmall(){if(S.opp){if(S.opp.all){S.opp.all=false;return}S.opp=null;return}if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
@@ -1240,7 +1250,7 @@ function viewMy(){
      ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
   const demo=!touched?'<div class="banner">אלה שתי קבוצות לדוגמה מהלוח האמיתי. לחצו "+ קבוצה" כדי לבחור את שלכם.</div>':'';
-  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${ksNewCard(all)}${tpCards(all)}${repCards(all)}${weekStrip(ts)}`;
+  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${tpCards(all)}${repCards(all)}${weekStrip(ts)}`;
   const pastBlock=past.length?`<section class="sec"><h2>תוצאות אחרונות</h2><div class="list">${past.slice(0,4).map(x=>row(x.g,x.t,multi)).join('')}</div></section>`:'';
   if(multi){
     const nexts=ts.map(t=>({t,g:t.games.find(g=>!isPast(g))})).filter(x=>x.g).sort((a,b)=>a.g.date-b.g.date);
@@ -1497,6 +1507,7 @@ function render(){
 }
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
+  if(e.target.closest('.scrim')&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);track('ks_new_no');render();return}
   if(e.target.closest('.scrim')&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite)track('invite_dismiss');if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
@@ -1510,7 +1521,7 @@ document.addEventListener('click',e=>{
   if(d.rep){S.repG=+d.rep;S.repMode='form';S.repDraft={};S.pErr='';render();return}
   if(d.repask){const g=GAMES[+d.repask],r=g&&repOf(g);if(!r)return;S.repG=+d.repask;S.repMode=r.alts?'pick':'check';S.repDraft={};S.pErr='';track('rep_ask');render();return}
   if(d.repseen){S.repSeen[GAMES[+d.repseen].id]=1;store.set('tipoff.repseen',S.repSeen);track('rep_card_no');render();return}
-  if(d.ksnew){S.ksNew=true;store.set('tipoff.ksnew',true);track(+d.ksnew?'ks_new_go':'ks_new_no');if(+d.ksnew){S.repG=+d.ksnew;S.repMode='form';S.repDraft={};S.pErr=''}render();return}
+  if(d.kspop){S.ksPop=false;store.set('tipoff.kspop',true);track(+d.kspop?'ks_new_go':'ks_new_no');if(+d.kspop){S.repG=+d.kspop;S.repMode='form';S.repDraft={};S.pErr=''}render();return}
   if(d.repfix){const g=GAMES[+d.repfix],r=g&&S.rep[g.id];if(!r||!r.my)return;S.repG=+d.repfix;S.repMode='form';S.repDraft={h:String(r.my.hs),a:String(r.my.as),fix:1};S.pErr='';render();return}
   if(d.repno){S.repG=+d.repno;S.repMode='form';S.repDraft={};S.pErr='';render();return}
   if(d.repyes||d.reppick){const [gi,hs,as]=d.reppick?d.reppick.split(':').map(Number):[+d.repyes],g=GAMES[gi],r=g&&repOf(g);if(!r)return;
@@ -1605,7 +1616,7 @@ document.addEventListener('click',e=>{
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);render();return}if(e.key==='Escape'&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
   if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
 document.addEventListener('submit',e=>{
   const rf=e.target.closest('form[data-repform]');if(rf){e.preventDefault();const g=GAMES[S.repG];if(!g)return;
@@ -1657,7 +1668,7 @@ if(window.__adopted){try{const r=await fetch('/api/restore?device='+DEV).then(r=
     S.res=(r.res||[]).filter(k=>k in KEY);store.set('tipoff.res',S.res);S.nicks=r.nicks||{};store.set('tipoff.nicks',S.nicks);
     if(r.prefs&&Object.keys(r.prefs).length){S.alerts={...S.alerts,...r.prefs};store.set('tipoff.alerts',S.alerts)}
     S.prac=r.practices||[];S.pskips=r.pskips||{};S.pmoves=r.pmoves||{};store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);store.set('tipoff.pmoves',S.pmoves);const sn={};S.follows.forEach(k=>{if(pracOf(k).length)sn[k]=tpJSON(tpOf(k))});store.set('tipoff.psnap',sn);track('restore');render()}}catch(e){}}
-syncState('open').then(loadTeamPrac);loadReports();
+syncState('open').then(loadTeamPrac);loadReports(true);
 if(!S.invite)syncURL();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 S.push=await pushState();if(S.view==='alerts'||S.view==='my')render();
