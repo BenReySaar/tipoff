@@ -102,7 +102,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .day[aria-pressed="true"] .dn{background:var(--sel);color:var(--sel-ink)}
 .day.today[aria-pressed="true"] .dn{background:var(--accent);color:var(--accent-ink)}
 .opp-link{background:none;border:0;padding:0 0 1px;font:inherit;color:inherit;font-weight:inherit;display:inline-flex;align-items:center;gap:2px;border-bottom:1.5px dotted currentColor;cursor:pointer;min-height:32px}
-.opp-link svg{width:14px;height:14px;opacity:.7}.opp-link.sm{min-height:28px}.op-back{margin:0 0 6px}.tpage{padding-top:4px}.tpage .tp-name{margin:4px 0 6px}.tp-share{margin:4px 0 14px;gap:6px;display:inline-flex;align-items:center}.tp-share svg{width:18px;height:18px;flex:none}.tnext{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:6px 0 10px}.tnext p{margin:2px 0}.tn-t{font-weight:700}.op-fol{margin:2px 0 6px}.btn.sm{min-height:40px;padding:6px 14px;font-size:14px}.op-n .opp-link{border-bottom-width:1px}.tbl .tn .opp-link{text-align:start}
+.opp-link svg{width:14px;height:14px;opacity:.7}.opp-link.sm{min-height:28px}.op-back{margin:0 0 6px}.choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:start;background:var(--card,transparent);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0;font:inherit;color:inherit;cursor:pointer;min-height:56px}.choice b{font-size:16px}.choice span{font-size:14px;color:var(--muted)}.tpage{padding-top:4px}.tpage .tp-name{margin:4px 0 6px}.tp-share{margin:4px 0 14px;gap:6px;display:inline-flex;align-items:center}.tp-share svg{width:18px;height:18px;flex:none}.tnext{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:6px 0 10px}.tnext p{margin:2px 0}.tn-t{font-weight:700}.op-fol{margin:2px 0 6px}.btn.sm{min-height:40px;padding:6px 14px;font-size:14px}.op-n .opp-link{border-bottom-width:1px}.tbl .tn .opp-link{text-align:start}
 .opp-more{display:block;margin:4px 0 8px;margin-inline-start:0;padding:0;min-height:40px;font-size:15px;font-weight:600;text-align:start}
 .op-h{font-size:14px;color:var(--muted);font-weight:600;margin:14px 0 6px}
 .op-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
@@ -575,7 +575,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL()}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
-S.pshare=null;S.opp=null;S.team=null;S.teamDepth=0;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.repAsked=store.get('tipoff.repasked',{});S.ksPop=false;S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
+S.pshare=null;S.opp=null;S.team=null;S.teamDepth=0;S.followAsk=null;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.repAsked=store.get('tipoff.repasked',{});S.ksPop=false;S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
 /* ---------- regular practices (entered by the family, only on this phone) ---------- */
 const isoD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
@@ -784,12 +784,18 @@ function openTeam(ti,from){const t=TEAMS[ti];if(!t)return;const hop=!!S.team;
   track(hop?'opp_hop':'opp_open');render();scrollTo(0,0)}
 function leaveTeam(){if(S.teamDepth>0&&history.state&&history.state.tp){history.back();return}S.team=null;S.teamDepth=0;try{history.replaceState(null,'','/')}catch(e){}syncURL();render();scrollTo(0,0)}
 addEventListener('popstate',e=>{const st=e.state;if(st&&st.tp&&TEAMS[st.ti]){S.team={ti:st.ti,from:st.from??null,all:false};S.teamDepth=Math.max(0,(S.teamDepth||1)-1)}else{S.team=null;S.teamDepth=0;syncURL()}render();scrollTo(0,0)});
+/* one follow button on a team page; the choice comes only when tapping it */
+function followSheet(){const t=TEAMS[S.followAsk],r=S.res.includes(t.key);
+  return sheet(`<h2 tabindex="-1" data-autofocus>לעקוב אחרי ${esc(t.name)}</h2>
+    <button class="choice" data-teammine="${t.i}"><b>זו הקבוצה של הילד שלי</b><span>הלו״ז המלא ב"המשחקים שלי", והתראה כשמשחק זז</span></button>
+    ${r?`<button class="choice" data-rres="${esc(t.key)}"><b>להפסיק לעקוב</b><span>להסיר מהמעקב אחרי התוצאות</span></button>`:`<button class="choice" data-oppres="${esc(t.key)}"><b>רק התוצאות</b><span>למשל קבוצה של חברים או יריבה. בלי לו״ז ובלי התראות על שינויים</span></button>`}
+    <button class="linkbtn sh-skip" data-followno="1">ביטול</button>`,'לעקוב אחרי '+t.name)}
 function teamView(){const o=TEAMS[S.team.ti],from=S.team.from;
   const gs=[...o.games].sort((a,b)=>a.date-b.date),past=gs.filter(g=>NOW>=g.date&&scoreOf(g)).reverse(),next=gs.filter(g=>!isPast(g)),nx=next[0];
   const mineF=touched&&S.follows.includes(o.key),mineR=S.res.includes(o.key);
   const rows=tableRows(o.lg),pos=rows.findIndex(r=>r.id===o.i),pl=!ksLg(o.lg)&&rows[pos]&&rows[pos].p;
   const back=`<button class="back op-back" data-teamback="1">${ic.prev}<span>${S.teamDepth>0?'חזרה':'לטיפ-אוף'}</span></button>`;
-  const follow=mineF?'<p class="sub op-fol">הקבוצה שלכם · מופיעה ב"המשחקים שלי"</p>':`<div class="op-fol tp-btns">${mineR?`<span class="sub">במעקב תוצאות · <button class="linkbtn" data-rres="${esc(o.key)}">הסרה</button></span>`:`<button class="btn ghost sm" data-oppres="${esc(o.key)}">+ למעקב תוצאות</button>`}<button class="linkbtn" data-teammine="${o.i}">זו הקבוצה של הילד שלי</button></div>`;
+  const follow=mineF?'<p class="sub op-fol">הקבוצה שלכם · מופיעה ב"המשחקים שלי"</p>':mineR?`<p class="sub op-fol">במעקב תוצאות · <button class="linkbtn" data-teamfollow="${o.i}">שינוי</button></p>`:`<div class="op-fol"><button class="btn sm" data-teamfollow="${o.i}">+ לעקוב אחרי הקבוצה</button></div>`;
   let nxt='';
   if(nx){const op=TEAMS[nx.h===o.i?nx.a:nx.h],home=nx.h===o.i;
     nxt=`<section class="sec tnext"><h3 class="op-h">המשחק הבא</h3><p class="tn-when"><b>יום ${DAYS[nx.date.getDay()]}, ${dm(nx.date)}</b> · <span class="tn-t">${hm(nx.date)}</span></p>
@@ -1216,8 +1222,8 @@ function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, האימונים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
-function overlay(){return S.ksPop?ksPopSheet():S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
-function closeSmall(){if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
+function overlay(){return S.ksPop?ksPopSheet():S.followAsk!=null?followSheet():S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function closeSmall(){if(S.followAsk!=null){S.followAsk=null;return}if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
   setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
@@ -1537,7 +1543,7 @@ function render(){
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
   if(e.target.closest('.scrim')&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);track('ks_new_no');render();return}
-  if(e.target.closest('.scrim')&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
+  if(e.target.closest('.scrim')&&(S.followAsk!=null||S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite)track('invite_dismiss');if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
   if(b.closest('nav.tabs')){if(S.team){S.team=null;S.teamDepth=0;try{history.replaceState(null,'','/')}catch(e){}}S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;if(S.view==='my')afterFirstTeam();render();scrollTo(0,0);return}
@@ -1546,11 +1552,13 @@ document.addEventListener('click',e=>{
   if(d.growx){if(d.growx==='prac')S.pshare=null;else S.chgSess=null;track('grow_'+d.growx+'_no');render();return}
   if(d.opp){openTeam(+d.opp,d.oppf!=null?+d.oppf:null);return}
   if(d.teamback){leaveTeam();return}
+  if(d.teamfollow){S.followAsk=+d.teamfollow;track('team_follow_ask');render();return}
+  if(d.followno){S.followAsk=null;render();return}
   if(d.teamshare){const t=TEAMS[+d.teamshare],url=pageURL(t),text=`הלו״ז והתוצאות של ${t.name}, ${ageLabel(t.lg)}`;track('team_share');
     if(navigator.share)navigator.share({title:t.name,text,url}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(text+'\n'+url),'_blank','noopener');return}
   if(d.teammine){const t=TEAMS[+d.teammine];if(S.res.includes(t.key)){S.res=S.res.filter(k=>k!==t.key);store.set('tipoff.res',S.res)}
-    setFollows(touched?(S.follows.includes(t.key)?S.follows:[...S.follows,t.key]):[t.key]);track('team_follow');toast('נוספה ל"המשחקים שלי"');render();return}
-  if(d.oppres){toggleRes(d.oppres);track('opp_follow');return}
+    S.followAsk=null;setFollows(touched?(S.follows.includes(t.key)?S.follows:[...S.follows,t.key]):[t.key]);track('team_follow');toast('נוספה ל"המשחקים שלי"');render();return}
+  if(d.oppres){S.followAsk=null;toggleRes(d.oppres);track('opp_follow');return}
   if(d.oppall){S.team.all=true;track('opp_all');render();return}
   if(d.rep){S.repG=+d.rep;S.repMode='form';S.repDraft={};S.pErr='';render();return}
   if(d.repask){const g=GAMES[+d.repask],r=g&&repOf(g);if(!r)return;S.repG=+d.repask;S.repMode=r.alts?'pick':'check';S.repDraft={};S.pErr='';track('rep_ask');render();return}
@@ -1617,7 +1625,7 @@ document.addEventListener('click',e=>{
   if(d.go){S.view=d.go;S.findMode='full';if(d.go==='my'){S.justAdded=null;afterFirstTeam()}render();scrollTo(0,0);if(d.go==='season'){track('season');const el=document.getElementById('m-'+(NOW.getFullYear()*12+NOW.getMonth()));if(el&&el.previousElementSibling)el.scrollIntoView({block:'start'})}}
   else if(d.addres){S.view='find';S.findMode='res';S.q='';render();scrollTo(0,0)}
   else if(d.res)toggleRes(d.res);
-  else if(d.rres)toggleRes(d.rres);
+  else if(d.rres){S.followAsk=null;toggleRes(d.rres)}
   else if(d.mode){S.findMode=d.mode;render()}
   else if(d.wk){S.weekOff+=+d.wk;S.dayWeek=null;render()}
   else if(d.day){S.day=d.day;S.dayWeek=S.weekOff;render()}
@@ -1650,7 +1658,7 @@ document.addEventListener('click',e=>{
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}
   else if(d.al){S.alerts[d.al]=!S.alerts[d.al];store.set('tipoff.alerts',S.alerts);syncState('prefs');render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);render();return}if(e.key==='Escape'&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);render();return}if(e.key==='Escape'&&(S.followAsk!=null||S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){const k=S.menu;closeSmall();render();const b=k&&document.querySelector(`[data-menu-open="${CSS.escape(k)}"]`);if(b)b.focus();return}
   if(e.key==='Escape'&&(S.invite||S.welcome)){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render()}});
 document.addEventListener('submit',e=>{
   const rf=e.target.closest('form[data-repform]');if(rf){e.preventDefault();const g=GAMES[S.repG];if(!g)return;
