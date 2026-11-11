@@ -20,6 +20,7 @@ export const SCHEMA = [
 // Columns added after launch. Running them again fails harmlessly ("duplicate column"), so errors are ignored.
 export const MIGRATIONS = [
   `ALTER TABLE feedback ADD COLUMN diag TEXT`,
+  `ALTER TABLE feedback ADD COLUMN done INTEGER`,  // the owner marked it handled (time)
 ];
 
 let ready = false;

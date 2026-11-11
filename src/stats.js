@@ -161,6 +161,13 @@ export async function ksStats(DB, pack, now = new Date()) {
   out.median = out.mins.length ? Math.round(out.mins[Math.floor(out.mins.length / 2)]) : null;
   return out;
 }
+/** A parent's contact as a link: e-mail opens a reply with a subject, a phone opens WhatsApp. */
+function contactLink(c) {
+  const t = String(c).trim(), em = t.match(/[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}/i), digits = t.replace(/[^\d+]/g, '');
+  if (em) return `<a dir="ltr" href="mailto:${encodeURIComponent(em[0])}?subject=${encodeURIComponent('טיפ-אוף: לגבי מה שכתבת')}">${esc(t)}</a>`;
+  if (/^(\+?972|0)5\d{8}$/.test(digits)) return `<a dir="ltr" href="https://wa.me/972${digits.replace(/^(\+?972|0)/, '')}">${esc(t)}</a>`;
+  return `<b dir="ltr">${esc(t)}</b>`;
+}
 const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
 const dur = m => m == null ? '—' : m < 120 ? `${m} דק׳` : m < 48 * 60 ? `${Math.round(m / 60)} שעות` : `${Math.round(m / 1440)} ימים`;
 
@@ -185,7 +192,7 @@ export async function statsPage(env, pack) {
     all('SELECT kind, SUM(sent) sent, SUM(failed) failed FROM pushlog WHERE day>=? GROUP BY kind', d30),
     all('SELECT kind, COUNT(*) c FROM changes WHERE ts>? GROUP BY kind', now - 7 * 864e5),
     all("SELECT team, kind FROM follows"),
-    all('SELECT ts, topic, source, text, contact, teams, platform, diag FROM feedback ORDER BY ts DESC LIMIT 60'),
+    all('SELECT rowid id, ts, topic, source, text, contact, teams, platform, diag, done FROM feedback ORDER BY ts DESC LIMIT 60'),
     one('SELECT COUNT(*) c FROM feedback WHERE ts>?', now - 30 * 864e5),
   ]);
   const [newRows, openRows, evRows, followRows, devRows, pracRows] = await Promise.all([
@@ -254,7 +261,7 @@ svg{width:100%;height:auto;display:block}
 .in b.big{font-size:30px;font-variant-numeric:tabular-nums;display:block;line-height:1.2}.in p{margin:4px 0}.in .fix{color:var(--m);font-size:13px;border-top:1px solid var(--l);margin-top:8px;padding-top:8px}
 .fn{display:flex;flex-direction:column;gap:6px}.fn div{display:grid;grid-template-columns:120px 1fr 70px;gap:8px;align-items:center;font-size:14px}.fn i{display:block;height:14px;border-radius:4px;background:var(--a);min-width:2px}.fn em{font-style:normal;text-align:left;font-variant-numeric:tabular-nums}
 details summary{cursor:pointer;font-weight:600}
-.fbl{display:flex;flex-direction:column}.fbi{border-top:1px solid var(--l);padding:12px 0}.fbi:first-child{border-top:0;padding-top:0}.fbh{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.fbi p{margin:6px 0;white-space:pre-wrap}
+.fbl{display:flex;flex-direction:column}.fbi.done{opacity:.55}.fbdone{font:inherit;font-size:13px;background:none;border:1px solid var(--l);border-radius:8px;padding:4px 10px;cursor:pointer;color:inherit;margin-top:6px}.fbi{border-top:1px solid var(--l);padding:12px 0}.fbi:first-child{border-top:0;padding-top:0}.fbh{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.fbi p{margin:6px 0;white-space:pre-wrap}
 </style></head><body><main>
 <div><h1>טיפ-אוף · נתוני שימוש</h1><div class="sub">עודכן ${when(now)}. "משתמש" = מכשיר אחד (טלפון או מחשב). הורה עם שני מכשירים נספר פעמיים. בסך הכל ${fmt(tot?.c)} מכשירים, ${fmt(withTeam?.c)} מהם עם קבוצה.</div></div>
 
@@ -325,8 +332,8 @@ ${K.played ? `<details style="margin-top:12px"><summary>לפי ליגה (15 הל
 <div class="card"><h2>מה ההורים כתבו</h2>
 ${fb.length ? `<div class="fbl">${fb.map(f => {
   const teams = JSON.parse(f.teams || '[]').map(k => k.split('|')[1]).join(', ');
-  return `<div class="fbi"><div class="fbh"><span class="st ${f.topic === 'idea' ? 'ok' : 'bad'}">${esc(TOPIC[f.topic] || f.topic)}</span><span class="sub">${when(f.ts)}${f.source === 'my' ? ' · מתחתית "המשחקים שלי"' : ''} · ${esc(f.platform || '')}</span></div>
-  <p>${esc(f.text)}</p>${f.contact ? `<div class="sub">לחזור אל: <b dir="ltr">${esc(f.contact)}</b></div>` : ''}${teams ? `<div class="sub">עוקבים אחרי: ${esc(teams)}</div>` : ''}${f.diag ? `<div class="sub">פרטים טכניים: ${esc(Object.entries(JSON.parse(f.diag)).map(([k, v]) => (DIAG[k] || k) + ': ' + v).join(' · '))}</div>` : ''}</div>`;
+  return `<div class="fbi${f.done ? ' done' : ''}"><div class="fbh"><span class="st ${f.topic === 'idea' ? 'ok' : 'bad'}">${esc(TOPIC[f.topic] || f.topic)}</span><span class="sub">${when(f.ts)}${f.source === 'my' ? ' · מתחתית "המשחקים שלי"' : ''} · ${esc(f.platform || '')}</span></div>
+  <p>${esc(f.text)}</p>${f.contact ? `<div class="sub">לחזור אל: ${contactLink(f.contact)}</div>` : ''}<div class="sub"><button class="fbdone" data-id="${f.id}" data-on="${f.done ? 0 : 1}">${f.done ? `טופל ${when(f.done)} · לבטל` : 'לסמן שטופל'}</button></div>${teams ? `<div class="sub">עוקבים אחרי: ${esc(teams)}</div>` : ''}${f.diag ? `<div class="sub">פרטים טכניים: ${esc(Object.entries(JSON.parse(f.diag)).map(([k, v]) => (DIAG[k] || k) + ': ' + v).join(' · '))}</div>` : ''}</div>`;
 }).join('')}</div>` : '<p class="sub">עוד אין הודעות.</p>'}
 </div>
 
@@ -337,5 +344,15 @@ ${sync?.histError ? `<p class="sub">${esc(sync.histError)}</p>` : ''}
 <h2 style="margin-top:14px">שינויים שזוהו בלוח (7 ימים)</h2>${table(changes, [r => ({ moved: 'שעה או תאריך', venue: 'אולם', 'moved+venue': 'מועד ואולם', removed: 'ירד מהלוח', result: 'תוצאות שנכנסו' }[r.kind] || r.kind), r => fmt(r.c)])}
 ${lastOk && !sync?.ok ? `<p class="sub">סנכרון תקין אחרון: ${when(lastOk.at)}. האפליקציה ממשיכה להציג את הנתונים ממנו.</p>` : ''}
 </div>
-</main></body></html>`;
+</main>
+<script>
+document.addEventListener('click', async e => {
+  const b = e.target.closest('.fbdone'); if (!b) return;
+  b.disabled = true;
+  const key = new URLSearchParams(location.search).get('key');
+  const r = await fetch('/api/feedback-done?key=' + encodeURIComponent(key) + '&id=' + b.dataset.id + '&on=' + b.dataset.on, { method: 'POST' }).catch(() => null);
+  if (r && r.ok) { const on = b.dataset.on === '1'; b.closest('.fbi').classList.toggle('done', on); b.dataset.on = on ? '0' : '1'; b.textContent = on ? 'טופל עכשיו · לבטל' : 'לסמן שטופל'; }
+  b.disabled = false;
+});
+</script></body></html>`;
 }

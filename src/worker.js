@@ -263,12 +263,12 @@ export async function reportScore(env, b, now = new Date()) {
   if (g.hs != null) return { status: 409, error: 'official' };
   const follows = await env.DB.prepare('SELECT 1 FROM follows WHERE device=? AND team IN (?,?)').bind(b.device, g.homeKey, g.awayKey).first();
   if (!follows) return { status: 403, error: 'follow' };
-  const before = await env.DB.prepare('SELECT COUNT(*) c, SUM(hs=? AND aws=? AND device<>?) same FROM reports WHERE game=?').bind(hs, as, b.device, g.id).first();
+  const before = await env.DB.prepare('SELECT COUNT(*) c, SUM(hs=? AND aws=? AND device<>?) same, SUM(device=?) mine FROM reports WHERE game=?').bind(hs, as, b.device, b.device, g.id).first();
   const confirm = before.same > 0, win = KS.has(pack.lg[row[2]][2]) ? Infinity : 36 * 60;
   if (m < 0 || (m > win && !confirm)) return { status: 409, error: 'time' };
   await env.DB.prepare('INSERT INTO reports(game,device,hs,aws,ts) VALUES(?,?,?,?,?) ON CONFLICT(game,device) DO UPDATE SET hs=excluded.hs, aws=excluded.aws, ts=excluded.ts')
     .bind(g.id, b.device, hs, as, now.getTime()).run();
-  await track(env, b.device, confirm ? 'report_ok' : 'report');
+  await track(env, b.device, before.mine > 0 ? 'report_fix' : confirm ? 'report_ok' : 'report');
   let pushed = 0;
   if (!before.c) { // the first report goes out like a result, to the parents who asked for results
     const rows = await devicesFollowing(env, [g.homeKey, g.awayKey]);
@@ -571,6 +571,13 @@ export default {
         if (!keys.length) return json({});
         const { results } = await env.DB.prepare(`SELECT team, data, by, at FROM team_prac WHERE team IN (${keys.map(() => '?').join(',')})`).bind(...keys).all();
         return json(Object.fromEntries(results.map(r => [r.team, { ...JSON.parse(r.data), at: r.at, mine: r.by === b.device }])), 200, { 'cache-control': 'no-store' });
+      }
+      if (p === '/api/feedback-done' && req.method === 'POST') {
+        if (!keyAllowed(env, url, req)) return json({ error: 'key' }, 403);
+        const id = Number(url.searchParams.get('id')), on = url.searchParams.get('on') === '1' ? Date.now() : null;
+        if (!Number.isInteger(id)) return json({ error: 'id' }, 400);
+        await env.DB.prepare('UPDATE feedback SET done=? WHERE rowid=?').bind(on, id).run();
+        return json({ ok: true });
       }
       if (p === '/api/ks-announce' && req.method === 'POST') {
         if (!keyAllowed(env, url, req)) return json({ error: 'key' }, 403);

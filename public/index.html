@@ -139,7 +139,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .tm{font-weight:600;font-size:17px}
 .score{font-weight:600;font-size:16px;direction:ltr;unicode-bidi:isolate}
-.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.ks-rec{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:6px}.ks-rec h2{font-size:16px;margin:0}.ks-rec p{margin:0}.ks-rec .linkbtn{align-self:flex-start;min-height:40px;display:inline-flex;align-items:center;text-align:start}.tbl-note{margin:0 0 8px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
+.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-fix{min-height:32px;font-size:14px;margin-inline-start:6px}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.ks-rec{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:6px}.ks-rec h2{font-size:16px;margin:0}.ks-rec p{margin:0}.ks-rec .linkbtn{align-self:flex-start;min-height:40px;display:inline-flex;align-items:center;text-align:start}.tbl-note{margin:0 0 8px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
 .res{font-size:12px;font-weight:600;white-space:nowrap}
 .res.w{color:var(--win)}
 .res.l{color:var(--loss)}
@@ -638,7 +638,9 @@ const repOk=g=>touched&&!played(g)&&!S.rep[g.id]&&repTime(g);
 const repOf=g=>{const r=S.rep[g.id];return r&&!played(g)?r:null};
 const repAsk=r=>touched&&!r.ok&&!r.my;
 const repSide=(r,g,t)=>{const home=g.h===t.i,my=home?r.hs:r.as,op=home?r.as:r.hs;return {my,op,w:my>op}};
-function repScore(g,t){const r=repOf(g);if(!r||r.alts)return null;return {...repSide(r,g,t),ok:r.ok,ask:repAsk(r)}}
+/* a game's score: the association's, or else the one parents reported (not while they disagree) */
+function scoreOf(g){if(played(g))return {hs:g.hs,as:g.as,rep:false};const r=S.rep[g.id];return r&&!r.alts&&!played(g)?{hs:r.hs,as:r.as,rep:true,ok:r.ok}:null}
+function repScore(g,t){const r=repOf(g);if(!r||r.alts)return null;return {...repSide(r,g,t),ok:r.ok,ask:repAsk(r),mine:!!r.my}}
 const repTag=r=>`<span class="rep-tag">${r.ok?'אושר ע״י הורים':'דיווח הורה'}</span>`;
 /* another parent reported: ask the others once, at the top, like the team's practice schedule ("correct?" / "not correct") */
 function repCards(ts){if(!touched)return '';const multi=S.follows.length>1,seen=new Set();
@@ -659,9 +661,9 @@ function ksNewCard(ts){if(!touched||S.ksNew)return '';const ks=ts.filter(t=>KS.h
 function repFact(g,t){const r=repOf(g);
   if(r&&r.alts)return `<div class="fact">${ic.ball}<span><b>יש דיווחים שונים על התוצאה</b> <button class="linkbtn" data-repask="${g.i}">מה הייתה התוצאה?</button></span></div>`;
   const x=repScore(g,t);
-  if(x)return `<div class="fact">${ic.ball}<span><b>${x.w?'ניצחון':'הפסד'} <span class="score">${x.my}–${x.op}</span></b> ${repTag(x)}${x.ask?`<span class="rep-chk">נכון? <button class="linkbtn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="linkbtn" data-repno="${g.i}">לא נכון</button>`:''}</span>`:''}</span></div>`;
+  if(x)return `<div class="fact">${ic.ball}<span><b>${x.w?'ניצחון':'הפסד'} <span class="score">${x.my}–${x.op}</span></b> ${repTag(x)}${x.mine&&repTime(g)?` <button class="linkbtn rep-fix" data-repfix="${g.i}">לתקן</button>`:''}${x.ask?`<span class="rep-chk">נכון? <button class="linkbtn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="linkbtn" data-repno="${g.i}">לא נכון</button>`:''}</span>`:''}</span></div>`;
   return repOk(g)?`<button class="rep-big" data-rep="${g.i}">איך נגמר? לדווח את התוצאה</button>`:''}
-async function loadReports(){const ids=[...new Set(S.follows.flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
+async function loadReports(){const ids=[...new Set([...S.follows,...S.res].flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
   if(!ids.length)return;const out={};
   try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?device='+DEV+'&games='+ids.slice(i,i+90).join(','));if(!r.ok)return;Object.assign(out,await r.json()||{})}
     S.rep=out;if(S.view==='my')render()}catch(e){}}
@@ -678,7 +680,7 @@ function repSheet(){const g=GAMES[S.repG],H=TEAMS[g.h],A=TEAMS[g.a],v=k=>esc(S.r
   if(S.repMode==='check'&&r&&!r.alts)return sheet(`${head}<p><b>הורה דיווח:</b> ${line(r)}</p><p class="sub">התוצאה נכונה?</p>
     <div class="tp-btns"><button class="btn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="linkbtn" data-repno="${g.i}">לא נכון</button>`:''}</div>
     <button class="linkbtn sh-skip" data-repclose="1">ביטול</button>`,'איך נגמר?');
-  return sheet(`${head}
+  return sheet(`${head.replace('איך נגמר?',S.repDraft.fix?'תיקון התוצאה':'איך נגמר?')}
     ${NOW-g.date<3*36e5?'<p class="sub">את התוצאה הסופית, בסוף המשחק.</p>':''}
     <form class="pform" data-repform="1" novalidate>
       <div class="prow2"><label for="rp-h"><span>${esc(H.name)}</span><input id="rp-h" type="number" inputmode="numeric" min="0" max="250" data-rp="h" value="${v('h')}"></label>
@@ -736,20 +738,20 @@ function tableRows(lg){
   return Object.values(T).map(r=>({...r,pts:r.w*2+r.l})).sort((x,y)=>y.pts-x.pts||(y.f-y.a)-(x.f-x.a)||TEAMS[x.id].name.localeCompare(TEAMS[y.id].name,'he'))}
 function teamLine(t){
   const rows=tableRows(t.lg),i=rows.findIndex(r=>r.id===t.i),r=rows[i];
-  const last=t.games.filter(played).sort((a,b)=>b.date-a.date)[0];
-  let lastTxt='עוד לא שיחקה';
-  if(last){const home=last.h===t.i,my=home?last.hs:last.as,op=home?last.as:last.hs;
-    lastTxt=`<span class="res ${my>op?'w':'l'}">${my>op?'ניצחון':'הפסד'}</span> <span class="score">${my}–${op}</span> נגד ${esc(TEAMS[home?last.a:last.h].name)}, ${dm(last.date)}`}
+  const last=t.games.filter(g=>NOW>=g.date&&scoreOf(g)).sort((a,b)=>b.date-a.date)[0];
+  let lastTxt=ksLg(t.lg)?'עוד לא דווחה תוצאה':'עוד לא שיחקה';
+  if(last){const x=scoreOf(last),home=last.h===t.i,my=home?x.hs:x.as,op=home?x.as:x.hs;
+    lastTxt=`<span class="res ${my>op?'w':'l'}">${my>op?'ניצחון':'הפסד'}</span> <span class="score">${my}–${op}</span> נגד ${esc(TEAMS[home?last.a:last.h].name)}, ${dm(last.date)}${x.rep?' <span class="rep-tag">דיווח הורה</span>':''}`}
   return {pos:r&&r.p?`${i+1} מתוך ${rows.length}`:'עוד אין',rec:r&&r.p?`${r.w} נצ׳, ${r.l} הפ׳`:'—',last:lastTxt}}
 function details(g,t){
   const o=TEAMS[g.h===t.i?g.a:g.h],A=teamLine(t),B=teamLine(o);
-  const met=t.games.filter(x=>played(x)&&(x.h===o.i||x.a===o.i)).sort((a,b)=>b.date-a.date)[0];
-  const metTxt=met?`המפגש הקודם ביניהן: ${dm(met.date)}, ${esc(TEAMS[met.h].name)} <span class="score">${met.hs}–${met.as}</span> ${esc(TEAMS[met.a].name)}`:'זה המפגש הראשון ביניהן העונה.';
+  const met=t.games.filter(x=>x!==g&&NOW>=x.date&&scoreOf(x)&&(x.h===o.i||x.a===o.i)).sort((a,b)=>b.date-a.date)[0],ms=met&&scoreOf(met),ks=ksLg(t.lg);
+  const metTxt=met?`המפגש הקודם ביניהן: ${dm(met.date)}, ${esc(TEAMS[met.h].name)} <span class="score">${ms.as}–${ms.hs}</span> ${esc(TEAMS[met.a].name)}`:'זה המפגש הראשון ביניהן העונה.';
   return `<div class="cmp" id="det-${g.i}"><table><thead><tr><th><span class="sr">נתון</span></th><th>${esc(t.name)}</th><th>${esc(o.name)}</th></tr></thead><tbody>
-    <tr><th scope="row">מקום בטבלה</th><td>${A.pos}</td><td>${B.pos}</td></tr>
-    <tr><th scope="row">מאזן</th><td>${A.rec}</td><td>${B.rec}</td></tr>
+    ${ks?'':`<tr><th scope="row">מקום בטבלה</th><td>${A.pos}</td><td>${B.pos}</td></tr>
+    <tr><th scope="row">מאזן</th><td>${A.rec}</td><td>${B.rec}</td></tr>`}
     <tr><th scope="row">משחק אחרון</th><td>${A.last}</td><td>${B.last}</td></tr></tbody></table>
-    <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">ללו״ז של ${esc(o.name)}</button><p class="note">לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.</p></div>`}
+    <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">ללו״ז של ${esc(o.name)}</button><p class="note">${ks?'בקט-סל האיגוד לא מפרסם תוצאות, אז אלה התוצאות שהורים דיווחו.':'לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.'}</p></div>`}
 /* ---------- a peek at the opponent's schedule: opens only on demand, nothing to follow ---------- */
 function oppRow(g,o,mine){const op=TEAMS[g.h===o.i?g.a:g.h],home=g.h===o.i,ours=mine!=null&&(g.h===mine||g.a===mine);
   let right;if(played(g)){const my=home?g.hs:g.as,them=home?g.as:g.hs;right=`<span class="res ${my>them?'w':'l'}">${my>them?'ניצחון':'הפסד'}</span> <span class="score">${my}–${them}</span>`}
@@ -770,7 +772,7 @@ function row(g,t,showTeam){
   const home=g.h===t.i,o=TEAMS[home?g.a:g.h];let right;
   if(played(g)){const my=home?g.hs:g.as,op=home?g.as:g.hs,w=my>op;
     right=`<span class="score">${my}–${op}</span><span class="res ${w?'w':'l'}">${w?'ניצחון':'הפסד'}</span>`}
-  else if(repScore(g,t)){const r=repScore(g,t);right=`<span class="score">${r.my}–${r.op}</span><span class="res ${r.w?'w':'l'}">${r.w?'ניצחון':'הפסד'}</span>${r.ask?`<button class="rep-tag ask" data-repask="${g.i}">דיווח הורה · נכון?</button>`:repTag(r)}`}
+  else if(repScore(g,t)){const r=repScore(g,t);right=`<span class="score">${r.my}–${r.op}</span><span class="res ${r.w?'w':'l'}">${r.w?'ניצחון':'הפסד'}</span>${r.ask?`<button class="rep-tag ask" data-repask="${g.i}">דיווח הורה · נכון?</button>`:r.mine&&repTime(g)?`<button class="rep-tag ask" data-repfix="${g.i}">הדיווח שלך · לתקן</button>`:repTag(r)}`}
   else if(repOf(g)&&repOf(g).alts) right=`<button class="rep-btn" data-repask="${g.i}">דיווחים שונים</button>`;
   else if(repOk(g)) right=`<button class="rep-btn" data-rep="${g.i}">איך נגמר?</button>`;
   else if(isPast(g)) right=isKs(g)?'':`<span class="res p">טרם עודכן</span>`;
@@ -917,10 +919,12 @@ function weekStrip(ts){
 /* ---------- results-only teams ---------- */
 function resultsBlock(){
   const items=S.res.map(k=>TEAMS[KEY[k]]).filter(Boolean).map(t=>{
-    const last=t.games.filter(played).sort((a,b)=>b.date-a.date)[0],nx=t.games.find(g=>!isPast(g));
-    let r='עוד לא שיחקה העונה';
-    if(last){const home=last.h===t.i,my=home?last.hs:last.as,op=home?last.as:last.hs,o=TEAMS[home?last.a:last.h];
-      r=`<span class="res ${my>op?'w':'l'}">${my>op?'ניצחה':'הפסידה'}</span> <span class="score">${my}–${op}</span> נגד ${esc(o.name)} · ${dm(last.date)}`}
+    const last=t.games.filter(g=>NOW>=g.date&&scoreOf(g)).sort((a,b)=>b.date-a.date)[0],nx=t.games.find(g=>!isPast(g));
+    const ask=t.games.filter(g=>NOW>=g.date&&!scoreOf(g)&&!S.rep[g.id]&&!played(g)&&repTime(g)&&(!last||g.date>last.date)).sort((a,b)=>b.date-a.date)[0];
+    let r=ksLg(t.lg)?'עוד לא דווחה תוצאה':'עוד לא שיחקה העונה';
+    if(last){const x=scoreOf(last),home=last.h===t.i,my=home?x.hs:x.as,op=home?x.as:x.hs,o=TEAMS[home?last.a:last.h];
+      r=`<span class="res ${my>op?'w':'l'}">${my>op?'ניצחה':'הפסידה'}</span> <span class="score">${my}–${op}</span> נגד ${esc(o.name)} · ${dm(last.date)}${x.rep?(S.rep[last.id]&&S.rep[last.id].my&&repTime(last)?` <button class="rep-tag ask" data-repfix="${last.i}">הדיווח שלך · לתקן</button>`:' <span class="rep-tag">דיווח הורה</span>'):''}`}
+    if(ask)r+=`<div class="sm"><button class="rep-btn" data-rep="${ask.i}">איך נגמר נגד ${esc(TEAMS[ask.h===t.i?ask.a:ask.h].name)}?</button></div>`;
     return `<div class="rr"><div class="rr-x"><div class="ttl">${esc(t.name)} <span class="sub">${ageLabel(t.lg)}</span></div>
       <div class="sm">${r}</div>${nx?`<div class="sm">הבא: ${DAYS[nx.date.getDay()]} ${dm(nx.date)} ${hm(nx.date)}</div>`:''}</div>
       <button class="rm" data-rres="${esc(t.key)}">הסרה</button></div>`}).join('');
@@ -1261,7 +1265,7 @@ function teamPick(t,withLeague){const RES=S.findMode==='res';const on=RES?S.res.
 
 function viewFind(){
   const q=S.q.trim();
-  const search=`<label class="search">${ic.search}<input id="q" type="search" aria-label="חיפוש קבוצה לפי שם או עיר" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(q)}" autocomplete="off"></label>`;
+  const search=`<label class="search">${ic.search}<input id="q" type="search" aria-label="חיפוש קבוצה לפי שם או עיר" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(S.q)}" autocomplete="off"></label>`;
   if(q.length>=2){const hits=TEAMS.filter(t=>t.name.includes(q)||LEAGUES[t.lg].full.includes(q))
       .sort((x,y)=>AGES.findIndex(a=>a.id===LEAGUES[x.lg].age)-AGES.findIndex(a=>a.id===LEAGUES[y.lg].age));
     return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
@@ -1441,13 +1445,13 @@ function fbForm(topic,{ph,contact=true,source='help'}){
   const d=S.drafts[topic+source]||{};
   return `<form class="fb" data-fb="${topic}" data-src="${source}" novalidate>
     <textarea id="fb-${topic}-${source}" name="text" rows="3" maxlength="1500" placeholder="${esc(ph)}" aria-label="${esc(ph)}">${esc(d.text||'')}</textarea>
-    ${contact?`<input id="fbc-${topic}-${source}" name="contact" maxlength="120" placeholder="איך לחזור אליכם? טלפון או אימייל (לא חובה)" aria-label="פרטים לחזרה, לא חובה" value="${esc(d.contact||'')}">`:''}
+    ${contact?`<input id="fbc-${topic}-${source}" name="contact" maxlength="120" placeholder="מייל או טלפון, ונעדכן כשזה מטופל (לא חובה)" aria-label="מייל או טלפון לעדכון, לא חובה" value="${esc(d.contact||'')}">`:''}
     <div class="fb-row"><button class="btn" type="submit">שליחה</button>${S.fbErr===topic+source?'<span class="fb-err">לא הצלחנו לשלוח. בדקו את החיבור ונסו שוב.</span>':''}</div>
     ${source==='help'?'<p class="note">יחד עם ההודעה נשלחים פרטים טכניים שיעזרו לנו לבדוק: סוג הטלפון והדפדפן, ומצב ההתראות והיומן.</p>':''}
   </form>`}
 function ideaBox(){
   return `<section class="sec idea"><h2>מה עוד הייתם רוצים בטיפ-אוף?</h2>
-    <p class="sub">כתבו בקצרה. אנחנו קוראים כל רעיון.</p>${fbForm('idea',{ph:'למשל: תזכורת לאימונים, תוצאות בזמן אמת…',contact:false,source:'my'})}</section>`}
+    <p class="sub">כתבו בקצרה. אנחנו קוראים כל רעיון.</p>${fbForm('idea',{ph:'למשל: תזכורת לאימונים, תוצאות בזמן אמת…',source:'my'})}</section>`}
 function viewHelp(){
   const faq=FAQ.map(([q,a],i)=>`<details class="faq" id="faq-${i}"><summary>${q}</summary><div class="faq-a">${a}</div></details>`).join('');
   const topics=TOPICS.map(t=>{const open=S.helpOpen===t.id;
@@ -1507,6 +1511,7 @@ document.addEventListener('click',e=>{
   if(d.repask){const g=GAMES[+d.repask],r=g&&repOf(g);if(!r)return;S.repG=+d.repask;S.repMode=r.alts?'pick':'check';S.repDraft={};S.pErr='';track('rep_ask');render();return}
   if(d.repseen){S.repSeen[GAMES[+d.repseen].id]=1;store.set('tipoff.repseen',S.repSeen);track('rep_card_no');render();return}
   if(d.ksnew){S.ksNew=true;store.set('tipoff.ksnew',true);track(+d.ksnew?'ks_new_go':'ks_new_no');if(+d.ksnew){S.repG=+d.ksnew;S.repMode='form';S.repDraft={};S.pErr=''}render();return}
+  if(d.repfix){const g=GAMES[+d.repfix],r=g&&S.rep[g.id];if(!r||!r.my)return;S.repG=+d.repfix;S.repMode='form';S.repDraft={h:String(r.my.hs),a:String(r.my.as),fix:1};S.pErr='';render();return}
   if(d.repno){S.repG=+d.repno;S.repMode='form';S.repDraft={};S.pErr='';render();return}
   if(d.repyes||d.reppick){const [gi,hs,as]=d.reppick?d.reppick.split(':').map(Number):[+d.repyes],g=GAMES[gi],r=g&&repOf(g);if(!r)return;
     repSend(g,d.reppick?hs:r.hs,d.reppick?as:r.as).then(err=>{if(!err){S.repG=null;S.pErr=''}render();toast(err||'תודה! התוצאה אושרה')});return}
@@ -1607,7 +1612,7 @@ document.addEventListener('submit',e=>{
     const hs=parseInt(S.repDraft.h,10),as=parseInt(S.repDraft.a,10);
     if(!(hs>=0&&hs<=250&&as>=0&&as<=250)){S.pErr='חסרות נקודות לאחת הקבוצות';render();return}
     if(hs===as){S.pErr='בכדורסל אין תיקו. כדאי לבדוק שוב';render();return}
-    repSend(g,hs,as).then(err=>{if(!err){S.repG=null;S.pErr='';render();toast('תודה! ההורים בשתי הקבוצות רואים את התוצאה');return}S.pErr=err;render()});return}
+    const fix=S.repDraft.fix;repSend(g,hs,as).then(err=>{if(!err){S.repG=null;S.pErr='';render();toast(fix?'התוצאה תוקנה':'תודה! ההורים בשתי הקבוצות רואים את התוצאה');return}S.pErr=err;render()});return}
   const of=e.target.closest('form[data-oform]');if(of){e.preventDefault();const x=S.occ,id=S.pday.id,orig=S.pday.orig,p=S.prac.find(q=>q.id===id);if(!x||!p)return;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')){S.pErr='בחרו תאריך';render();return}
     if(!/^\d{2}:\d{2}$/.test(x.start||'')){S.pErr='חסרה שעת התחלה';render();return}
