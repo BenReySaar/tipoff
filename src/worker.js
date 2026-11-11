@@ -246,7 +246,9 @@ export function teamPart(pr, team) {
   return { list, skips: pick(pr.skips), moves: pick(pr.moves) };
 }
 
-/** A score a parent reports: allowed from 60 minutes after the start until 36 hours after, if the association has no result yet. */
+/** A score a parent reports: from the start of the game until 36 hours after (7 days in קט-סל, where the association never publishes
+ *  scores), while the association has no result. Confirming a score another parent already reported is allowed all season. */
+const KS = new Set(['ks-a', 'ks-b', 'gks-a', 'gks-b']);
 const minsSince = (d, now) => { const P = ilParts(now); const t = s => Date.UTC(2000 + +s.slice(0, 2), +s.slice(2, 4) - 1, +s.slice(4, 6), +s.slice(6, 8), +s.slice(8, 10));
   return (Date.UTC(+P.year, +P.month - 1, +P.day, +P.hour, +P.minute) - t(d)) / 60000; };
 export async function reportScore(env, b, now = new Date()) {
@@ -257,13 +259,14 @@ export async function reportScore(env, b, now = new Date()) {
   if (!row) return { status: 404, error: 'game' };
   const g = gameInfo(pack, row), m = minsSince(g.d, now);
   if (g.hs != null) return { status: 409, error: 'official' };
-  if (m < 60 || m > 36 * 60) return { status: 409, error: 'time' };
   const follows = await env.DB.prepare('SELECT 1 FROM follows WHERE device=? AND team IN (?,?)').bind(b.device, g.homeKey, g.awayKey).first();
   if (!follows) return { status: 403, error: 'follow' };
-  const before = await env.DB.prepare('SELECT COUNT(*) c FROM reports WHERE game=?').bind(g.id).first();
+  const before = await env.DB.prepare('SELECT COUNT(*) c, SUM(hs=? AND aws=? AND device<>?) same FROM reports WHERE game=?').bind(hs, as, b.device, g.id).first();
+  const confirm = before.same > 0, win = (KS.has(pack.lg[row[2]][2]) ? 7 * 24 : 36) * 60;
+  if (m < 0 || (m > win && !confirm)) return { status: 409, error: 'time' };
   await env.DB.prepare('INSERT INTO reports(game,device,hs,aws,ts) VALUES(?,?,?,?,?) ON CONFLICT(game,device) DO UPDATE SET hs=excluded.hs, aws=excluded.aws, ts=excluded.ts')
     .bind(g.id, b.device, hs, as, now.getTime()).run();
-  await track(env, b.device, 'report');
+  await track(env, b.device, confirm ? 'report_ok' : 'report');
   let pushed = 0;
   if (!before.c) { // the first report goes out like a result, to the parents who asked for results
     const rows = await devicesFollowing(env, [g.homeKey, g.awayKey]);
@@ -271,19 +274,23 @@ export async function reportScore(env, b, now = new Date()) {
     for (const r of rows) {
       if (r.device === b.device || !JSON.parse(r.prefs || '{}').result || per.result.has(r.device)) continue;
       const mine = r.team === g.homeKey, my = mine ? hs : as, op = mine ? as : hs, team = withNick(mine ? g.home : g.away, r.nick);
-      per.result.set(r.device, { device: r.device, push: r.push, msgs: [{ title: `🏀 ${team} ${my > op ? 'ניצחה' : 'הפסידה'} ${my}–${op}`, body: `נגד ${mine ? g.away : g.home}. לפי דיווח של הורה מהמגרש` }] });
+      per.result.set(r.device, { device: r.device, push: r.push, msgs: [{ title: `🏀 ${team} ${my > op ? 'ניצחה' : 'הפסידה'} ${my}–${op}`, body: `נגד ${mine ? g.away : g.home}. הורה דיווח מהמגרש, אפשר לאשר באפליקציה` }] });
     }
     pushed = (await isQuiet(env)) ? await holdForMorning(env, per) : await deliver(env, per.result, 'report');
   }
   return { status: 200, ok: true, first: !before.c, pushed };
 }
 
-/** The score most parents reported for each game (earliest report breaks a tie). */
-export async function reportsFor(env, ids) {
+/** The score most parents reported for each game (earliest report breaks a tie). With a device, `my` is the score that parent reported or confirmed. */
+export async function reportsFor(env, ids, device) {
   if (!ids.length) return {};
   const { results } = await env.DB.prepare(`SELECT game, hs, aws, COUNT(*) n, MIN(ts) t FROM reports WHERE game IN (${ids.map(() => '?').join(',')}) GROUP BY game, hs, aws ORDER BY n DESC, t ASC`).bind(...ids).all();
   const out = {};
   for (const r of results) if (!out[r.game]) out[r.game] = { hs: r.hs, as: r.aws, n: r.n };
+  if (device && DEVICE.test(device)) {
+    const { results: mine } = await env.DB.prepare(`SELECT game, hs, aws FROM reports WHERE device=? AND game IN (${ids.map(() => '?').join(',')})`).bind(device, ...ids).all();
+    for (const r of mine) if (out[r.game]) out[r.game].my = { hs: r.hs, as: r.aws };
+  }
   return out;
 }
 
@@ -362,7 +369,7 @@ export async function cleanup(env, now = Date.now()) {
     env.DB.prepare('DELETE FROM nicks WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo),
     env.DB.prepare('DELETE FROM practices WHERE device IN (SELECT id FROM devices WHERE last_seen < ?)').bind(yearAgo),
     env.DB.prepare('DELETE FROM devices WHERE last_seen < ?').bind(yearAgo),
-    env.DB.prepare('DELETE FROM reports WHERE ts < ?').bind(now - 30 * 864e5),          // parents' score reports: 30 days
+    env.DB.prepare('DELETE FROM reports WHERE ts < ?').bind(now - 300 * 864e5),         // parents' score reports: kept the whole season (קט-סל has no official scores)
     env.DB.prepare('DELETE FROM team_prac WHERE at < ?').bind(now - 180 * 864e5),       // team schedules nobody touched for half a year
   ]);
 }
@@ -508,8 +515,9 @@ export default {
         return json(r, r.status);
       }
       if (p === '/api/reports' && req.method === 'GET') {
-        const ids = (url.searchParams.get('games') || '').split(',').map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 60);
-        return json(await reportsFor(env, ids), 200, { 'cache-control': 'no-store' });
+        // ids from the season files are negative, so any non-zero integer; D1 allows ~100 bound values per query
+        const ids = (url.searchParams.get('games') || '').split(',').map(Number).filter(n => Number.isInteger(n) && n !== 0).slice(0, 90);
+        return json(await reportsFor(env, ids, url.searchParams.get('device')), 200, { 'cache-control': 'no-store' });
       }
       if (p === '/api/forget' && req.method === 'POST') {
         const b = await readJSON(req);

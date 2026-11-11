@@ -138,7 +138,8 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .mid .meta a{text-decoration:none}
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .tm{font-weight:600;font-size:17px}
-.score{font-weight:600;font-size:16px;direction:ltr}
+.score{font-weight:600;font-size:16px;direction:ltr;unicode-bidi:isolate}
+.score.muted{color:var(--muted);margin-inline-end:8px;font-size:15px}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
 .res{font-size:12px;font-weight:600;white-space:nowrap}
 .res.w{color:var(--win)}
 .res.l{color:var(--loss)}
@@ -629,22 +630,40 @@ function tpCards(ts){if(!touched)return '';const multi=S.follows.length>1;
 async function loadTeamPrac(){if(!touched||!S.follows.length)return;
   try{const r=await fetch('/api/teamprac',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV,teams:S.follows})});if(!r.ok)return;S.tprac=await r.json()||{};if(S.view==='my')render()}catch(e){}}
 /* ---------- "how did it end?": a parent reports the score until the association publishes it ---------- */
-const repTime=g=>NOW-g.date>75*6e4&&NOW-g.date<36*36e5;
+/* קט-סל: the association never publishes scores, so parents' reports are the only score, kept all season, reportable for a week */
+const KS=new Set(['ks-a','ks-b','gks-a','gks-b']);const isKs=g=>KS.has(LEAGUES[g.lg].age);
+const repTime=g=>NOW-g.date>=0&&NOW-g.date<(isKs(g)?7*24:36)*36e5;
 const repOk=g=>touched&&!played(g)&&!S.rep[g.id]&&repTime(g);
-function repScore(g,t){const r=S.rep[g.id];if(!r||played(g))return null;const home=g.h===t.i,my=home?r.hs:r.as,op=home?r.as:r.hs;return {my,op,w:my>op}}
+/* another parent's score this parent has not taken yet: offered, like the team's practice schedule */
+const repOffer=g=>{const r=S.rep[g.id];return touched&&!played(g)&&r&&!r.my?r:null};
+const repSide=(r,g,t)=>{const home=g.h===t.i,my=home?r.hs:r.as,op=home?r.as:r.hs;return {my,op,w:my>op}};
+function repScore(g,t){const r=S.rep[g.id];if(!r||!r.my||played(g))return null;return repSide(r.my,g,t)}
 function repFact(g,t){const r=repScore(g,t);
   if(r)return `<div class="fact">${ic.ball}<span><b>${r.w?'ניצחון':'הפסד'} <span class="score">${r.my}–${r.op}</span></b> <span class="rep-tag">לפי דיווח הורה</span></span></div>`;
   return repOk(g)?`<button class="rep-big" data-rep="${g.i}">איך נגמר? לדווח את התוצאה</button>`:''}
-async function loadReports(){const ids=[...new Set(S.follows.flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>60*6e4&&NOW-g.date<36*36e5).map(g=>g.id))];
-  if(!ids.length)return;try{const r=await fetch('/api/reports?games='+ids.join(','));if(r.ok){S.rep=await r.json()||{};if(S.view==='my')render()}}catch(e){}}
+function repCards(ts){if(!touched)return '';const multi=S.follows.length>1,seen=new Set();
+  return ts.flatMap(t=>t.games.filter(g=>repOffer(g)&&NOW-g.date<7*24*36e5).map(g=>({g,t}))).sort((x,y)=>y.g.date-x.g.date).filter(({g})=>!seen.has(g.id)&&seen.add(g.id)).slice(0,3).map(({g,t})=>{
+    const r=repSide(repOffer(g),g,t),o=TEAMS[g.h===t.i?g.a:g.h];
+    return `<section class="tp" aria-label="תוצאה שהורה דיווח">${multi?`<span class="tp-who">${dot(t.key)}${esc(t.name)}</span>`:''}<h2>הורה דיווח: ${r.w?'ניצחון':'הפסד'} <span class="score">${r.my}–${r.op}</span></h2>
+      <p class="sub">נגד ${esc(o.name)}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)}. לעדכן גם אצלך?</p>
+      <div class="tp-btns"><button class="btn" data-repyes="${g.i}">לעדכן</button>${repTime(g)?`<button class="linkbtn" data-rep="${g.i}">התוצאה אחרת</button>`:''}</div></section>`}).join('')}
+async function loadReports(){const ids=[...new Set(S.follows.flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
+  if(!ids.length)return;const out={};
+  try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?device='+DEV+'&games='+ids.slice(i,i+90).join(','));if(!r.ok)return;Object.assign(out,await r.json()||{})}
+    S.rep=out;if(S.view==='my')render()}catch(e){}}
+async function repSend(g,hs,as){let r=null;try{r=await fetch('/api/report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV,game:g.id,hs,as})})}catch(x){}
+  const j=r?await r.json().catch(()=>({})):{};
+  if(r&&r.ok){const old=S.rep[g.id];S.rep[g.id]=old&&old.hs===hs&&old.as===as?{...old,n:old.n+1,my:{hs,as}}:{...(old||{hs,as,n:1}),my:{hs,as}};return ''}
+  return !r?'אין חיבור לאינטרנט. נסו שוב':j.error==='official'?'האיגוד כבר פרסם את התוצאה':j.error==='time'?(NOW<g.date?'אפשר לדווח מהרגע שהמשחק מתחיל':'עבר הזמן לדיווח על המשחק הזה'):j.error==='follow'?'אפשר לדווח רק על משחק של קבוצה שאתם עוקבים אחריה':'משהו השתבש. נסו שוב'}
 function repSheet(){const g=GAMES[S.repG],H=TEAMS[g.h],A=TEAMS[g.a],v=k=>esc(S.repDraft[k]??'');
   return sheet(`<h2 tabindex="-1" data-autofocus>איך נגמר?</h2><p class="sub">${esc(H.name)} נגד ${esc(A.name)}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)}</p>
+    <p class="sub">את התוצאה הסופית, בסוף המשחק.</p>
     <form class="pform" data-repform="1" novalidate>
       <div class="prow2"><label for="rp-h"><span>${esc(H.name)}</span><input id="rp-h" type="number" inputmode="numeric" min="0" max="250" data-rp="h" value="${v('h')}"></label>
       <label for="rp-a"><span>${esc(A.name)}</span><input id="rp-a" type="number" inputmode="numeric" min="0" max="250" data-rp="a" value="${v('a')}"></label></div>
       ${S.pErr?`<p class="fb-err" role="alert">${S.pErr}</p>`:''}
       <button class="btn wide" type="submit">שליחה</button></form>
-    <p class="sub">ההורים בשתי הקבוצות יראו את התוצאה עד שהאיגוד יפרסם את התוצאה הרשמית.</p>
+    <p class="sub">${isKs(g)?'ההורים בשתי הקבוצות יקבלו את התוצאה.':'ההורים בשתי הקבוצות יקבלו את התוצאה, עד שהאיגוד יפרסם את התוצאה הרשמית.'}</p>
     <button class="linkbtn sh-skip" data-repclose="1">ביטול</button>`,'איך נגמר?')}
 function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
@@ -712,7 +731,7 @@ function details(g,t){
 /* ---------- a peek at the opponent's schedule: opens only on demand, nothing to follow ---------- */
 function oppRow(g,o,mine){const op=TEAMS[g.h===o.i?g.a:g.h],home=g.h===o.i,ours=mine!=null&&(g.h===mine||g.a===mine);
   let right;if(played(g)){const my=home?g.hs:g.as,them=home?g.as:g.hs;right=`<span class="res ${my>them?'w':'l'}">${my>them?'ניצחון':'הפסד'}</span> <span class="score">${my}–${them}</span>`}
-  else right=isPast(g)?'<span class="res p">טרם עודכן</span>':`<span class="op-t">${hm(g.date)}</span>`;
+  else right=isPast(g)?(isKs(g)?'':'<span class="res p">טרם עודכן</span>'):`<span class="op-t">${hm(g.date)}</span>`;
   return `<li class="op-row${ours?' ours':''}"><span class="op-d">${dm(g.date)}</span><span class="op-n">נגד ${esc(op.name)}${ours?' <span class="rep-tag">המשחק שלכם</span>':''}</span><span class="op-r">${right}</span></li>`}
 function oppSheet(){const o=TEAMS[S.opp.ti];if(!o){S.opp=null;return ''}
   const gs=[...o.games].sort((a,b)=>a.date-b.date),past=gs.filter(played).reverse(),next=gs.filter(g=>!isPast(g));
@@ -730,8 +749,9 @@ function row(g,t,showTeam){
   if(played(g)){const my=home?g.hs:g.as,op=home?g.as:g.hs,w=my>op;
     right=`<span class="score">${my}–${op}</span><span class="res ${w?'w':'l'}">${w?'ניצחון':'הפסד'}</span>`}
   else if(repScore(g,t)){const r=repScore(g,t);right=`<span class="score">${r.my}–${r.op}</span><span class="res ${r.w?'w':'l'}">${r.w?'ניצחון':'הפסד'}</span><span class="rep-tag">דיווח הורה</span>`}
+  else if(repOffer(g)){const r=repSide(repOffer(g),g,t);right=`<span class="score muted">${r.my}–${r.op}</span><button class="rep-btn" data-repyes="${g.i}" aria-label="הורה דיווח ${r.my}–${r.op}. לעדכן גם אצלך">לעדכן?</button>`}
   else if(repOk(g)) right=`<button class="rep-btn" data-rep="${g.i}">איך נגמר?</button>`;
-  else if(isPast(g)) right=`<span class="res p">טרם עודכן</span>`;
+  else if(isPast(g)) right=isKs(g)?'':`<span class="res p">טרם עודכן</span>`;
   else right=`<span class="tm">${hm(g.date)}</span>${CH.has(g.id)?'<span class="pill-warn">עודכן</span>':''}`;
   const meta=isPast(g)?esc(LEAGUES[g.lg].cup?LEAGUES[g.lg].full:LEAGUES[g.lg].short):`<a href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav">${esc(VEN[g.v].name)}</a>`;
   return `<div class="row${showTeam?' tagged':''}"${showTeam?` style="--tc:${tcolor(t.key)}"`:''}><div class="date"><span class="dn">${DAYS[g.date.getDay()]}</span><span class="dd">${dm(g.date)}</span></div>
@@ -1171,7 +1191,7 @@ function viewMy(){
      ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
   const demo=!touched?'<div class="banner">אלה שתי קבוצות לדוגמה מהלוח האמיתי. לחצו "+ קבוצה" כדי לבחור את שלכם.</div>':'';
-  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${tpCards(all)}${weekStrip(ts)}`;
+  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${tpCards(all)}${repCards(all)}${weekStrip(ts)}`;
   const pastBlock=past.length?`<section class="sec"><h2>תוצאות אחרונות</h2><div class="list">${past.slice(0,4).map(x=>row(x.g,x.t,multi)).join('')}</div></section>`:'';
   if(multi){
     const nexts=ts.map(t=>({t,g:t.games.find(g=>!isPast(g))})).filter(x=>x.g).sort((a,b)=>a.g.date-b.g.date);
@@ -1439,6 +1459,7 @@ document.addEventListener('click',e=>{
   if(d.oppall){S.opp.all=true;track('opp_all');render();return}
   if(d.oppclose){S.opp=null;render();return}
   if(d.rep){S.repG=+d.rep;S.repDraft={};S.pErr='';render();return}
+  if(d.repyes){const g=GAMES[+d.repyes],r=g&&repOffer(g);if(!r)return;repSend(g,r.hs,r.as).then(err=>{render();toast(err||'התוצאה עודכנה')});return}
   if(d.repclose){closeSmall();render();return}
   if(d.tpadd||d.tpupd){const k=d.tpadd||d.tpupd,T=S.tprac[k];if(!T)return;tpTake(k,T);track(d.tpadd?'tp_add':'tp_update');render();toast(d.tpadd?'האימונים נוספו, עם תזכורת שעה לפני':'האימונים עודכנו לפי הקבוצה');return}
   if(d.tpno){const T=S.tprac[d.tpno];if(T){S.tpseen[d.tpno]=T.at;store.set('tipoff.tpseen',S.tpseen)}track('tp_no');render();return}
@@ -1536,10 +1557,7 @@ document.addEventListener('submit',e=>{
     const hs=parseInt(S.repDraft.h,10),as=parseInt(S.repDraft.a,10);
     if(!(hs>=0&&hs<=250&&as>=0&&as<=250)){S.pErr='חסרות נקודות לאחת הקבוצות';render();return}
     if(hs===as){S.pErr='בכדורסל אין תיקו. כדאי לבדוק שוב';render();return}
-    (async()=>{let r=null;try{r=await fetch('/api/report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV,game:g.id,hs,as})})}catch(x){}
-      const j=r?await r.json().catch(()=>({})):{};
-      if(r&&r.ok){S.rep[g.id]={hs,as,n:1};S.repG=null;S.pErr='';render();toast('תודה! ההורים בקבוצה יראו את התוצאה');return}
-      S.pErr=!r?'אין חיבור לאינטרנט. נסו שוב':j.error==='official'?'האיגוד כבר פרסם את התוצאה':j.error==='time'?'אפשר לדווח רק אחרי שהמשחק נגמר':j.error==='follow'?'אפשר לדווח רק על משחק של קבוצה שאתם עוקבים אחריה':'משהו השתבש. נסו שוב';render()})();return}
+    repSend(g,hs,as).then(err=>{if(!err){S.repG=null;S.pErr='';render();toast('תודה! ההורים בקבוצה יקבלו את התוצאה');return}S.pErr=err;render()});return}
   const of=e.target.closest('form[data-oform]');if(of){e.preventDefault();const x=S.occ,id=S.pday.id,orig=S.pday.orig,p=S.prac.find(q=>q.id===id);if(!x||!p)return;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')){S.pErr='בחרו תאריך';render();return}
     if(!/^\d{2}:\d{2}$/.test(x.start||'')){S.pErr='חסרה שעת התחלה';render();return}
