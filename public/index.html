@@ -573,7 +573,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>'};
 
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
-function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL()}
+function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL();loadReports()}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
 S.pshare=null;S.opp=null;S.team=null;S.teamDepth=0;S.followAsk=null;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.repAsked=store.get('tipoff.repasked',{});S.ksPop=false;S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
@@ -676,10 +676,10 @@ function repFact(g,t){const r=repOf(g);
   const x=repScore(g,t);
   if(x)return `<div class="fact">${ic.ball}<span><b>${x.w?'ניצחון':'הפסד'} <span class="score">${x.my}–${x.op}</span></b> ${repTag(x)}${x.mine&&repTime(g)?` <button class="linkbtn rep-fix" data-repfix="${g.i}">לתקן</button>`:''}${x.ask?`<span class="rep-chk">נכון? <button class="linkbtn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="linkbtn" data-repno="${g.i}">לא נכון</button>`:''}</span>`:''}</span></div>`;
   return repOk(g)?`<button class="rep-big" data-rep="${g.i}">איך נגמר? לדווח את התוצאה</button>`:''}
-async function loadReports(first){const ids=[...new Set([...S.follows,...S.res].flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
+async function loadReports(first){const ids=[...new Set([...S.follows,...S.res].flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).concat(S.team&&TEAMS[S.team.ti]?TEAMS[S.team.ti].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
   const out={};
   if(ids.length)for(let tryN=0;tryN<3;tryN++){try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?device='+DEV+'&games='+ids.slice(i,i+90).join(','));if(!r.ok)throw new Error(r.status);Object.assign(out,await r.json()||{})}
-    S.rep=out;S.repLoaded=Date.now();if(S.view==='my')render();break}catch(e){await new Promise(r=>setTimeout(r,[3000,8000,0][tryN]))}}
+    S.rep=out;S.repLoaded=Date.now();if(S.view==='my'||S.team)render();break}catch(e){await new Promise(r=>setTimeout(r,[3000,8000,0][tryN]))}}
   if(!first)return;
   if(!store.get('tipoff.kspop',false)&&ksTeams().length&&!overlayOpen()){S.ksPop=true;track('ks_pop');render()}else repPrompt()}
 async function repSend(g,hs,as){let r=null;try{r=await fetch('/api/report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV,game:g.id,hs,as})})}catch(x){}
@@ -709,7 +709,7 @@ function toggleFollow(key){const was=S.follows.includes(key);
   const f=touched?(was?S.follows.filter(x=>x!==key):[...S.follows,key]):(was?S.follows.filter(x=>x!==key):[key]);
   setFollows(f);if(S.filter!=='all'&&!f.includes(S.filter))S.filter='all';S.justAdded=f.includes(key)?key:null;S.dayWeek=null;
   toast(f.includes(key)?'נוספה למשחקים שלי':'הוסרה מהמשחקים שלי');render()}
-function toggleRes(key){const on=S.res.includes(key);S.res=on?S.res.filter(x=>x!==key):[...S.res,key];store.set('tipoff.res',S.res);syncState('follow');
+function toggleRes(key){const on=S.res.includes(key);S.res=on?S.res.filter(x=>x!==key):[...S.res,key];store.set('tipoff.res',S.res);syncState('follow');loadReports();
   toast(on?'הוסרה ממעקב התוצאות':'נוספה למעקב תוצאות');render()}
 
 /* ---------- views ---------- */
@@ -781,9 +781,9 @@ const pageURL=t=>location.origin+"/team/"+t.id;
 function openTeam(ti,from){const t=TEAMS[ti];if(!t)return;const hop=!!S.team;
   S.team={ti,from:from!=null?from:(S.team?S.team.from:null),all:false};S.teamDepth=(S.teamDepth||0)+1;
   try{if(t.id)history.pushState({tp:1,ti,from:S.team.from},'','/team/'+t.id)}catch(e){}
-  track(hop?'opp_hop':'opp_open');render();scrollTo(0,0)}
+  track(hop?'opp_hop':'opp_open');render();scrollTo(0,0);loadReports()}
 function leaveTeam(){if(S.teamDepth>0&&history.state&&history.state.tp){history.back();return}S.team=null;S.teamDepth=0;try{history.replaceState(null,'','/')}catch(e){}syncURL();render();scrollTo(0,0)}
-addEventListener('popstate',e=>{const st=e.state;if(st&&st.tp&&TEAMS[st.ti]){S.team={ti:st.ti,from:st.from??null,all:false};S.teamDepth=Math.max(0,(S.teamDepth||1)-1)}else{S.team=null;S.teamDepth=0;syncURL()}render();scrollTo(0,0)});
+addEventListener('popstate',e=>{const st=e.state;if(st&&st.tp&&TEAMS[st.ti]){S.team={ti:st.ti,from:st.from??null,all:false};S.teamDepth=Math.max(0,(S.teamDepth||1)-1);loadReports()}else{S.team=null;S.teamDepth=0;syncURL()}render();scrollTo(0,0)});
 /* one follow button on a team page; the choice comes only when tapping it */
 function followSheet(){const t=TEAMS[S.followAsk],r=S.res.includes(t.key);
   return sheet(`<h2 tabindex="-1" data-autofocus>לעקוב אחרי ${esc(t.name)}</h2>
