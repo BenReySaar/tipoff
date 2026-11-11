@@ -679,7 +679,7 @@ function repSheet(){const g=GAMES[S.repG],H=TEAMS[g.h],A=TEAMS[g.a],v=k=>esc(S.r
     <div class="tp-btns"><button class="btn" data-repyes="${g.i}">נכון</button>${repTime(g)?`<button class="linkbtn" data-repno="${g.i}">לא נכון</button>`:''}</div>
     <button class="linkbtn sh-skip" data-repclose="1">ביטול</button>`,'איך נגמר?');
   return sheet(`${head}
-    <p class="sub">את התוצאה הסופית, בסוף המשחק.</p>
+    ${NOW-g.date<3*36e5?'<p class="sub">את התוצאה הסופית, בסוף המשחק.</p>':''}
     <form class="pform" data-repform="1" novalidate>
       <div class="prow2"><label for="rp-h"><span>${esc(H.name)}</span><input id="rp-h" type="number" inputmode="numeric" min="0" max="250" data-rp="h" value="${v('h')}"></label>
       <label for="rp-a"><span>${esc(A.name)}</span><input id="rp-a" type="number" inputmode="numeric" min="0" max="250" data-rp="a" value="${v('a')}"></label></div>
