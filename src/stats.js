@@ -13,7 +13,7 @@ const DIAG = { os: 'מערכת', browser: 'דפדפן', home: 'מסך הבית',
 const ACTIONS = {
   open: 'פתחו את האפליקציה', new: 'מכשירים חדשים', follow: 'הוסיפו או הסירו קבוצה', standalone: 'פתחו מהמסך הבית',
   push_on: 'הפעילו התראות', push_off: 'כיבו התראות', nav: 'לחצו ניווט', calendar: 'הוסיפו משחק ליומן', cal_sub: 'חיברו יומן מתעדכן',
-  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', share_app_wa: 'שיתפו את האפליקציה בוואטסאפ', share_app_fb: 'שיתפו את האפליקציה בפייסבוק', share_app_tg: 'שיתפו את האפליקציה בטלגרם', share_app_native: 'שיתפו את האפליקציה (תפריט השיתוף)', share_app_copy: 'העתיקו קישור לאפליקציה', share_team_native: 'שיתפו קבוצה (תפריט השיתוף)', season: 'פתחו את כל משחקי העונה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות', nick: 'נתנו כינוי לקבוצה', remove_team: 'הסירו קבוצה מהתפריט', details: 'פתחו פירוט מול היריבה', gmaps: 'לחצו Google Maps', wrong_open: 'לחצו "משהו לא נכון?"', forget: 'מחקו את המידע שלהם', diag_fix: 'לחצו על תיקון באבחון', invite_close: 'סגרו את "הזמינו הורים"', howto_open: 'פתחו את מדריך ההוספה למסך הבית', install_copy: 'העתיקו קישור כדי לעבור לספארי', install_send: 'שלחו לעצמם קישור מהמחשב', installed_open: 'פתחו לראשונה מהמסך הבית', howto_auto: 'קיבלו את מדריך ההתקנה אחרי בחירת קבוצה (אייפון)', pushask_show: 'קיבלו הצעה להפעיל התראות אחרי בחירת קבוצה', pushask_no: 'דחו את ההצעה להפעיל התראות', edit_open: 'פתחו עריכת קבוצות', invite_dismiss: 'סגרו את חלון ההזמנה בלחיצה מחוץ לו', practice_add: 'הוסיפו אימון קבוע', practice_top: 'לחצו "+ אימון" למעלה', promo_show: 'ראו את החלון "חדש: תזכורת לאימונים"', promo_go: 'לחצו "להוספת אימון" בחלון החדש', promo_no: 'סגרו את חלון החדש', demo_play: 'פתחו את סרטון ההדגמה', practice_skip: 'ביטלו אימון לתאריך אחד', practice_one: 'שינו אימון בודד (מועד או מקום)', restore: 'אפליקציה במסך הבית קיבלה את ההגדרות מספארי', clash_seen: 'ראו אזהרה "באותה שעה"', report: 'דיווחו "איך נגמר?"', report_ok: 'אישרו "נכון" לתוצאה שהורה אחר דיווח', rep_ask: 'פתחו "נכון?" או "דיווחים שונים"', ks_invite: 'הזמינו הורים מהמאזן של קט-סל', ks_pop: 'ראו את החלון "חדש: התוצאות בקט-סל"', rep_prompt: 'קפץ להם חלון "איך נגמר?" (קט-סל)', rep_card_no: 'סגרו כרטיס "הורה דיווח"', ks_new_go: 'לחצו "לדווח על המשחק האחרון" (קט-סל)', ks_new_no: 'סגרו את חלון "חדש: התוצאות בקט-סל"', practice: 'שמרו שינוי באימונים', opp_open: 'פתחו את הלוז של היריבה', grow_chg_seen: 'ראו "המשחק זז. ההורים בקבוצה יודעים?"', grow_chg_wa: 'שלחו בוואטסאפ אחרי משחק שזז', grow_chg_no: 'סגרו את בקשת השיתוף (משחק שזז)', grow_prac_seen: 'ראו "שלחו את האימונים להורים"', grow_prac_wa: 'שלחו את האימונים בוואטסאפ', grow_prac_no: 'סגרו את בקשת השיתוף (אימונים)', opp_all: 'פתחו את כל המשחקים של היריבה', tp_add: 'הוסיפו את לוז האימונים של הקבוצה', tp_update: 'עדכנו מהקבוצה', tp_no: 'דחו לוז או עדכון מהקבוצה',
+  cal_fetch: 'יומן מתעדכן נקרא', feedback: 'שלחו הודעה מ"עזרה" או רעיון', share_team: 'שיתפו קישור לקבוצה', invite_open: 'נכנסו מקישור של קבוצה', invite_follow: 'הצטרפו לקבוצה מקישור', invite_skip: 'נכנסו מקישור ולא הצטרפו', onboard_skip: 'דילגו על המדריך', install: 'התקינו (אנדרואיד)', share_game: 'שיתפו משחק', share_app: 'שיתפו את האפליקציה', share_app_wa: 'שיתפו את האפליקציה בוואטסאפ', share_app_fb: 'שיתפו את האפליקציה בפייסבוק', share_app_tg: 'שיתפו את האפליקציה בטלגרם', share_app_native: 'שיתפו את האפליקציה (תפריט השיתוף)', share_app_copy: 'העתיקו קישור לאפליקציה', share_team_native: 'שיתפו קבוצה (תפריט השיתוף)', season: 'פתחו את כל משחקי העונה', social: 'לחצו על רשת חברתית', prefs: 'שינו הגדרות התראות', nick: 'נתנו כינוי לקבוצה', remove_team: 'הסירו קבוצה מהתפריט', details: 'פתחו פירוט מול היריבה', gmaps: 'לחצו Google Maps', wrong_open: 'לחצו "משהו לא נכון?"', forget: 'מחקו את המידע שלהם', diag_fix: 'לחצו על תיקון באבחון', invite_close: 'סגרו את "הזמינו הורים"', howto_open: 'פתחו את מדריך ההוספה למסך הבית', install_copy: 'העתיקו קישור כדי לעבור לספארי', install_send: 'שלחו לעצמם קישור מהמחשב', installed_open: 'פתחו לראשונה מהמסך הבית', howto_auto: 'קיבלו את מדריך ההתקנה אחרי בחירת קבוצה (אייפון)', pushask_show: 'קיבלו הצעה להפעיל התראות אחרי בחירת קבוצה', pushask_no: 'דחו את ההצעה להפעיל התראות', edit_open: 'פתחו עריכת קבוצות', invite_dismiss: 'סגרו את חלון ההזמנה בלחיצה מחוץ לו', practice_add: 'הוסיפו אימון קבוע', practice_top: 'לחצו "+ אימון" למעלה', promo_show: 'ראו את החלון "חדש: תזכורת לאימונים"', promo_go: 'לחצו "להוספת אימון" בחלון החדש', promo_no: 'סגרו את חלון החדש', demo_play: 'פתחו את סרטון ההדגמה', practice_skip: 'ביטלו אימון לתאריך אחד', practice_one: 'שינו אימון בודד (מועד או מקום)', restore: 'אפליקציה במסך הבית קיבלה את ההגדרות מספארי', clash_seen: 'ראו אזהרה "באותה שעה"', report: 'דיווחו "איך נגמר?"', report_ok: 'אישרו "נכון" לתוצאה שהורה אחר דיווח', rep_ask: 'פתחו "נכון?" או "דיווחים שונים"', ks_invite: 'הזמינו הורים מהמאזן של קט-סל', slow_open5: 'פתיחה איטית (5–15 שניות)', slow_open15: 'פתיחה איטית מאוד (מעל 15 שניות)', stale_open: 'נפתחה מהלו״ז השמור (אינטרנט איטי)', stale_reload: 'התרעננה לבד כשהגיע לו״ז עדכני', ks_pop: 'ראו את החלון "חדש: התוצאות בקט-סל"', rep_prompt: 'קפץ להם חלון "איך נגמר?" (קט-סל)', rep_card_no: 'סגרו כרטיס "הורה דיווח"', ks_new_go: 'לחצו "לדווח על המשחק האחרון" (קט-סל)', ks_new_no: 'סגרו את חלון "חדש: התוצאות בקט-סל"', practice: 'שמרו שינוי באימונים', opp_open: 'פתחו את הלוז של היריבה', grow_chg_seen: 'ראו "המשחק זז. ההורים בקבוצה יודעים?"', grow_chg_wa: 'שלחו בוואטסאפ אחרי משחק שזז', grow_chg_no: 'סגרו את בקשת השיתוף (משחק שזז)', grow_prac_seen: 'ראו "שלחו את האימונים להורים"', grow_prac_wa: 'שלחו את האימונים בוואטסאפ', grow_prac_no: 'סגרו את בקשת השיתוף (אימונים)', opp_all: 'פתחו את כל המשחקים של היריבה', tp_add: 'הוסיפו את לוז האימונים של הקבוצה', tp_update: 'עדכנו מהקבוצה', tp_no: 'דחו לוז או עדכון מהקבוצה',
 };
 
 // One club often appears under several names ("הפועל מרנין טבעון", "הפועל קרית טבעון", "הפועל ק.טבעון מרנין").
@@ -146,11 +146,14 @@ export async function ksStats(DB, pack, now = new Date()) {
     const r = await DB.prepare(`SELECT COUNT(DISTINCT device) c FROM follows WHERE team IN (${part.map(() => '?').join(',')})`).bind(...part).first();
     followers += r?.c || 0; // a parent following teams in two chunks counts twice; rare
   }
-  const out = { played: games.length, reported: 0, confirmed: 0, disputes: 0, followers, mins: [], leagues: new Map() };
+  const out = { list: [], played: games.length, reported: 0, confirmed: 0, disputes: 0, followers, mins: [], leagues: new Map() };
   for (const r of games) {
     const L = pack.lg[r[2]], k = L[0]; const lg = out.leagues.get(k) || { name: L[0], played: 0, reported: 0, confirmed: 0 }; lg.played++;
     const gs = groups.get(r[0]);
     if (gs) {
+      const tie = !!(gs[1] && gs[1].n === gs[0].n);
+      out.list.push({ d: r[1], league: L[0], home: pack.tm[r[3]][0], away: pack.tm[r[4]][0], scores: (tie ? gs.slice(0, 2) : gs.slice(0, 1)).map(x => [x.hs, x.aws]),
+        status: tie ? 'מחלוקת' : gs[0].n >= 2 ? 'אושר' : 'דיווח הורה', n: gs.reduce((a, x) => a + x.n, 0), first: Math.min(...gs.map(x => x.t)) });
       out.reported++; lg.reported++;
       if (gs[1] && gs[1].n === gs[0].n) out.disputes++; else if (gs[0].n >= 2) { out.confirmed++; lg.confirmed++; }
       out.mins.push((Math.min(...gs.map(x => x.t)) - startMs(r[1])) / 6e4);
@@ -162,6 +165,7 @@ export async function ksStats(DB, pack, now = new Date()) {
   const { results: recent } = await DB.prepare('SELECT game, COUNT(*) n FROM reports WHERE ts > ? GROUP BY game').bind(now.getTime() - 30 * 864e5).all();
   out.other = { games: 0, reports: 0 };
   for (const r of recent) { const lg = lgOf.get(r.game); if (lg == null || KS_AGES.has(pack.lg[lg][2])) continue; out.other.games++; out.other.reports += r.n; }
+  out.list.sort((a, b) => b.first - a.first);
   out.mins.sort((a, b) => a - b);
   out.median = out.mins.length ? Math.round(out.mins[Math.floor(out.mins.length / 2)]) : null;
   return out;
@@ -174,6 +178,13 @@ function contactLink(c) {
   return `<b dir="ltr">${esc(t)}</b>`;
 }
 const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+const dm2 = d => `${+d.slice(4, 6)}.${+d.slice(2, 4)}`;
+const atIL = ms => new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
+function ksList(rows) {
+  return `<div style="overflow-x:auto"><table><thead><tr><th>משחק</th><th>ליגה</th><th>קבוצות ותוצאה</th><th>מצב</th><th>הורים</th><th>דיווח ראשון</th></tr></thead><tbody>${rows.map(r => `<tr>
+<td>${dm2(r.d)}</td><td>${esc(r.league)}</td><td>${esc(r.home)} <b dir="ltr">${r.scores.map(([h, a]) => `${a}–${h}`).join(' / ')}</b> ${esc(r.away)}</td>
+<td>${r.status}</td><td>${r.n}</td><td>${atIL(r.first)}</td></tr>`).join('')}</tbody></table></div>`;
+}
 const dur = m => m == null ? '—' : m < 120 ? `${m} דק׳` : m < 48 * 60 ? `${Math.round(m / 60)} שעות` : `${Math.round(m / 1440)} ימים`;
 
 export async function statsPage(env, pack) {
@@ -239,6 +250,8 @@ export async function statsPage(env, pack) {
   }).join('');
 
   const K = await ksStats(DB, pack).catch(() => null);
+  const slow = await DB.prepare(`SELECT day, type, COUNT(DISTINCT device) d, SUM(n) n FROM activity WHERE type IN ('slow_open5','slow_open15','stale_open','stale_reload') AND day >= ? GROUP BY day, type ORDER BY day DESC`)
+    .bind(new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10)).all().then(r => r.results).catch(() => []);
   const tile = (n, label, sub = '') => `<div class="t"><b>${fmt(n)}</b><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
   const table = (rows, cols) => `<table><tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${c(r)}</td>`).join('')}</tr>`).join('') || '<tr><td>אין עדיין נתונים</td></tr>'}</tbody></table>`;
   const sortMap = m => [...m].sort((a, b) => b[1] - a[1]);
@@ -315,7 +328,13 @@ ${K ? `<div class="card"><h2>קט-סל: ההורים מדווחים תוצאות
 <div class="tiles">${tile(K.played, 'משחקים ששוחקו')}${tile(K.reported, 'דווחו', pct(K.reported, K.played) + ' מהמשחקים')}${tile(K.confirmed, 'אושרו', pct(K.confirmed, K.played) + ' מהמשחקים')}${tile(K.disputes, 'מחלוקות', 'שתי תוצאות שונות, אותו מספר הורים')}
 <div class="t"><b>${dur(K.median)}</b><span>עד הדיווח הראשון</span><small>חציון, מתחילת המשחק</small></div>${tile(K.followers, 'הורים שעוקבים אחרי קט-סל')}</div>
 <p class="sub" style="margin-top:10px">בשאר הגילאים (האיגוד מפרסם תוצאות), ב־30 הימים האחרונים: ${fmt(K.other.games)} משחקים קיבלו דיווח הורה (${fmt(K.other.reports)} דיווחים ואישורים). אם המספר נשאר קרוב לאפס, אפשר להוריד שם את הכפתור.</p>
+${K.list.length ? `<h3 style="margin:16px 0 6px;font-size:15px">משחקים שדווחו</h3>${ksList(K.list.slice(0, 20))}${K.list.length > 20 ? `<details><summary>הצגת כל המשחקים (${K.list.length})</summary>${ksList(K.list.slice(20))}</details>` : ''}` : ''}
 ${K.played ? `<details style="margin-top:12px"><summary>לפי ליגה (15 הליגות עם הכי הרבה דיווחים)</summary>${table([...K.leagues.values()].sort((a, b) => b.reported - a.reported || b.played - a.played).slice(0, 15), [r => esc(r.name), r => fmt(r.played) + ' שוחקו', r => fmt(r.reported) + ' דווחו (' + pct(r.reported, r.played) + ')', r => fmt(r.confirmed) + ' אושרו'])}</details>` : ''}</div>` : ''}
+
+<div class="card"><h2>פתיחות איטיות, 14 ימים</h2>
+<p class="sub">כמה פעמים האפליקציה לקחה יותר מ־5 שניות להיפתח. אם זה קורה לכולם באותו יום, הבעיה בשרת. אם להורה אחד, ברשת שלו. "נפתחה מהטלפון": לא הייתה תשובה מהאינטרנט תוך 4 שניות, והלו״ז נפתח מהעותק השמור והתעדכן אחר כך.</p>
+${slow.length ? (() => { const days = [...new Set(slow.map(r => r.day))]; const g = (d, t) => { const r = slow.find(x => x.day === d && x.type === t); return r ? `${r.n} (${r.d} מכשירים)` : '—'; };
+  return `<div style="overflow-x:auto"><table><thead><tr><th>יום</th><th>5–15 שניות</th><th>יותר מ־15 שניות</th><th>נפתחה מהטלפון</th><th>התרעננה לבד</th></tr></thead><tbody>${days.map(d => `<tr><td>${d.slice(8)}.${+d.slice(5, 7)}</td><td>${g(d, 'slow_open5')}</td><td>${g(d, 'slow_open15')}</td><td>${g(d, 'stale_open')}</td><td>${g(d, 'stale_reload')}</td></tr>`).join('')}</tbody></table></div>`; })() : '<p class="sub">לא היו פתיחות איטיות.</p>'}</div>
 
 <div class="card"><h2>פעילים בכל יום, 30 ימים</h2><div class="sub lg"><i style="background:var(--a)"></i>פעילים<i style="background:var(--b)"></i>חדשים</div>
 <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="פעילים יומיים">${bars}</svg></div>
