@@ -246,8 +246,9 @@ export function teamPart(pr, team) {
   return { list, skips: pick(pr.skips), moves: pick(pr.moves) };
 }
 
-/** A score a parent reports: from the start of the game until 36 hours after (7 days in קט-סל, where the association never publishes
- *  scores), while the association has no result. Confirming a score another parent already reported is allowed all season. */
+/** A score a parent reports: from the start of the game until 36 hours after (any game of the season in קט-סל, where the association
+ *  never publishes scores, so the parents' table can fill in), while the association has no result. Confirming a score another parent
+ *  already reported is allowed all season. */
 const KS = new Set(['ks-a', 'ks-b', 'gks-a', 'gks-b']);
 const minsSince = (d, now) => { const P = ilParts(now); const t = s => Date.UTC(2000 + +s.slice(0, 2), +s.slice(2, 4) - 1, +s.slice(4, 6), +s.slice(6, 8), +s.slice(8, 10));
   return (Date.UTC(+P.year, +P.month - 1, +P.day, +P.hour, +P.minute) - t(d)) / 60000; };
@@ -262,7 +263,7 @@ export async function reportScore(env, b, now = new Date()) {
   const follows = await env.DB.prepare('SELECT 1 FROM follows WHERE device=? AND team IN (?,?)').bind(b.device, g.homeKey, g.awayKey).first();
   if (!follows) return { status: 403, error: 'follow' };
   const before = await env.DB.prepare('SELECT COUNT(*) c, SUM(hs=? AND aws=? AND device<>?) same FROM reports WHERE game=?').bind(hs, as, b.device, g.id).first();
-  const confirm = before.same > 0, win = (KS.has(pack.lg[row[2]][2]) ? 7 * 24 : 36) * 60;
+  const confirm = before.same > 0, win = KS.has(pack.lg[row[2]][2]) ? Infinity : 36 * 60;
   if (m < 0 || (m > win && !confirm)) return { status: 409, error: 'time' };
   await env.DB.prepare('INSERT INTO reports(game,device,hs,aws,ts) VALUES(?,?,?,?,?) ON CONFLICT(game,device) DO UPDATE SET hs=excluded.hs, aws=excluded.aws, ts=excluded.ts')
     .bind(g.id, b.device, hs, as, now.getTime()).run();
@@ -279,6 +280,33 @@ export async function reportScore(env, b, now = new Date()) {
     pushed = (await isQuiet(env)) ? await holdForMorning(env, per) : await deliver(env, per.result, 'report');
   }
   return { status: 200, ok: true, first: !before.c, pushed };
+}
+
+/** קט-סל: about two hours after a game nobody reported, one nudge to its parents who asked for results. Runs with the hourly sync,
+ *  which picks games that started 2 to 3 hours ago, so each game is asked about once. */
+export async function ksAsk(env, now = new Date()) {
+  if (await isQuiet(env)) return 0;
+  const pack = await getPack(env);
+  if (!pack) return 0;
+  const games = pack.g.filter(r => KS.has(pack.lg[r[2]][2]) && r[6] == null).map(r => gameInfo(pack, r)).filter(g => { const m = minsSince(g.d, now); return m >= 120 && m < 180; });
+  if (!games.length) return 0;
+  const ids = games.map(g => g.id).slice(0, 90);
+  const { results } = await env.DB.prepare(`SELECT DISTINCT game FROM reports WHERE game IN (${ids.map(() => '?').join(',')})`).bind(...ids).all();
+  const done = new Set(results.map(r => r.game)), todo = games.filter(g => !done.has(g.id));
+  if (!todo.length) return 0;
+  const rows = await devicesFollowing(env, todo.flatMap(g => [g.homeKey, g.awayKey]));
+  const per = new Map();
+  for (const r of rows) {
+    if (!JSON.parse(r.prefs || '{}').result) continue;
+    for (const g of todo) {
+      if (g.homeKey !== r.team && g.awayKey !== r.team) continue;
+      const mine = r.team === g.homeKey, team = withNick(mine ? g.home : g.away, r.nick);
+      const e = per.get(r.device) || { device: r.device, push: r.push, msgs: [] };
+      if (!e.msgs.some(m => m.game === g.id)) e.msgs.push({ game: g.id, title: `🏀 איך נגמר המשחק של ${team}?`, body: `נגד ${mine ? g.away : g.home}. האיגוד לא מפרסם תוצאות בקט-סל, אפשר לדווח בלחיצה` });
+      per.set(r.device, e);
+    }
+  }
+  return per.size ? deliver(env, per, 'ks_ask') : 0;
 }
 
 /** The score most parents reported or confirmed for each game (earliest report breaks a tie). `ok` once two parents agree
@@ -575,6 +603,7 @@ export default {
         if (url.searchParams.get('flush')) return json({ sent: await flushPending(env) });
         if (url.searchParams.get('cleanup')) { await cleanup(env); return json({ ok: true }); }
         if (url.searchParams.get('practice')) return json({ sent: await practiceReminders(env, new Date(url.searchParams.get('practice'))) });
+        if (url.searchParams.get('ksask')) return json({ sent: await ksAsk(env) });
         return json({ ok: true });
       }
       if (p.startsWith('/api/')) return json({ error: 'not found' }, 404);
@@ -593,5 +622,6 @@ export default {
     }
     await runSync(env);
     await flushPending(env); // morning: what was held overnight
+    await ksAsk(env).catch(() => {});
   },
 };

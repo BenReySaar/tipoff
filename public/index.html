@@ -139,7 +139,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .tm{font-weight:600;font-size:17px}
 .score{font-weight:600;font-size:16px;direction:ltr;unicode-bidi:isolate}
-.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
+.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.ks-rec{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:6px}.ks-rec h2{font-size:16px;margin:0}.ks-rec p{margin:0}.ks-rec .linkbtn{align-self:flex-start;min-height:40px;display:inline-flex;align-items:center;text-align:start}.tbl-note{margin:0 0 8px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
 .res{font-size:12px;font-weight:600;white-space:nowrap}
 .res.w{color:var(--win)}
 .res.l{color:var(--loss)}
@@ -569,7 +569,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL()}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
-S.pshare=null;S.opp=null;S.tprac={};S.rep={};S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
+S.pshare=null;S.opp=null;S.tprac={};S.rep={};S.ktab={};S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
 /* ---------- regular practices (entered by the family, only on this phone) ---------- */
 const isoD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
@@ -630,9 +630,9 @@ function tpCards(ts){if(!touched)return '';const multi=S.follows.length>1;
 async function loadTeamPrac(){if(!touched||!S.follows.length)return;
   try{const r=await fetch('/api/teamprac',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV,teams:S.follows})});if(!r.ok)return;S.tprac=await r.json()||{};if(S.view==='my')render()}catch(e){}}
 /* ---------- "how did it end?": a parent reports the score until the association publishes it ---------- */
-/* קט-סל: the association never publishes scores, so parents' reports are the only score, kept all season, reportable for a week */
+/* קט-סל: the association never publishes scores, so parents' reports are the only score, kept and reportable all season */
 const KS=new Set(['ks-a','ks-b','gks-a','gks-b']);const isKs=g=>KS.has(LEAGUES[g.lg].age);
-const repTime=g=>NOW-g.date>=0&&NOW-g.date<(isKs(g)?7*24:36)*36e5;
+const repTime=g=>NOW-g.date>=0&&(isKs(g)||NOW-g.date<36*36e5);
 const repOk=g=>touched&&!played(g)&&!S.rep[g.id]&&repTime(g);
 /* a parent's report shows for everyone straight away; others can say "correct" / "not correct". Two parents agreeing = confirmed */
 const repOf=g=>{const r=S.rep[g.id];return r&&!played(g)?r:null};
@@ -764,7 +764,30 @@ function row(g,t,showTeam){
    <div class="mid">${showTeam?`<span class="who">${dot(t.key)}${esc(t.name)}, ${nickOf(t.key)?esc(nickOf(t.key)):ageLabel(t.lg)}</span>`:''}<span class="vs">נגד ${esc(o.name)}<span class="ha-badge">${home?'בית':'חוץ'}</span>${isCup(g)?'<span class="cup">גביע</span>':''}</span>
    <span class="meta">${meta}</span></div><div class="right">${right}</div></div>`}
 
+/* קט-סל table from the scores parents confirmed (two agreeing). Shown once most of the league's games have one; until then the team's record */
+const ksLg=lg=>KS.has(LEAGUES[lg].age);
+async function loadKs(lg){if(S.ktab[lg])return;S.ktab[lg]={rep:{},ready:false};
+  const ids=GAMES.filter(g=>g.lg===lg&&!played(g)&&NOW>=g.date).map(g=>g.id);
+  try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?games='+ids.slice(i,i+90).join(','));if(!r.ok)break;Object.assign(S.ktab[lg].rep,await r.json()||{})}}catch(e){}
+  S.ktab[lg].ready=true;render()}
+function ksRows(lg){const K=S.ktab[lg],L=LEAGUES[lg],T={};L.teams.forEach(id=>T[id]={id,p:0,w:0,l:0,f:0,a:0});let done=0,total=0;
+  GAMES.forEach(g=>{if(g.lg!==lg||played(g)||NOW<g.date||!T[g.h]||!T[g.a])return;total++;const r=S.rep[g.id]||K.rep[g.id];if(!r||!r.ok||r.alts)return;done++;
+    const h=T[g.h],a=T[g.a];h.p++;a.p++;h.f+=r.hs;h.a+=r.as;a.f+=r.as;a.a+=r.hs;if(r.hs>r.as){h.w++;a.l++}else{a.w++;h.l++}});
+  const rows=Object.values(T).map(r=>({...r,pts:r.w*2+r.l})).sort((x,y)=>y.pts-x.pts||(y.f-y.a)-(x.f-x.a)||TEAMS[x.id].name.localeCompare(TEAMS[y.id].name,'he'));
+  return {rows,done,total}}
+function ksStandings(lg,tid){const K=S.ktab[lg];if(!K){loadKs(lg);return ''}if(!K.ready)return '';
+  const L=LEAGUES[lg],{rows,done,total}=ksRows(lg);if(!total)return '';const t=TEAMS[tid];
+  const count=`תוצאות שאושרו ע״י הורים: ${done} מתוך ${total} משחקים בליגה.`;
+  if(done>=total*0.7)return `<details class="tbl"><summary>טבלה לפי דיווחי הורים</summary><p class="sub tbl-note">האיגוד לא מפרסם טבלה בקט-סל. ${count}</p><div class="tw"><table><thead><tr><th>#</th><th class="tn">קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>הפרש</th><th>נק׳</th></tr></thead><tbody>
+   ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${esc(TEAMS[r.id].name)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
+   </tbody></table></div></details>`;
+  const me=rows.find(r=>r.id===tid);
+  return `<section class="ks-rec" aria-label="המאזן לפי דיווחי הורים"><h2>המאזן לפי דיווחי הורים</h2>
+    <p><b>${me&&me.p?`${me.w} ${me.w===1?'ניצחון':'ניצחונות'}, ${me.l} ${me.l===1?'הפסד':'הפסדים'}`:'עוד אין תוצאות מאושרות'}</b></p>
+    <p class="sub">${count} הטבלה של ${esc(L.full)} תופיע כשרוב המשחקים יאושרו.</p>
+    <a class="linkbtn" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="ks_invite">להזמין עוד הורים מהקבוצה, כדי שיותר משחקים ידווחו</a></section>`}
 function standings(lg,tid){
+  if(ksLg(lg))return ksStandings(lg,tid);
   const L=LEAGUES[lg],rows=tableRows(lg);
   return `<details class="tbl"><summary>טבלת ${esc(L.full)}</summary><div class="tw"><table><thead><tr><th>#</th><th class="tn">קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>הפרש</th><th>נק׳</th></tr></thead><tbody>
    ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${esc(TEAMS[r.id].name)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
