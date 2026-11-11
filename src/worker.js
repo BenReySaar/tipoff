@@ -274,19 +274,25 @@ export async function reportScore(env, b, now = new Date()) {
     for (const r of rows) {
       if (r.device === b.device || !JSON.parse(r.prefs || '{}').result || per.result.has(r.device)) continue;
       const mine = r.team === g.homeKey, my = mine ? hs : as, op = mine ? as : hs, team = withNick(mine ? g.home : g.away, r.nick);
-      per.result.set(r.device, { device: r.device, push: r.push, msgs: [{ title: `🏀 ${team} ${my > op ? 'ניצחה' : 'הפסידה'} ${my}–${op}`, body: `נגד ${mine ? g.away : g.home}. הורה דיווח מהמגרש, אפשר לאשר באפליקציה` }] });
+      per.result.set(r.device, { device: r.device, push: r.push, msgs: [{ title: `🏀 ${team} ${my > op ? 'ניצחה' : 'הפסידה'} ${my}–${op}`, body: `נגד ${mine ? g.away : g.home}. לפי דיווח של הורה מהמגרש` }] });
     }
     pushed = (await isQuiet(env)) ? await holdForMorning(env, per) : await deliver(env, per.result, 'report');
   }
   return { status: 200, ok: true, first: !before.c, pushed };
 }
 
-/** The score most parents reported for each game (earliest report breaks a tie). With a device, `my` is the score that parent reported or confirmed. */
+/** The score most parents reported or confirmed for each game (earliest report breaks a tie). `ok` once two parents agree
+ *  (a parent of the other team confirming counts the same). `alts` when the two most common scores are level: parents are asked
+ *  which it was. With a device, `my` is the score that parent reported or confirmed. */
 export async function reportsFor(env, ids, device) {
   if (!ids.length) return {};
   const { results } = await env.DB.prepare(`SELECT game, hs, aws, COUNT(*) n, MIN(ts) t FROM reports WHERE game IN (${ids.map(() => '?').join(',')}) GROUP BY game, hs, aws ORDER BY n DESC, t ASC`).bind(...ids).all();
   const out = {};
-  for (const r of results) if (!out[r.game]) out[r.game] = { hs: r.hs, as: r.aws, n: r.n };
+  for (const r of results) {
+    const o = out[r.game];
+    if (!o) out[r.game] = { hs: r.hs, as: r.aws, n: r.n, ok: r.n >= 2 };
+    else if (!o.alts && r.n === o.n) { o.alts = [{ hs: o.hs, as: o.as }, { hs: r.hs, as: r.aws }]; o.ok = false; }
+  }
   if (device && DEVICE.test(device)) {
     const { results: mine } = await env.DB.prepare(`SELECT game, hs, aws FROM reports WHERE device=? AND game IN (${ids.map(() => '?').join(',')})`).bind(device, ...ids).all();
     for (const r of mine) if (out[r.game]) out[r.game].my = { hs: r.hs, as: r.aws };
