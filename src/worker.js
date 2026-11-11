@@ -250,6 +250,7 @@ export function teamPart(pr, team) {
  *  never publishes scores, so the parents' table can fill in), while the association has no result. Confirming a score another parent
  *  already reported is allowed all season. */
 const KS = new Set(['ks-a', 'ks-b', 'gks-a', 'gks-b']);
+const escAttr = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const KS_ANNOUNCE_DAY = '2026-11-11';
 const minsSince = (d, now) => { const P = ilParts(now); const t = s => Date.UTC(2000 + +s.slice(0, 2), +s.slice(2, 4) - 1, +s.slice(4, 6), +s.slice(6, 8), +s.slice(8, 10));
   return (Date.UTC(+P.year, +P.month - 1, +P.day, +P.hour, +P.minute) - t(d)) / 60000; };
@@ -646,6 +647,21 @@ export default {
         return json({ ok: true });
       }
       if (p.startsWith('/api/')) return json({ error: 'not found' }, 404);
+      // a team's own page: the app, with the team's name in the title and link previews (WhatsApp)
+      const tm = p.match(/^\/team\/(\d+)\/?$/);
+      if (tm && req.method === 'GET') {
+        const page = await env.ASSETS.fetch(new Request(new URL('/', url), req));
+        let html = await page.text();
+        const pack = await getPack(env).catch(() => null);
+        const t = pack && pack.tm.find(x => x[2] === +tm[1]);
+        if (t) {
+          const L = pack.lg[t[1]], name = escAttr(t[0]), lg = escAttr(L[0]);
+          html = html.replace(/<title>[^<]*<\/title>/, `<title>${name} · טיפ-אוף</title>`)
+            .replace(/(<meta property="og:title" content=")[^"]*/, `$1${name} · ${lg}`)
+            .replace(/(<meta property="og:description" content=")[^"]*/, `$1הלו״ז, התוצאות והמשחק הבא של ${name}. בטיפ-אוף, בלי הרשמה.`);
+        }
+        return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' } });
+      }
       return env.ASSETS.fetch(req);
     } catch (e) {
       return json({ error: String(e && e.message || e) }, 500);

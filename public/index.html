@@ -102,7 +102,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .day[aria-pressed="true"] .dn{background:var(--sel);color:var(--sel-ink)}
 .day.today[aria-pressed="true"] .dn{background:var(--accent);color:var(--accent-ink)}
 .opp-link{background:none;border:0;padding:0 0 1px;font:inherit;color:inherit;font-weight:inherit;display:inline-flex;align-items:center;gap:2px;border-bottom:1.5px dotted currentColor;cursor:pointer;min-height:32px}
-.opp-link svg{width:14px;height:14px;opacity:.7}.opp-link.sm{min-height:28px}.op-back{margin:0 0 6px}.op-fol{margin:2px 0 6px}.btn.sm{min-height:40px;padding:6px 14px;font-size:14px}.op-n .opp-link{border-bottom-width:1px}.tbl .tn .opp-link{text-align:start}
+.opp-link svg{width:14px;height:14px;opacity:.7}.opp-link.sm{min-height:28px}.op-back{margin:0 0 6px}.tpage{padding-top:4px}.tpage .tp-name{margin:4px 0 6px}.tp-share{margin:4px 0 14px;gap:6px;display:inline-flex;align-items:center}.tp-share svg{width:18px;height:18px;flex:none}.tnext{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:6px 0 10px}.tnext p{margin:2px 0}.tn-t{font-weight:700}.op-fol{margin:2px 0 6px}.btn.sm{min-height:40px;padding:6px 14px;font-size:14px}.op-n .opp-link{border-bottom-width:1px}.tbl .tn .opp-link{text-align:start}
 .opp-more{display:block;margin:4px 0 8px;margin-inline-start:0;padding:0;min-height:40px;font-size:15px;font-weight:600;text-align:start}
 .op-h{font-size:14px;color:var(--muted);font-weight:600;margin:14px 0 6px}
 .op-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
@@ -575,7 +575,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
 function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL()}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
-S.pshare=null;S.opp=null;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.repAsked=store.get('tipoff.repasked',{});S.ksPop=false;S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
+S.pshare=null;S.opp=null;S.team=null;S.teamDepth=0;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.repAsked=store.get('tipoff.repasked',{});S.ksPop=false;S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
 /* ---------- regular practices (entered by the family, only on this phone) ---------- */
 const isoD=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
@@ -770,24 +770,41 @@ function details(g,t){
     <p class="sub">${metTxt}</p><button class="linkbtn opp-more" data-opp="${o.i}" data-oppf="${t.i}">ללו״ז של ${esc(o.name)}</button><p class="note">${ks?'בקט-סל האיגוד לא מפרסם תוצאות, אז אלה התוצאות שהורים דיווחו.':'לפי התוצאות שפורסמו באתר האיגוד, בליגה של כל קבוצה.'}</p></div>`}
 /* ---------- a peek at the opponent's schedule: opens only on demand, nothing to follow ---------- */
 /* any team name opens that team's schedule and results; from there, the next team (back goes one step) */
-const tlink=(t,from)=>`<button class="opp-link sm" data-opp="${t.i}"${from!=null?` data-oppf="${from}"`:''} aria-label="הלו״ז והתוצאות של ${esc(t.name)}">${esc(t.name)}</button>`;
+const tlink=(t,from)=>!t.id?esc(t.name):`<button class="opp-link sm" data-opp="${t.i}"${from!=null?` data-oppf="${from}"`:''} aria-label="הלו״ז והתוצאות של ${esc(t.name)}">${esc(t.name)}</button>`;
 function oppRow(g,o,mine){const op=TEAMS[g.h===o.i?g.a:g.h],home=g.h===o.i,ours=mine!=null&&(g.h===mine||g.a===mine);
   let right;const x=NOW>=g.date&&scoreOf(g);if(x){const my=home?x.hs:x.as,them=home?x.as:x.hs;right=`<span class="res ${my>them?'w':'l'}">${my>them?'ניצחון':'הפסד'}</span> <span class="score">${my}–${them}</span>${x.rep?' <span class="rep-tag">דיווח הורה</span>':''}`}
   else right=isPast(g)?(isKs(g)?'':'<span class="res p">טרם עודכן</span>'):`<span class="op-t">${hm(g.date)}</span>`;
   return `<li class="op-row${ours?' ours':''}"><span class="op-d">${dm(g.date)}</span><span class="op-n">נגד ${tlink(op,mine)}${ours?' <span class="rep-tag">המשחק שלכם</span>':''}</span><span class="op-r">${right}</span></li>`}
-function oppSheet(){const o=TEAMS[S.opp.ti];if(!o){S.opp=null;return ''}
-  const gs=[...o.games].sort((a,b)=>a.date-b.date),past=gs.filter(g=>NOW>=g.date&&scoreOf(g)).reverse(),next=gs.filter(g=>!isPast(g));
-  const prev=S.opp.back&&S.opp.back.length?TEAMS[S.opp.back[S.opp.back.length-1]]:null,mineF=S.follows.includes(o.key)&&touched,mineR=S.res.includes(o.key);
-  const follow=mineF?'<p class="sub op-fol">הקבוצה שלכם</p>':mineR?`<p class="sub op-fol">במעקב תוצאות · <button class="linkbtn" data-rres="${esc(o.key)}">הסרה</button></p>`:`<div class="op-fol"><button class="btn ghost sm" data-oppres="${esc(o.key)}">+ למעקב תוצאות</button></div>`;
-  const rows=tableRows(o.lg),pos=rows.findIndex(r=>r.id===o.i),pl=rows[pos]&&rows[pos].p;
-  const all=S.opp.all?`<ul class="op-list">${gs.map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:'';
-  return sheet(`${prev?`<button class="back op-back" data-oppback="1">${ic.prev}<span>חזרה ל${esc(prev.name)}</span></button>`:''}<p class="sub" style="margin-bottom:-8px">${esc(LEAGUES[o.lg].full)}${pl?` · מקום ${pos+1} מתוך ${rows.length}`:''}</p><h2 tabindex="-1" data-autofocus>${esc(o.name)}</h2>${follow}
-    ${S.opp.all?`<h3 class="op-h">כל המשחקים של העונה</h3>${all}`:`
-    ${past.length?`<h3 class="op-h">משחקים אחרונים</h3><ul class="op-list">${past.slice(0,3).map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:''}
-    ${next.length?`<h3 class="op-h">משחקים הבאים</h3><ul class="op-list">${next.slice(0,2).map(g=>oppRow(g,o,S.opp.from)).join('')}</ul>`:''}
-    ${gs.length>5?`<button class="btn wide ghost" data-oppall="1">כל המשחקים של העונה (${gs.length})</button>`:''}
-    ${standings(o.lg,o.i)}`}
-    <button class="linkbtn sh-skip" data-oppclose="1">סגירה</button>`,'הלו״ז של '+o.name)}
+/* A team's own page: /team/<association id>. Shareable, opens straight from a link, back goes to the previous team.
+   Visiting never changes the parent's teams or alerts; only the follow buttons do. */
+const pageURL=t=>location.origin+"/team/"+t.id;
+function openTeam(ti,from){const t=TEAMS[ti];if(!t)return;const hop=!!S.team;
+  S.team={ti,from:from!=null?from:(S.team?S.team.from:null),all:false};S.teamDepth=(S.teamDepth||0)+1;
+  try{if(t.id)history.pushState({tp:1,ti,from:S.team.from},'','/team/'+t.id)}catch(e){}
+  track(hop?'opp_hop':'opp_open');render();scrollTo(0,0)}
+function leaveTeam(){if(S.teamDepth>0&&history.state&&history.state.tp){history.back();return}S.team=null;S.teamDepth=0;try{history.replaceState(null,'','/')}catch(e){}syncURL();render();scrollTo(0,0)}
+addEventListener('popstate',e=>{const st=e.state;if(st&&st.tp&&TEAMS[st.ti]){S.team={ti:st.ti,from:st.from??null,all:false};S.teamDepth=Math.max(0,(S.teamDepth||1)-1)}else{S.team=null;S.teamDepth=0;syncURL()}render();scrollTo(0,0)});
+function teamView(){const o=TEAMS[S.team.ti],from=S.team.from;
+  const gs=[...o.games].sort((a,b)=>a.date-b.date),past=gs.filter(g=>NOW>=g.date&&scoreOf(g)).reverse(),next=gs.filter(g=>!isPast(g)),nx=next[0];
+  const mineF=touched&&S.follows.includes(o.key),mineR=S.res.includes(o.key);
+  const rows=tableRows(o.lg),pos=rows.findIndex(r=>r.id===o.i),pl=!ksLg(o.lg)&&rows[pos]&&rows[pos].p;
+  const back=`<button class="back op-back" data-teamback="1">${ic.prev}<span>${S.teamDepth>0?'חזרה':'לטיפ-אוף'}</span></button>`;
+  const follow=mineF?'<p class="sub op-fol">הקבוצה שלכם · מופיעה ב"המשחקים שלי"</p>':`<div class="op-fol tp-btns">${mineR?`<span class="sub">במעקב תוצאות · <button class="linkbtn" data-rres="${esc(o.key)}">הסרה</button></span>`:`<button class="btn ghost sm" data-oppres="${esc(o.key)}">+ למעקב תוצאות</button>`}<button class="linkbtn" data-teammine="${o.i}">זו הקבוצה של הילד שלי</button></div>`;
+  let nxt='';
+  if(nx){const op=TEAMS[nx.h===o.i?nx.a:nx.h],home=nx.h===o.i;
+    nxt=`<section class="sec tnext"><h3 class="op-h">המשחק הבא</h3><p class="tn-when"><b>יום ${DAYS[nx.date.getDay()]}, ${dm(nx.date)}</b> · <span class="tn-t">${hm(nx.date)}</span></p>
+      <p>נגד ${tlink(op,from)} <span class="ha-badge">${home?'בית':'חוץ'}</span>${isCup(nx)?'<span class="cup">גביע</span>':''}</p>
+      <p class="sub"><a href="${waze(nx)}" target="_blank" rel="noopener" data-ev="nav">${esc(VEN[nx.v].name)}</a></p></section>`}
+  const all=`<ul class="op-list">${gs.map(g=>oppRow(g,o,from)).join('')}</ul>`;
+  return `<main class="tpage">${back}<p class="sub" style="margin:8px 0 -6px">${esc(LEAGUES[o.lg].full)} · ${esc(ageLabel(o.lg))}${pl?` · מקום ${pos+1} מתוך ${rows.length}`:''}</p>
+    <h1 class="h1 tp-name" tabindex="-1">${esc(o.name)}</h1>${follow}
+    <button class="btn ghost sm tp-share" data-teamshare="${o.i}">${ic.share||''}שיתוף הקבוצה</button>
+    ${!gs.length?'<p class="empty sub">אין עדיין משחקים לקבוצה הזו.</p>':''}
+    ${S.team.all?`<h3 class="op-h">כל המשחקים של העונה</h3>${all}`:`${nxt}
+    ${past.length?`<h3 class="op-h">משחקים אחרונים</h3><ul class="op-list">${past.slice(0,3).map(g=>oppRow(g,o,from)).join('')}</ul>`:''}
+    ${next.length>1?`<h3 class="op-h">משחקים הבאים</h3><ul class="op-list">${next.slice(1,3).map(g=>oppRow(g,o,from)).join('')}</ul>`:''}
+    ${gs.length>5?`<button class="btn wide ghost" data-oppall="1">כל המשחקים של העונה (${gs.length})</button>`:''}`}
+    ${standings(o.lg,o.i)}</main>`}
 
 function row(g,t,showTeam){
   const home=g.h===t.i,o=TEAMS[home?g.a:g.h];let right;
@@ -818,7 +835,7 @@ function ksStandings(lg,tid){const K=S.ktab[lg];if(!K){loadKs(lg);return ''}if(!
   const L=LEAGUES[lg],{rows,done,total}=ksRows(lg);if(!total)return '';const t=TEAMS[tid];
   const count=`תוצאות שהורים דיווחו: ${done} מתוך ${total} משחקים בליגה.`;
   if(done>=total*0.7)return `<details class="tbl"><summary>טבלה לפי דיווחי הורים</summary><p class="sub tbl-note">האיגוד לא מפרסם טבלה בקט-סל. ${count}</p><div class="tw"><table><thead><tr><th>#</th><th class="tn">קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>הפרש</th><th>נק׳</th></tr></thead><tbody>
-   ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${r.id===tid?esc(TEAMS[r.id].name):tlink(TEAMS[r.id],S.opp?S.opp.from:tid)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
+   ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${r.id===tid?esc(TEAMS[r.id].name):tlink(TEAMS[r.id],S.team?S.team.from:tid)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
    </tbody></table></div></details>`;
   const me=rows.find(r=>r.id===tid);
   return `<section class="ks-rec" aria-label="המאזן לפי דיווחי הורים"><h2>המאזן לפי דיווחי הורים</h2>
@@ -829,7 +846,7 @@ function standings(lg,tid){
   if(ksLg(lg))return KS_TABLE?ksStandings(lg,tid):'';
   const L=LEAGUES[lg],rows=tableRows(lg);
   return `<details class="tbl"><summary>טבלת ${esc(L.full)}</summary><div class="tw"><table><thead><tr><th>#</th><th class="tn">קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>הפרש</th><th>נק׳</th></tr></thead><tbody>
-   ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${r.id===tid?esc(TEAMS[r.id].name):tlink(TEAMS[r.id],S.opp?S.opp.from:tid)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
+   ${rows.map((r,i)=>`<tr class="${r.id===tid?'me':''}"><td>${i+1}</td><td class="tn">${r.id===tid?esc(TEAMS[r.id].name):tlink(TEAMS[r.id],S.team?S.team.from:tid)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.l}</td><td dir="ltr">${r.f-r.a>0?'+':''}${r.f-r.a}</td><td>${r.pts}</td></tr>`).join('')}
    </tbody></table></div><a class="src" href="${leagueURL(lg)}" target="_blank" rel="noopener">לעמוד הליגה באתר האיגוד</a></details>`}
 
 /* two followed teams with upcoming games on the same day */
@@ -1005,7 +1022,7 @@ function growCard(){if(!touched||S.justAdded)return '';
 function copyTeam(key){const t=TEAMS[KEY[key]];if(!t)return;track('share_team');
   if(navigator.clipboard)navigator.clipboard.writeText(teamURL(t)).then(()=>toast('הקישור הועתק')).catch(()=>{S.showLink=key;render()});else{S.showLink=key;render()}}
 /* keep the chosen teams in the address, so "add to home screen" carries them (an iPhone home-screen app starts with empty storage) */
-function syncURL(){try{const refs=(touched?S.follows:[]).map(k=>tref(TEAMS[KEY[k]])).join(',');
+function syncURL(){if(S.team)return;try{const refs=(touched?S.follows:[]).map(k=>tref(TEAMS[KEY[k]])).join(',');
   let want=refs?'/?my='+refs:'/';
   if(S.howto&&IOS&&!STANDALONE)want+=(want.includes('?')?'&':'?')+'d='+DEV; // while the guide is open: "add to home screen" copies this address
   if(location.pathname+location.search!==want)history.replaceState(null,'',want)}catch(e){}}
@@ -1025,7 +1042,8 @@ if(myRefs.length&&!touched){touched=true;store.set('tipoff.touched',true);S.foll
 S.invite=null;const inv=fromRef(params.get('t'));
 if(inv){if(touched&&S.follows.includes(inv.key))S.filter=inv.key;else S.invite=inv.key}
 S.onb=store.get('tipoff.onb',{});
-S.welcome=!S.invite&&!touched&&!S.onb.welcomed;
+{const m=location.pathname.match(/^\/team\/(\d+)\/?$/);if(m){const t=TEAMS.find(x=>x.id===+m[1]);if(t){S.team={ti:t.i,from:null,all:false};S.teamDepth=0;try{history.replaceState({tp:1,ti:t.i,from:null},'',location.pathname)}catch(e){}S.teamLink=1}else{try{history.replaceState(null,'','/')}catch(e){}}}}
+S.welcome=!S.team&&!S.invite&&!touched&&!S.onb.welcomed;
 S.bip=null;S.det=new Set();S.monthMode=store.get('tipoff.monthMode','team');S.seasonF='all';S.menu=null;S.menuConfirm=false;S.forgetAsk=false;
 const justDeleted=params.get('deleted')==='1';
 S.howto=false;S.installed=false;
@@ -1198,8 +1216,8 @@ function forgetSheet(){return sheet(`<h2 tabindex="-1" data-autofocus>למחוק
   <p class="sub">נמחקים מהשרת: הקבוצות שבחרתם, הכינויים, האימונים, הגדרות והרשמת ההתראות, נתוני השימוש וההודעות ששלחתם. גם הנתונים בטלפון הזה יתאפסו.</p>
   <p class="sub">יומן שחיברתם יפסיק להתעדכן. אפשר להסיר אותו מאפליקציית היומן.</p>
   <button class="btn wide danger" data-forget="yes">מחיקה</button><button class="linkbtn sh-skip" data-forget="no">ביטול</button>`,'מחיקת המידע שלי')}
-function overlay(){return S.ksPop?ksPopSheet():S.opp?oppSheet():S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
-function closeSmall(){if(S.opp){if(S.opp.all){S.opp.all=false;return}if(S.opp.back&&S.opp.back.length){const b=[...S.opp.back];S.opp={...S.opp,ti:b.pop(),back:b};return}S.opp=null;return}if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
+function overlay(){return S.ksPop?ksPopSheet():S.repG!=null?repSheet():S.forgetAsk?forgetSheet():S.pracTeam?practiceSheet():S.pday?pdaySheet():S.pracPick?pracPickSheet():S.menu?teamMenu():S.edit?editSheet():S.howto?howtoSheet():S.pushAsk?pushAskSheet():S.invite?inviteSheet():S.installed?installedSheet():S.promo&&S.view==='my'?promoSheet():S.welcome&&S.view==='my'?welcomeSheet():''}
+function closeSmall(){if(S.repG!=null){S.repG=null;S.pErr='';return}if(S.occ){S.occ=null;S.pErr='';return}if(S.pday){S.pday=null;S.pdayDel=false;return}if(S.pracTeam){S.pracTeam=null;S.pracDraft=null;S.pdelAsk=null;S.pErr='';S.pdemo=false;return}if(S.pracPick){S.pracPick=false;return}if(S.promo){S.promo=false;S.onb.promoPrac=true;saveOnb();return}if(S.menu&&S.edit){S.menu=null;S.menuConfirm=false;return}S.menu=null;S.menuConfirm=false;S.forgetAsk=false;S.howto=false;S.howtoAuto=false;S.edit=false;S.editConfirm=null;S.pushAsk=false;if(S.installed){S.installed=false;S.onb.installedSeen=true;saveOnb()}}
 function saveNicks(){store.set('tipoff.nicks',S.nicks)}
 function removeTeam(key){const t=TEAMS[KEY[key]];delete S.nicks[key];saveNicks();if(S.filter===key)S.filter='all';
   setFollows(S.follows.filter(k=>k!==key));if(S.follows.length<2)S.filter='all';track('remove_team');toast((t?t.name:'הקבוצה')+' הוסרה')}
@@ -1503,9 +1521,9 @@ function render(){
   const ae=document.activeElement,aid=ae&&ae.id&&(app.contains(ae)||/^(pf|of|rp)-/.test(ae.id))&&/^(fb|fbc|nick|pf|of|rp)-/.test(ae.id)?ae.id:null,sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   const ovEl=document.getElementById('ov'),ovHTML=overlay();
   ovEl.innerHTML=ovHTML;
-  app.innerHTML=header()+(S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():S.view==='season'?viewSeason():viewAlerts())+
+  app.innerHTML=header()+(S.team?teamView():S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():S.view==='season'?viewSeason():viewAlerts())+
    `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/terms.html">תנאי שימוש</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
-  const tab=(S.view==='find'||S.view==='season')?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  const tab=S.team?'':(S.view==='find'||S.view==='season')?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   const open=!!ovHTML;document.body.classList.toggle('locked',open);
   app.inert=open;document.querySelector('nav.tabs').inert=open;
   ovEl.querySelectorAll('video[autoplay]').forEach(v=>{v.muted=true;const p=v.play();if(p)p.catch(()=>{})});
@@ -1522,15 +1540,18 @@ document.addEventListener('click',e=>{
   if(e.target.closest('.scrim')&&(S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite)track('invite_dismiss');if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
   const b=e.target.closest('button');if(!b)return;
-  if(b.closest('nav.tabs')){S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;if(S.view==='my')afterFirstTeam();render();scrollTo(0,0);return}
+  if(b.closest('nav.tabs')){if(S.team){S.team=null;S.teamDepth=0;try{history.replaceState(null,'','/')}catch(e){}}S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;if(S.view==='my')afterFirstTeam();render();scrollTo(0,0);return}
   const d=b.dataset;
   if(d.fix)track('diag_fix');
   if(d.growx){if(d.growx==='prac')S.pshare=null;else S.chgSess=null;track('grow_'+d.growx+'_no');render();return}
-  if(d.opp){const hop=S.opp&&S.opp.ti!==+d.opp;S.opp={ti:+d.opp,from:d.oppf!=null?+d.oppf:(S.opp?S.opp.from:null),all:false,back:hop?[...(S.opp.back||[]),S.opp.ti]:[]};track(hop?'opp_hop':'opp_open');render();document.querySelector('.sheet')?.scrollTo(0,0);return}
-  if(d.oppback){const b=[...(S.opp.back||[])],ti=b.pop();S.opp={...S.opp,ti,back:b,all:false};render();return}
+  if(d.opp){openTeam(+d.opp,d.oppf!=null?+d.oppf:null);return}
+  if(d.teamback){leaveTeam();return}
+  if(d.teamshare){const t=TEAMS[+d.teamshare],url=pageURL(t),text=`הלו״ז והתוצאות של ${t.name}, ${ageLabel(t.lg)}`;track('team_share');
+    if(navigator.share)navigator.share({title:t.name,text,url}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(text+'\n'+url),'_blank','noopener');return}
+  if(d.teammine){const t=TEAMS[+d.teammine];if(S.res.includes(t.key)){S.res=S.res.filter(k=>k!==t.key);store.set('tipoff.res',S.res)}
+    setFollows(touched?(S.follows.includes(t.key)?S.follows:[...S.follows,t.key]):[t.key]);track('team_follow');toast('נוספה ל"המשחקים שלי"');render();return}
   if(d.oppres){toggleRes(d.oppres);track('opp_follow');return}
-  if(d.oppall){S.opp.all=true;track('opp_all');render();return}
-  if(d.oppclose){S.opp=null;render();return}
+  if(d.oppall){S.team.all=true;track('opp_all');render();return}
   if(d.rep){S.repG=+d.rep;S.repMode='form';S.repDraft={};S.pErr='';render();return}
   if(d.repask){const g=GAMES[+d.repask],r=g&&repOf(g);if(!r)return;S.repG=+d.repask;S.repMode=r.alts?'pick':'check';S.repDraft={};S.pErr='';track('rep_ask');render();return}
   if(d.repseen){S.repSeen[GAMES[+d.repseen].id]=1;store.set('tipoff.repseen',S.repSeen);track('rep_card_no');render();return}
@@ -1682,6 +1703,7 @@ if(window.__adopted){try{const r=await fetch('/api/restore?device='+DEV).then(r=
     if(r.prefs&&Object.keys(r.prefs).length){S.alerts={...S.alerts,...r.prefs};store.set('tipoff.alerts',S.alerts)}
     S.prac=r.practices||[];S.pskips=r.pskips||{};S.pmoves=r.pmoves||{};store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);store.set('tipoff.pmoves',S.pmoves);const sn={};S.follows.forEach(k=>{if(pracOf(k).length)sn[k]=tpJSON(tpOf(k))});store.set('tipoff.psnap',sn);track('restore');render()}}catch(e){}}
 syncState('open').then(loadTeamPrac);loadReports(true);
+if(S.teamLink)track('team_link');
 {const ms=performance.now()-T0;if(STALE)track('stale_open');if(ms>15000)track('slow_open15');else if(ms>5000)track('slow_open5');
   try{if(sessionStorage.getItem('tipoff.stalereload')){sessionStorage.removeItem('tipoff.stalereload');track('stale_reload')}}catch(x){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-(S.repLoaded||0)>120000)loadReports()});

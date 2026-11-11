@@ -17,7 +17,8 @@ self.addEventListener('fetch', e => {
   if (!fresh) return;
   const key = e.request.mode === 'navigate' ? '/' : e.request;
   const net = fetch(e.request).then(r => {
-    if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
+    // a team page (/team/…) is the same app: keep only the home page as the saved copy
+    if (r.ok && !(e.request.mode === 'navigate' && url.pathname !== '/')) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
     return r;
   });
   e.waitUntil(net.catch(() => {}));
