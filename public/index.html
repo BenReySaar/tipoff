@@ -139,7 +139,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .tm{font-weight:600;font-size:17px}
 .score{font-weight:600;font-size:16px;direction:ltr;unicode-bidi:isolate}
-.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-fix{min-height:32px;font-size:14px;margin-inline-start:6px}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.ks-rec{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:6px}.ks-rec h2{font-size:16px;margin:0}.ks-rec p{margin:0}.ks-rec .linkbtn{align-self:flex-start;min-height:40px;display:inline-flex;align-items:center;text-align:start}.tbl-note{margin:0 0 8px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
+.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-fix{min-height:32px;font-size:14px;margin-inline-start:6px}.upd{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);font-size:14px;padding:6px 14px;border-radius:999px;max-width:calc(100vw - 32px);text-align:center}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.ks-rec{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:6px}.ks-rec h2{font-size:16px;margin:0}.ks-rec p{margin:0}.ks-rec .linkbtn{align-self:flex-start;min-height:40px;display:inline-flex;align-items:center;text-align:start}.tbl-note{margin:0 0 8px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
 .res{font-size:12px;font-weight:600;white-space:nowrap}
 .res.w{color:var(--win)}
 .res.l{color:var(--loss)}
@@ -489,9 +489,15 @@ button.prow{width:100%;background:none;border:0;border-bottom:1px solid var(--li
 window.__bip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__bip=e;if(window.__onbip)window.__onbip()});
 (async function boot(){
 const appEl=document.getElementById('app');
-let DATA;
-try{const r=await fetch('/api/data');if(!r.ok)throw new Error(r.status);DATA=await r.json()}
-catch(e){appEl.innerHTML='<div class="empty" style="margin-top:40px"><h2>לא הצלחנו לטעון את לוח המשחקים</h2><p class="sub">בדקו את החיבור לאינטרנט ונסו שוב.</p><button class="btn" onclick="location.reload()">לנסות שוב</button></div>';return}
+let DATA,STALE=false;const T0=performance.now();
+const fresh=fetch('/api/data',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+try{DATA=await Promise.race([fresh,new Promise((_,j)=>setTimeout(()=>j(new Error('slow')),4000))])}
+catch(e){try{const c=window.caches&&await caches.match('/api/data');if(c){DATA=await c.json();STALE=true}}catch(x){}
+  if(!DATA)try{DATA=await fresh}catch(x){}}
+if(STALE){fresh.then(async d=>{let last=0;try{last=+sessionStorage.getItem('tipoff.stalereloadAt')||0}catch(x){}
+  if(d&&d.gen!==DATA.gen&&Date.now()-last>60000){try{await (await caches.open('tipoff-v1')).put('/api/data',new Response(JSON.stringify(d),{headers:{'content-type':'application/json'}}));sessionStorage.setItem('tipoff.stalereload','1');sessionStorage.setItem('tipoff.stalereloadAt',String(Date.now()))}catch(x){}location.reload()}else if(d&&d.gen!==DATA.gen){const b=document.getElementById('upd');if(b){b.textContent='יש לו״ז עדכני · לרענון';b.onclick=()=>location.reload();b.style.cursor='pointer'}}else{window.__fresh=true;const b=document.getElementById('upd');if(b)b.remove()}}).catch(()=>{const b=document.getElementById('upd');if(b)b.textContent='אין חיבור לאינטרנט. מוצג הלו״ז האחרון שנשמר'})}
+if(!DATA){appEl.innerHTML='<div class="empty" style="margin-top:40px"><h2>לא הצלחנו לטעון את לוח המשחקים</h2><p class="sub">בדקו את החיבור לאינטרנט ונסו שוב.</p><button class="btn" onclick="location.reload()">לנסות שוב</button></div>';return}
+if(STALE&&!window.__fresh){const b=document.createElement('div');b.id='upd';b.className='upd';b.setAttribute('role','status');b.textContent='מתעדכן…';document.body.appendChild(b)}
 document.documentElement.setAttribute('dir','rtl');
 
 /* ---------- data model ---------- */
@@ -672,8 +678,8 @@ function repFact(g,t){const r=repOf(g);
   return repOk(g)?`<button class="rep-big" data-rep="${g.i}">איך נגמר? לדווח את התוצאה</button>`:''}
 async function loadReports(first){const ids=[...new Set([...S.follows,...S.res].flatMap(k=>TEAMS[KEY[k]]?TEAMS[KEY[k]].games:[]).filter(g=>!played(g)&&NOW-g.date>=0).sort((a,b)=>b.date-a.date).map(g=>g.id))].slice(0,270);
   const out={};
-  if(ids.length)try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?device='+DEV+'&games='+ids.slice(i,i+90).join(','));if(!r.ok)return;Object.assign(out,await r.json()||{})}
-    S.rep=out;if(S.view==='my')render()}catch(e){}
+  if(ids.length)for(let tryN=0;tryN<3;tryN++){try{for(let i=0;i<ids.length;i+=90){const r=await fetch('/api/reports?device='+DEV+'&games='+ids.slice(i,i+90).join(','));if(!r.ok)throw new Error(r.status);Object.assign(out,await r.json()||{})}
+    S.rep=out;S.repLoaded=Date.now();if(S.view==='my')render();break}catch(e){await new Promise(r=>setTimeout(r,[3000,8000,0][tryN]))}}
   if(!first)return;
   if(!store.get('tipoff.kspop',false)&&ksTeams().length&&!overlayOpen()){S.ksPop=true;track('ks_pop');render()}else repPrompt()}
 async function repSend(g,hs,as){let r=null;try{r=await fetch('/api/report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({device:DEV,game:g.id,hs,as})})}catch(x){}
@@ -1669,6 +1675,9 @@ if(window.__adopted){try{const r=await fetch('/api/restore?device='+DEV).then(r=
     if(r.prefs&&Object.keys(r.prefs).length){S.alerts={...S.alerts,...r.prefs};store.set('tipoff.alerts',S.alerts)}
     S.prac=r.practices||[];S.pskips=r.pskips||{};S.pmoves=r.pmoves||{};store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);store.set('tipoff.pmoves',S.pmoves);const sn={};S.follows.forEach(k=>{if(pracOf(k).length)sn[k]=tpJSON(tpOf(k))});store.set('tipoff.psnap',sn);track('restore');render()}}catch(e){}}
 syncState('open').then(loadTeamPrac);loadReports(true);
+{const ms=performance.now()-T0;if(STALE)track('stale_open');if(ms>15000)track('slow_open15');else if(ms>5000)track('slow_open5');
+  try{if(sessionStorage.getItem('tipoff.stalereload')){sessionStorage.removeItem('tipoff.stalereload');track('stale_reload')}}catch(x){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-(S.repLoaded||0)>120000)loadReports()});
 if(!S.invite)syncURL();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 S.push=await pushState();if(S.view==='alerts'||S.view==='my')render();

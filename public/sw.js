@@ -9,18 +9,29 @@ self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-// Network first for the page and the schedule, so parents see fresh data; fall back to the last copy offline.
+// Network first for the page and the schedule, so parents see fresh data; fall back to the last copy offline or when slow.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   const fresh = e.request.mode === 'navigate' || url.pathname === '/api/data' || SHELL.includes(url.pathname);
   if (!fresh) return;
-  e.respondWith(
-    fetch(e.request).then(r => {
-      if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request.mode === 'navigate' ? '/' : e.request, copy)); }
-      return r;
-    }).catch(() => caches.match(e.request.mode === 'navigate' ? '/' : e.request))
-  );
+  const key = e.request.mode === 'navigate' ? '/' : e.request;
+  const net = fetch(e.request).then(r => {
+    if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
+    return r;
+  });
+  e.waitUntil(net.catch(() => {}));
+  // the page itself: if the network is slow, open from the saved copy after 4 seconds (the page refreshes its schedule on its own)
+  if (e.request.mode === 'navigate' || SHELL.includes(url.pathname)) {
+    e.respondWith(new Promise(res => {
+      let done = false;
+      const t = setTimeout(async () => { const c = await caches.match(key); if (c && !done) { done = true; res(c); } }, 4000);
+      net.then(r => { if (!done) { done = true; clearTimeout(t); res(r); } })
+        .catch(async () => { if (!done) { done = true; clearTimeout(t); res((await caches.match(key)) || Response.error()); } });
+    }));
+    return;
+  }
+  e.respondWith(net.catch(() => caches.match(key)));
 });
 
 self.addEventListener('push', e => {
