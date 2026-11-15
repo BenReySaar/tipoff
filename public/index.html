@@ -139,7 +139,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .tm{font-weight:600;font-size:17px}
 .score{font-weight:600;font-size:16px;direction:ltr;unicode-bidi:isolate}
-.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-fix{min-height:32px;font-size:14px;margin-inline-start:6px}.upd{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);font-size:14px;padding:6px 14px;border-radius:999px;max-width:calc(100vw - 32px);text-align:center}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.tbl .linkbtn{display:inline-flex;align-items:center;min-height:40px;margin-inline-end:16px}.ks-miss{margin:4px 0 6px}.ks-rec{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:6px}.ks-rec h2{font-size:16px;margin:0}.ks-rec p{margin:0}.ks-rec .linkbtn{align-self:flex-start;min-height:40px;display:inline-flex;align-items:center;text-align:start}.tbl-note{margin:0 0 8px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
+.rep-tag.ask{border:0;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);min-height:28px;padding:2px 10px}.rep-fix{min-height:32px;font-size:14px;margin-inline-start:6px}.upd{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);font-size:14px;padding:6px 14px;border-radius:999px;max-width:calc(100vw - 32px);text-align:center}.wchips{flex-wrap:wrap;overflow:visible;margin:4px 0 10px;padding:0}.wpick{min-height:40px;cursor:pointer;font:inherit;font-size:14px;color:inherit}.wpick.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}.fb-game{margin:0 0 4px}.fb-q{margin:8px 0 0;font-weight:600}.rep-chk{display:inline-flex;gap:12px;align-items:center;margin-inline-start:8px;font-size:14px;color:var(--muted)}.rep-chk .linkbtn{min-height:32px;font-size:14px}.tbl .linkbtn{display:inline-flex;align-items:center;min-height:40px;margin-inline-end:16px}.ks-miss{margin:4px 0 6px}.ks-rec{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;gap:6px}.ks-rec h2{font-size:16px;margin:0}.ks-rec p{margin:0}.ks-rec .linkbtn{align-self:flex-start;min-height:40px;display:inline-flex;align-items:center;text-align:start}.tbl-note{margin:0 0 8px}.rep-alts{display:flex;flex-direction:column;gap:10px;margin:8px 0}.rep-alts .btn{gap:8px;flex-wrap:wrap}.tp h2 .score{font-size:inherit}.tp .sub{margin:0}
 .res{font-size:12px;font-weight:600;white-space:nowrap}
 .res.w{color:var(--win)}
 .res.l{color:var(--loss)}
@@ -1485,11 +1485,17 @@ function diagBox(){
   else if(S.me.calDay){const [y,m,d]=S.me.calDay.split('-');out.push(it('ok','היומן המתעדכן מחובר',`נקרא לאחרונה ב־${+d}.${+m}.`))}
   else if(mine)out.push(it('info','היומן המתעדכן לא מחובר','לא חובה. כך כל המשחקים נכנסים ליומן של הטלפון.',`<button class="linkbtn" data-gocal="1" data-fix="1">לחיבור יומן</button>`));
   return `<section class="sec"><h2>מה בדקנו בטלפון הזה</h2><div class="diag">${out.join('')}</div></section>`}
+const WRONG=['השעה','התאריך','האולם','היריבה','זה לא המשחק של הילד שלי'];
 function fbForm(topic,{ph,contact=true,source='help'}){
   if(S.sent[topic+source])return `<div class="fb-done"><b>קיבלנו, תודה.</b><span class="sub">${contact?'אם השארתם פרטים, נחזור אליכם.':'כל רעיון נקרא.'}</span></div>`;
-  const d=S.drafts[topic+source]||{};
-  return `<form class="fb" data-fb="${topic}" data-src="${source}" novalidate>
-    <textarea id="fb-${topic}-${source}" name="text" rows="3" maxlength="1500" placeholder="${esc(ph)}" aria-label="${esc(ph)}">${esc(d.text||'')}</textarea>
+  const d=S.drafts[topic+source]||{},game=topic==='wrong'&&d.base;
+  /* a reported game: say what is wrong with one tap; the free text is optional then */
+  const picks=game?`<p class="fb-game"><b>המשחק:</b> ${esc(d.base)}</p><p class="fb-q" id="wq">מה לא נכון?</p>
+    <div class="chips wchips" role="group" aria-labelledby="wq">${WRONG.map(w=>`<button type="button" class="chip wpick${(S.wrongPick||[]).includes(w)?' on':''}" data-wpick="${w}" aria-pressed="${(S.wrongPick||[]).includes(w)}">${w}</button>`).join('')}</div>
+    ${S.fbMiss?'<p class="fb-err" role="alert">בחרו מה לא נכון, או כתבו במילים</p>':''}`:'';
+  const ph2=game?'פרטים נוספים, למשל השעה הנכונה (לא חובה)':ph;
+  return `<form class="fb" data-fb="${topic}" data-src="${source}" novalidate>${picks}
+    <textarea id="fb-${topic}-${source}" name="text" rows="${game?2:3}" maxlength="1500" placeholder="${esc(ph2)}" aria-label="${esc(ph2)}">${esc(d.text||'')}</textarea>
     ${contact?`<input id="fbc-${topic}-${source}" name="contact" maxlength="120" placeholder="מייל או טלפון, ונעדכן כשזה מטופל (לא חובה)" aria-label="מייל או טלפון לעדכון, לא חובה" value="${esc(d.contact||'')}">`:''}
     <div class="fb-row"><button class="btn" type="submit">שליחה</button>${S.fbErr===topic+source?'<span class="fb-err">לא הצלחנו לשלוח. בדקו את החיבור ונסו שוב.</span>':''}</div>
     ${source==='help'?'<p class="note">יחד עם ההודעה נשלחים פרטים טכניים שיעזרו לנו לבדוק: סוג הטלפון והדפדפן, ומצב ההתראות והיומן.</p>':''}
@@ -1513,13 +1519,16 @@ function viewHelp(){
    ${footer()}`}
 async function sendFeedback(form){
   const topic=form.dataset.fb,source=form.dataset.src,key=topic+source;
-  const text=(form.elements.text.value||'').trim(),contact=(form.elements.contact?.value||'').trim();
-  if(text.length<2){form.elements.text.focus();return}
+  let text=(form.elements.text.value||'').trim();const contact=(form.elements.contact?.value||'').trim(),dr=S.drafts[key]||{};
+  if(topic==='wrong'&&dr.base){const p=S.wrongPick||[];
+    if(!p.length&&text.length<2){S.fbMiss=true;S.drafts[key]={...dr,text,contact};render();document.querySelector('.wpick')?.focus();return}
+    text=`${dr.base}\nמה לא נכון: ${p.length?p.join(', '):'—'}${text?`\n${text}`:''}`}
+  else if(text.length<2){form.elements.text.focus();return}
   const btn=form.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='שולחים…';
   let ok=false;
   try{const r=await fetch('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({device:DEV,topic,source,text,contact,teams:touched?S.follows:[],platform:PLATFORM,standalone:STANDALONE,diag:source==='help'?diagInfo():undefined})});ok=r.ok}catch(e){}
-  if(ok){S.sent[key]=true;delete S.drafts[key];S.fbErr=null}else S.fbErr=key;
+  if(ok){S.sent[key]=true;delete S.drafts[key];S.fbErr=null;S.wrongPick=[];S.fbMiss=false}else S.fbErr=key;
   render()}
 
 function render(){
@@ -1583,8 +1592,9 @@ document.addEventListener('click',e=>{
   if(d.det){const i=+d.det;if(S.det.has(i))S.det.delete(i);else{S.det.add(i);track('details')}render();return}
   if(d.wrong){const g=GAMES[+d.wrong],t=TEAMS[+d.wt],o=TEAMS[g.h===t.i?g.a:g.h];track('wrong_open');
     S.view='help';S.helpOpen='wrong';delete S.sent.wronghelp;S.me=null;
-    S.drafts.wronghelp={text:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.\nמה לא נכון: `,contact:(S.drafts.wronghelp||{}).contact||''};
-    render();const ta=document.getElementById('fb-wrong-help');if(ta){ta.closest('.topic').scrollIntoView({block:'start'});ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+    S.drafts.wronghelp={text:'',base:`${t.name} נגד ${o.name}, יום ${DAYS[g.date.getDay()]} ${dm(g.date)} ב־${hm(g.date)}, ${VEN[g.v].name}.`,contact:(S.drafts.wronghelp||{}).contact||''};S.wrongPick=[];S.fbMiss=false;
+    render();const ch=document.querySelector('.wpick');if(ch){ch.closest('.topic').scrollIntoView({block:'start'});ch.focus()}return}
+  if(d.wpick){const p=S.wrongPick||[];S.wrongPick=p.includes(d.wpick)?p.filter(x=>x!==d.wpick):[...p,d.wpick];S.fbMiss=false;const f=b.closest('form.fb');if(f)S.drafts.wronghelp={...S.drafts.wronghelp,text:f.elements.text.value,contact:f.elements.contact?.value||''};render();return}
   if(d.pdayopen){S.pday={id:d.pdayopen,orig:d.porig,date:d.pdate};S.occ=null;S.pdayDel=false;render();return}
   if(d.occedit){const o=occOf(S.pday.id,S.pday.orig);if(o){S.occ={date:o.date,start:o.start,end:o.end||'',place:o.place||''};S.pErr=''}render();return}
   if(d.occcancel){S.occ=null;S.pErr='';render();return}
@@ -1691,7 +1701,7 @@ document.addEventListener('submit',e=>{
     if(v)S.nicks[k]=v;else delete S.nicks[k];saveNicks();syncState('nick');if(S.edit){S.menu=null}else closeSmall();render();toast(v?'הכינוי נשמר':'הכינוי הוסר');return}
   const f=e.target.closest('form.fb');if(!f)return;e.preventDefault();sendFeedback(f)});
 document.addEventListener('input',e=>{const of=e.target.dataset&&e.target.dataset.of;if(of&&S.occ){S.occ[of]=e.target.value;return}
-  const pf=e.target.dataset&&e.target.dataset.pf;if(pf&&S.pracDraft){S.pracDraft[pf]=pf==='remind'?+e.target.value:e.target.value;return}const f=e.target.closest('form.fb');if(!f)return;const k=f.dataset.fb+f.dataset.src;S.drafts[k]={text:f.elements.text.value,contact:f.elements.contact?.value||''}});
+  const pf=e.target.dataset&&e.target.dataset.pf;if(pf&&S.pracDraft){S.pracDraft[pf]=pf==='remind'?+e.target.value:e.target.value;return}const f=e.target.closest('form.fb');if(!f)return;const k=f.dataset.fb+f.dataset.src;S.drafts[k]={...(S.drafts[k]||{}),text:f.elements.text.value,contact:f.elements.contact?.value||''}});
 document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.of&&S.occ){S.occ[e.target.dataset.of]=e.target.value;return}if(e.target.dataset&&e.target.dataset.pf==='once'&&S.pracDraft){S.pracDraft.once=e.target.value;return}if(e.target.dataset&&e.target.dataset.pf==='remind'&&S.pracDraft){S.pracDraft.remind=+e.target.value;return}
   if(e.target.id==='selAge'){S.age=e.target.value||null;S.league=null;render()}
   else if(e.target.id==='selLg'){S.league=e.target.value===''?null:+e.target.value;render()}
