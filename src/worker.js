@@ -512,7 +512,7 @@ export default {
       if (p === '/api/state' && req.method === 'POST') return saveState(env, await readJSON(req));
       if (p === '/api/event' && req.method === 'POST') {
         const b = await readJSON(req);
-        if (!DEVICE.test(b.device || '') || !/^[a-z_]{2,20}$/.test(b.type || '')) return json({ error: 'bad' }, 400);
+        if (!DEVICE.test(b.device || '') || !/^[a-z0-9_]{2,24}$/.test(b.type || '')) return json({ error: 'bad' }, 400);
         await track(env, b.device, b.type);
         return json({ ok: true });
       }
