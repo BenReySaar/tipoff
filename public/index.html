@@ -885,7 +885,7 @@ function plBtns(ts){if(!touched||!S.follows.length)return '';const kids=ts.flatM
   return kids.map(pk=>`<button class="addbtn ghost pl-btn${S.plOpen===pk?' on':''}" data-plopen="${esc(pk)}" aria-expanded="${S.plOpen===pk}">🏀 ${esc(plName(pk))}</button>`).join('')}
 /* until a parent adds a child, also explain what it is, under the next game */
 function plAddLine(ts){if(!touched||!S.follows.length||ts.some(t=>kidsOf(t.key).length))return '';
-  return `<section class="pl-top" aria-label="השחקן שלי"><button class="pl-line pl-add1" ${ts.length===1?`data-plsetup="${esc(ts[0].key)}"`:'data-plpick="1"'}><span class="pl-ic" aria-hidden="true">+</span><span><b>השחקן שלי</b><span class="sub">הנקודות והעונה של הילד, וכרטיס לסטורי</span></span></button></section>`}
+  return `<section class="pl-top" aria-label="השחקן שלי"><button class="pl-line pl-add1" ${ts.length===1?`data-plsetup="${esc(ts[0].key)}"`:'data-plpick="1"'}><span class="pl-ic" aria-hidden="true">+</span><span><b>השחקן שלי</b><span class="sub">כמה נקודות בכל משחק, ממוצע ושיא</span></span></button></section>`}
 function plOpenBlock(ts){if(!touched||!S.plOpen)return '';const t=ts.find(t=>kidsOf(t.key).includes(S.plOpen));if(!t)return '';
   const unset=ts.filter(x=>!kidsOf(x.key).length);
   return `<div class="pl-open">${playerBlock(t,true,S.plOpen)}${unset.length?`<button class="linkbtn pl-kid2" ${unset.length===1?`data-plsetup="${esc(unset[0].key)}"`:'data-plpick="1"'}>+ שחקן בקבוצה אחרת</button>`:''}</div>`}
