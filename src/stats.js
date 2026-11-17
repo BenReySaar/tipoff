@@ -79,7 +79,7 @@ export function insights({ today, newRows, openRows, evRows, follows, devices, p
     ['הוסיפו אימון', base.filter(d => practiced.has(d.id)).length],
   ];
   // team picking, step by step (counted from 17.11.2026, when these steps started being counted)
-  const pickSince = Date.parse('2026-11-17T16:00:00+02:00'), pb = devices.filter(d => d.created >= pickSince), has = t => pb.filter(d => evDevs(t).has(d.id)).length;
+  const pickSince = Date.parse('2026-11-17T18:10:00+02:00'), pb = devices.filter(d => d.created >= pickSince), has = t => pb.filter(d => evDevs(t).has(d.id)).length;
   const pick = [
     ['נכנסו לאפליקציה', pb.length],
     ['לחצו "בחירת קבוצה" בחלון הפתיחה', has('welcome_go')],
