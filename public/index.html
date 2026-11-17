@@ -225,6 +225,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 .search input::placeholder{color:var(--muted)}
 .search.big{background:var(--card);border:2px solid var(--accent);border-radius:14px;padding:0 16px}.search.big input{font-size:18px;padding:16px 0}.search.big svg{width:22px;height:22px;color:var(--accent)}
 .qbig{display:flex;flex-direction:column;gap:8px;margin:2px 0 6px}.qbig-l{font-weight:800;font-size:18px}.or-h{font-size:15px;color:var(--muted);font-weight:700;margin:14px 0 2px}
+.gtag{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:999px;background:#e3edf9;color:#1c3358;vertical-align:1px}.gtag.f{background:#fbe6ef;color:#8a1f4c}
 .search svg{width:18px;height:18px;color:var(--muted)}
 .linkbtn{background:none;border:0;padding:0;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line-2);font-size:inherit}
 
@@ -1450,10 +1451,11 @@ function viewMy(){
    ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
 
 /* ---------- find a team: gender → age → league → team ---------- */
+const genTag=t=>{const a=ageOf(LEAGUES[t.lg].age),F=a.g==='F';return `<span class="gtag${F?' f':''}">${a.adult?(F?'נשים':'גברים'):(F?'בנות':'בנים')}</span> `};
 function teamPick(t,withLeague){const RES=S.findMode==='res';const on=RES?S.res.includes(t.key):S.follows.includes(t.key)&&touched;
   const nx=t.games.find(g=>!isPast(g));
   return `<div class="pick"><div style="display:flex;gap:10px;align-items:center;min-width:0">${crest(t)}<div style="min-width:0"><div class="ttl">${esc(t.name)}</div>
-   <div class="sm">${withLeague?esc(LEAGUES[t.lg].full)+'. ':''}${nx?'הבא: יום '+DAYS[nx.date.getDay()]+' '+dm(nx.date)+' '+hm(nx.date):'אין משחקים קרובים'}</div></div></div>
+   <div class="sm">${withLeague?genTag(t)+esc(LEAGUES[t.lg].full)+'. ':''}${nx?'הבא: יום '+DAYS[nx.date.getDay()]+' '+dm(nx.date)+' '+hm(nx.date):'אין משחקים קרובים'}</div></div></div>
    <button class="follow" ${RES?'data-res':'data-t'}="${esc(t.key)}" aria-pressed="${on}">${on?(RES?'בתוצאות ✓':'במעקב ✓'):(RES?'לתוצאות':'עקבו')}</button></div>`}
 
 function viewFind(){
