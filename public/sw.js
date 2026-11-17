@@ -13,6 +13,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // only the app's own pages (home, team pages) open from the saved copy; other pages (the stats page…) always come from the server
+  if (e.request.mode === 'navigate' && url.pathname !== '/' && url.pathname !== '/index.html' && !url.pathname.startsWith('/team/')) return;
   const fresh = e.request.mode === 'navigate' || url.pathname === '/api/data' || SHELL.includes(url.pathname + url.search);
   if (!fresh) return;
   const key = e.request.mode === 'navigate' ? '/' : e.request;
