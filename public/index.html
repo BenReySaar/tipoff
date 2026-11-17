@@ -223,6 +223,8 @@ tr.me td{font-weight:700;background:var(--fill)}
 .search{display:flex;align-items:center;gap:10px;background:var(--fill);border-radius:12px;padding:0 14px}
 .search input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;color:var(--ink);padding:12px 0;outline:none}
 .search input::placeholder{color:var(--muted)}
+.search.big{background:var(--card);border:2px solid var(--accent);border-radius:14px;padding:0 16px}.search.big input{font-size:18px;padding:16px 0}.search.big svg{width:22px;height:22px;color:var(--accent)}
+.qbig{display:flex;flex-direction:column;gap:8px;margin:2px 0 6px}.qbig-l{font-weight:800;font-size:18px}.or-h{font-size:15px;color:var(--muted);font-weight:700;margin:14px 0 2px}
 .search svg{width:18px;height:18px;color:var(--muted)}
 .linkbtn{background:none;border:0;padding:0;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line-2);font-size:inherit}
 
@@ -1199,8 +1201,7 @@ const saveOnb=()=>store.set('tipoff.onb',S.onb);
 function sheet(inner,label){return `<div class="scrim" data-closesheet="1"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${label}">${inner}</div>`}
 function welcomeSheet(){return sheet(`<div class="sh-ball">${header().match(/<svg[\s\S]*?<\/svg>/)[0]}</div>
   <h2>ברוכים הבאים לטיפ-אוף</h2>
-  <p class="sub">לוח המשחקים של הילדים בכדורסל, ישר מהאיגוד. שלושה צעדים קצרים:</p>
-  <ol class="sh-steps"><li><b>בוחרים קבוצה</b><span>גיל, ליגה וקבוצה</span></li><li><b>מוסיפים למסך הבית</b><span>נפתח כמו אפליקציה</span></li><li><b>מפעילים התראות</b><span>ויודעים מיד כשמשחק זז</span></li></ol>
+  <p class="sub">בוחרים את הקבוצה של הילד, והמשחקים מופיעים מיד.</p>
   <button class="btn wide" data-welcome="go">בחירת קבוצה</button>
   <button class="linkbtn sh-skip" data-welcome="skip">רק להסתכל קודם</button>`,'ברוכים הבאים')}
 function inviteSheet(){const t=TEAMS[KEY[S.invite]];const nx=t.games.find(g=>!isPast(g));
@@ -1457,7 +1458,10 @@ function teamPick(t,withLeague){const RES=S.findMode==='res';const on=RES?S.res.
 
 function viewFind(){
   const q=S.q.trim();
-  const search=`<label class="search">${ic.search}<input id="q" type="search" aria-label="חיפוש קבוצה לפי שם או עיר" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(S.q)}" autocomplete="off"></label>`;
+  const root=!S.age&&q.length<2&&S.findMode!=='res';
+  if(!S.fvT&&!(touched&&S.follows.length)&&S.findMode!=='res'){S.fvT=1;setTimeout(()=>track('find_view'))}
+  const search=root?`<div class="qbig"><label for="q" class="qbig-l">מה שם המועדון או העיר?</label><label class="search big">${ic.search}<input id="q" type="search" placeholder="למשל: טבעון, רמת השרון" value="${esc(S.q)}" autocomplete="off"></label></div><h2 class="or-h">או לפי גיל וליגה</h2>`
+    :`<label class="search">${ic.search}<input id="q" type="search" aria-label="חיפוש קבוצה לפי שם או עיר" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(S.q)}" autocomplete="off"></label>`;
   if(q.length>=2){const hits=TEAMS.filter(t=>t.name.includes(q)||LEAGUES[t.lg].full.includes(q))
       .sort((x,y)=>AGES.findIndex(a=>a.id===LEAGUES[x.lg].age)-AGES.findIndex(a=>a.id===LEAGUES[y.lg].age));
     return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
@@ -1482,7 +1486,7 @@ function viewFind(){
     ${(S.findMode==='res'?S.res.length:touched&&S.follows.length)?'<button class="btn" data-go="my" style="align-self:center">למשחקים שלי</button>':''}`;
   const RES=S.findMode==='res';
   const top=RES?`<section class="sec"><h1>קבוצה למעקב תוצאות</h1><p class="sub">רק תוצאה סופית, בלי לוח ובלי יומן. <button class="linkbtn" data-mode="full">לחיפוש רגיל</button></p></section>`
-    :`<section class="sec"><h1>מציאת קבוצה</h1><p class="sub">${S.age?'':'בוחרים גיל, ליגה וקבוצה. או מחפשים לפי שם.'}</p></section>`;
+    :`<section class="sec"><h1>מציאת קבוצה</h1></section>`;
   const back=`<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button>`;
   return `${back}${top}${!RES&&S.justAdded?shareCard():''}${search}${crumbs}${body}`}
 
@@ -1694,7 +1698,7 @@ function render(){
   if(!S.invite)syncURL();
   if(aid&&(!open||/^(pf|of)-/.test(aid))){const n=document.getElementById(aid);if(n){n.focus({preventScroll:true});if(sel)try{n.setSelectionRange(sel[0],sel[1])}catch(e){}}}
   const q=document.getElementById('q');
-  if(q)q.addEventListener('input',e=>{S.q=e.target.value;const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
+  if(q)q.addEventListener('input',e=>{S.q=e.target.value;if(!S.fT3&&S.q.trim().length>=2&&S.findMode!=='res'){S.fT3=1;track('find_search')}const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
 }
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.upddone){S.pushAsk=false;setTimeout(()=>{render();toast('המשחקים בדרך ליומן שלכם')},400)}if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
@@ -1811,8 +1815,8 @@ document.addEventListener('click',e=>{
   else if(d.more){S.showUp+=10;render()}
   else if(d.t)toggleFollow(d.t);
   else if(d.gender){S.gender=d.gender;render()}
-  else if(d.age){S.age=d.age;S.league=null;render();scrollTo(0,0)}
-  else if(d.lg!=null){S.league=+d.lg;render();scrollTo(0,0)}
+  else if(d.age){if(!S.fT1&&S.findMode!=='res'){S.fT1=1;track('find_age')}S.age=d.age;S.league=null;render();scrollTo(0,0)}
+  else if(d.lg!=null){if(!S.fT2&&S.findMode!=='res'){S.fT2=1;track('find_league')}S.league=+d.lg;render();scrollTo(0,0)}
   else if(d.back==='age'){S.age=null;S.league=null;render()}
   else if(d.back==='league'){S.league=null;render()}
   else if(d.push==='on')enablePush();
@@ -1827,7 +1831,7 @@ document.addEventListener('click',e=>{
   else if(d.copyapp){track('share_app_copy');if(navigator.clipboard)navigator.clipboard.writeText(APP_URL).then(()=>toast('הקישור הועתק')).catch(()=>{S.showAppLink=true;render()});else{S.showAppLink=true;render()}}
   else if(d.invite==='yes'){const k=S.invite;S.invite=null;track('invite_follow');setFollows(touched?(S.follows.includes(k)?S.follows:[...S.follows,k]):[k]);S.filter=S.follows.length>1?k:'all';S.dayWeek=null;S.justAdded=null;S.welcome=false;S.onb.welcomed=true;saveOnb();toast('הקבוצה נוספה ✓');afterFirstTeam();render();scrollTo(0,0)}
   else if(d.invite==='no'){S.invite=null;track('invite_skip');syncURL();render()}
-  else if(d.welcome==='go'){S.welcome=false;S.onb.welcomed=true;saveOnb();S.view='find';render();scrollTo(0,0)}
+  else if(d.welcome==='go'){track('welcome_go');S.welcome=false;S.onb.welcomed=true;saveOnb();S.view='find';render();scrollTo(0,0)}
   else if(d.welcome==='skip'||d.closesheet){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();track('onboard_skip');render()}
   else if(d.donelist){S.onb.doneList=true;saveOnb();render()}
   else if(d.install){const e=window.__bip;S.howto=false;if(e){e.prompt();e.userChoice.then(c=>{if(c.outcome==='accepted'){track('install');toast('טיפ-אוף נוספה ✓')}window.__bip=null;render()})}}
