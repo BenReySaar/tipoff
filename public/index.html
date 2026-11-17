@@ -883,6 +883,9 @@ function playerBlock(t,full,pk=t.key){if(!touched)return '';const P=S.players[pk
 function plBtns(ts){if(!touched||!S.follows.length)return '';const kids=ts.flatMap(t=>kidsOf(t.key));
   if(!kids.length){const unset=ts.filter(t=>!kidsOf(t.key).length);return `<button class="addbtn ghost pl-btn" ${unset.length===1?`data-plsetup="${esc(unset[0].key)}"`:'data-plpick="1"'}>+ השחקן שלי</button>`}
   return kids.map(pk=>`<button class="addbtn ghost pl-btn${S.plOpen===pk?' on':''}" data-plopen="${esc(pk)}" aria-expanded="${S.plOpen===pk}">🏀 ${esc(plName(pk))}</button>`).join('')}
+/* until a parent adds a child, also explain what it is, under the next game */
+function plAddLine(ts){if(!touched||!S.follows.length||ts.some(t=>kidsOf(t.key).length))return '';
+  return `<section class="pl-top" aria-label="השחקן שלי"><button class="pl-line pl-add1" ${ts.length===1?`data-plsetup="${esc(ts[0].key)}"`:'data-plpick="1"'}><span class="pl-ic" aria-hidden="true">+</span><span><b>השחקן שלי</b><span class="sub">הנקודות והעונה של הילד, וכרטיס לסטורי</span></span></button></section>`}
 function plOpenBlock(ts){if(!touched||!S.plOpen)return '';const t=ts.find(t=>kidsOf(t.key).includes(S.plOpen));if(!t)return '';
   const unset=ts.filter(x=>!kidsOf(x.key).length);
   return `<div class="pl-open">${playerBlock(t,true,S.plOpen)}${unset.length?`<button class="linkbtn pl-kid2" ${unset.length===1?`data-plsetup="${esc(unset[0].key)}"`:'data-plpick="1"'}>+ שחקן בקבוצה אחרת</button>`:''}</div>`}
@@ -1444,12 +1447,14 @@ function viewMy(){
     const nexts=ts.map(t=>({t,g:t.games.find(g=>!isPast(g))})).filter(x=>x.g).sort((a,b)=>a.g.date-b.g.date);
     return `${head}
      <section class="sec"><h2>המשחק הבא של כל קבוצה</h2>${nexts.map(x=>nextCard(x.g,x.t)).join('')||'<p class="sub">אין משחקים קרובים.</p>'}</section>
+     ${plAddLine(ts)}
      ${touched?inviteBlock(ts):''}
      ${comingMonth(ts,new Set(nexts.map(x=>x.g.i)))}
      ${pastBlock}${resultsBlock()}${ideaBox()}${footer()}`}
   const t=ts[0],next=up[0],rest=up.slice(1);
   return `${head}
    ${next?hero(next.g,next.t):`<div class="empty"><p>אין משחקים קרובים בלוח.</p>${touched?`<button class="linkbtn" data-menu-open="${esc(t.key)}">אפשרויות לקבוצה</button>`:''}</div>`}
+   ${plAddLine(ts)}
    ${touched?inviteBlock(ts):''}
    ${comingMonth(ts,new Set(next?[next.g.i]:[]))}
    ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
