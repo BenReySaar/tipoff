@@ -156,6 +156,9 @@ async function deliver(env, perDevice, kind) {
 }
 
 async function notifyChanges(env, changes) {
+  // a score that arrives for an old game (e.g. a technical result read again) is not news: no push after 3 days
+  const old = ymd(new Date(Date.now() - 3 * 864e5));
+  changes = changes.filter(c => !(c.kind === 'result' && c.game.d < old));
   if (!changes.length) return 0;
   const resIds = changes.filter(c => c.kind === 'result').map(c => c.game.id);
   if (resIds.length) { // parents already got the score from a report that turned out right

@@ -90,9 +90,9 @@ export async function fetchSeason({ season = '2026', userAgent = 'TipOff/1.0' } 
         if (!Array.isArray(e.teams) || e.teams.length !== 2) continue;
         const lg = (e.leagues || []).find(x => lgSet.has(x));
         if (lg == null) continue;
-        const done = e.state === 'finished' && Array.isArray(e.main_results) && e.main_results.length === 2 && e.main_results.every(x => x !== '' && x != null);
+        const [rh, ra] = e.state === 'finished' && Array.isArray(e.main_results) && e.main_results.length === 2 ? scorePair(e.main_results[0], e.main_results[1]) : [null, null];
         events.push([e.id, e.date, lg, e.teams[0], e.teams[1], decodeEntities(e.home?.team), decodeEntities(e.away?.team),
-          (e.venues || [])[0] ?? null, done ? +e.main_results[0] : null, done ? +e.main_results[1] : null]);
+          (e.venues || [])[0] ?? null, rh, ra]);
       }
       ps = r.pages; p++;
     } while (p <= ps);
@@ -132,6 +132,15 @@ export async function fetchHistory(leagueIds, { userAgent = 'TipOff/1.0' } = {})
   if (retry.length) { await wait(3000); await pool(retry, 1, async id => { try { take(id, await one(id)); } catch (e) { failed.push(id); } await wait(400); }); }
   return { hist, failed, empty };
 }
+/** A final score from the two cells. A technical result is written with the loser's cell empty ("" / 20): that side scored 0. */
+export function scorePair(h, a) {
+  const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
+  const hs = num(h), as = num(a);
+  if (hs != null && as != null) return [hs, as];
+  if (hs != null && hs > 0 && as == null) return [hs, 0];
+  if (as != null && as > 0 && hs == null) return [0, as];
+  return [null, null];
+}
 export function histRows(leagueId, rows) {
   const head = rows[0] || [];
   const col = (...names) => head.findIndex(h => names.includes(String(h || '').trim()));
@@ -144,10 +153,8 @@ export function histRows(leagueId, rows) {
     const t = String(r[C.time] || '').match(/^(\d{1,2}):(\d{2})/);
     if (!m || !r[C.home] || !r[C.away]) continue;
     const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}T${t ? t[1].padStart(2, '0') + ':' + t[2] : '00:00'}`;
-    const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
-    const hs = num(r[C.hs]), as = num(r[C.as]);
-    out.push([leagueId, +r[C.code] || 0, iso, decodeEntities(r[C.home]).trim(), decodeEntities(r[C.away]).trim(), decodeEntities(r[C.venue] ?? '').trim(),
-      hs != null && as != null ? hs : null, hs != null && as != null ? as : null]);
+    const [hs, as] = scorePair(r[C.hs], r[C.as]);
+    out.push([leagueId, +r[C.code] || 0, iso, decodeEntities(r[C.home]).trim(), decodeEntities(r[C.away]).trim(), decodeEntities(r[C.venue] ?? '').trim(), hs, as]);
   }
   return out;
 }
