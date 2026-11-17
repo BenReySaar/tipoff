@@ -451,7 +451,7 @@ button.prow{width:100%;background:none;border:0;border-bottom:1px solid var(--li
 .prow2{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
 .pform input[type=time]{-webkit-appearance:none;appearance:none;min-height:46px;display:block;text-align:start;line-height:1.4}
 .pform input[type=time]::-webkit-date-and-time-value{text-align:start}
-.addbtn.ghost{border-color:var(--line-2);font-weight:500}
+.addbtn.ghost{border-color:var(--line-2);font-weight:500}.pl-btn{border-color:var(--accent);color:var(--accent);font-weight:700}.pl-btn.on{background:var(--accent);color:#fff}.pl-open{margin-top:30px}
 .ed-list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
 .ed-row{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
 .ed-row.conf{flex-wrap:wrap;background:var(--fill);margin-inline:-10px;padding-inline:10px;border-radius:12px}
@@ -879,11 +879,13 @@ function playerBlock(t,full,pk=t.key){if(!touched)return '';const P=S.players[pk
       <details class="pl-all"><summary>כל המשחקים (${st.n})</summary><ul class="op-list">${st.es.map(e=>{const o=TEAMS[e.g.h===t.i?e.g.a:e.g.h];return `<li class="op-row"><span class="op-d">${dm(e.g.date)}</span><span class="op-n">נגד ${esc(o.name)}</span><span class="op-r"><button class="pl-chip on" data-plg="${e.g.i}" data-plt="${t.i}" data-plk="${esc(pk)}">${e.p} נק׳</button></span>${plExtra(e)||e.m?`<span class="pl-note">${esc([plExtra(e),e.m?`"${e.m}"`:''].filter(Boolean).join(' · '))}</span>`:''}</li>`}).join('')}</ul></details>`
     :`<p class="sub">אחרי כל משחק לוחצים "${name}: כמה נקודות?" ליד המשחק.</p>`}${more}</section>`}
 /* near the top: a short line to add the player, or the season in one line that opens the full card */
-function playerTop(ts){if(!touched)return '';const set=ts.filter(t=>kidsOf(t.key).length),unset=ts.filter(t=>!kidsOf(t.key).length);
-  const lines=set.flatMap(t=>kidsOf(t.key).map(pk=>({t,pk}))).map(({t,pk})=>{const st=plStats(pk),open=S.plOpen===pk;
-    return open?playerBlock(t,true,pk):`<button class="pl-line" data-plopen="${esc(pk)}"><span class="pl-ic" aria-hidden="true">🏀</span><span><b>העונה של ${esc(plName(pk))}</b>${ts.length>1?` <small>${esc(t.name)}</small>`:''}<span class="sub">${st.n?`${st.n} משחקים · ${st.avg} ממוצע · שיא ${st.best}`:'עוד לא הוזנו נקודות'}</span></span><span class="pl-go" aria-hidden="true">‹</span></button>`}).join('');
-  const add=unset.length?`<button class="pl-line pl-add1" ${unset.length===1?`data-plsetup="${esc(unset[0].key)}"`:'data-plpick="1"'}><span class="pl-ic" aria-hidden="true">+</span><span><b>השחקן שלי</b><span class="sub">הנקודות והעונה של הילד, וכרטיס לסטורי</span></span></button>`:'';
-  return `<section class="pl-top" aria-label="השחקן שלי">${lines}${add}</section>`}
+/* "my player" lives in the top button row: "+ השחקן שלי" until one is added, then a button per child that opens the season */
+function plBtns(ts){if(!touched||!S.follows.length)return '';const kids=ts.flatMap(t=>kidsOf(t.key));
+  if(!kids.length){const unset=ts.filter(t=>!kidsOf(t.key).length);return `<button class="addbtn ghost pl-btn" ${unset.length===1?`data-plsetup="${esc(unset[0].key)}"`:'data-plpick="1"'}>+ השחקן שלי</button>`}
+  return kids.map(pk=>`<button class="addbtn ghost pl-btn${S.plOpen===pk?' on':''}" data-plopen="${esc(pk)}" aria-expanded="${S.plOpen===pk}">🏀 ${esc(plName(pk))}</button>`).join('')}
+function plOpenBlock(ts){if(!touched||!S.plOpen)return '';const t=ts.find(t=>kidsOf(t.key).includes(S.plOpen));if(!t)return '';
+  const unset=ts.filter(x=>!kidsOf(x.key).length);
+  return `<div class="pl-open">${playerBlock(t,true,S.plOpen)}${unset.length?`<button class="linkbtn pl-kid2" ${unset.length===1?`data-plsetup="${esc(unset[0].key)}"`:'data-plpick="1"'}>+ שחקן בקבוצה אחרת</button>`:''}</div>`}
 /* after a game the child's points were not entered: ask once, up to two days */
 function plCards(ts){if(!touched)return '';const out=[];
   ts.forEach(t=>kidsOf(t.key).forEach(pk=>{const g=t.games.filter(g=>NOW-g.date>=36e5&&NOW-g.date<48*36e5&&!plGame(pk,g.id)&&!S.plSeen[pk+':'+g.id]&&!(pk===t.key&&S.plSeen[g.id])).sort((a,b)=>b.date-a.date)[0];if(g)out.push({g,t,pk})}));
@@ -1426,7 +1428,7 @@ function viewSeason(){
      <div class="list">${gr.items.map(x=>row(x.g,x.t,multi)).join('')}</div></section>`).join('')}`}
 
 function viewMy(){
-  const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><div class="pt-btns">${touched&&S.follows.length?'<button class="addbtn ghost" data-edit="1">עריכה</button><button class="addbtn ghost" data-paddtop="1">'+(S.prac.some(p=>S.follows.includes(p.team))?'אימונים':'+ אימון')+'</button>':''}<button class="addbtn" data-go="find">+ קבוצה</button></div></div>`;
+  const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><div class="pt-btns">${touched&&S.follows.length?'<button class="addbtn ghost" data-edit="1">עריכה</button><button class="addbtn ghost" data-paddtop="1">'+(S.prac.some(p=>S.follows.includes(p.team))?'אימונים':'+ אימון')+'</button>':''}${plBtns(S.follows.map(k=>TEAMS[KEY[k]]).filter(Boolean))}<button class="addbtn" data-go="find">+ קבוצה</button></div></div>`;
   if(!S.follows.length) return `${title}<div class="empty"><h2>עוד לא בחרתם קבוצה</h2><p class="sub">מחפשים את הקבוצה של הילד, והמשחק הבא מופיע כאן.</p><button class="btn" data-go="find">מציאת קבוצה</button></div>${resultsBlock()}${ideaBox()}${footer()}`;
   const keys=S.filter==='all'?S.follows:[S.filter];const ts=keys.map(k=>TEAMS[KEY[k]]);
   const all=S.follows.map(k=>TEAMS[KEY[k]]);
@@ -1436,20 +1438,18 @@ function viewMy(){
      ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
   const demo=!touched?'<div class="banner">אלה שתי קבוצות לדוגמה מהלוח האמיתי. לחצו "+ קבוצה" כדי לבחור את שלכם.</div>':'';
-  const head=`${title}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${tpCards(all)}${repCards(all)}${plCards(all)}${weekStrip(ts)}`;
+  const head=`${title}${plOpenBlock(ts)}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${tpCards(all)}${repCards(all)}${plCards(all)}${weekStrip(ts)}`;
   const pastBlock=past.length?`<section class="sec"><h2>תוצאות אחרונות</h2><div class="list">${past.slice(0,4).map(x=>row(x.g,x.t,multi)).join('')}</div></section>`:'';
   if(multi){
     const nexts=ts.map(t=>({t,g:t.games.find(g=>!isPast(g))})).filter(x=>x.g).sort((a,b)=>a.g.date-b.g.date);
     return `${head}
      <section class="sec"><h2>המשחק הבא של כל קבוצה</h2>${nexts.map(x=>nextCard(x.g,x.t)).join('')||'<p class="sub">אין משחקים קרובים.</p>'}</section>
-     ${playerTop(ts)}
      ${touched?inviteBlock(ts):''}
      ${comingMonth(ts,new Set(nexts.map(x=>x.g.i)))}
      ${pastBlock}${resultsBlock()}${ideaBox()}${footer()}`}
   const t=ts[0],next=up[0],rest=up.slice(1);
   return `${head}
    ${next?hero(next.g,next.t):`<div class="empty"><p>אין משחקים קרובים בלוח.</p>${touched?`<button class="linkbtn" data-menu-open="${esc(t.key)}">אפשרויות לקבוצה</button>`:''}</div>`}
-   ${playerTop(ts)}
    ${touched?inviteBlock(ts):''}
    ${comingMonth(ts,new Set(next?[next.g.i]:[]))}
    ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
@@ -1854,7 +1854,7 @@ document.addEventListener('submit',e=>{const plf=e.target.dataset&&e.target.data
   if(plf==='setup'){const k=S.plAsk.setup,nm=f.querySelector('#pl-n').value.trim().slice(0,16),num=f.querySelector('#pl-num').value.replace(/\D/g,'').slice(0,3),isNew=!S.players[k];
     if(isKid2(k)){if(!nm){S.plErr='כתבו שם, כדי שנדע מי זה מי';render();return}S.players[k]={...(S.players[k]||{games:{}}),num,name:nm}}
     else{if(nm)S.nicks[k]=nm;else delete S.nicks[k];saveNicks();syncState('follow');S.players[k]={...(S.players[k]||{games:{}}),num}}
-    savePlayers();S.plAsk=null;S.plErr='';if(isNew&&isKid2(k)){S.plOpen=k;track('pl_kid2')}track(isNew?'pl_setup':'pl_edit');toast(isNew?'נוסף. אחרי משחק, לחצו "כמה נקודות?"':'נשמר');render();return}
+    savePlayers();S.plAsk=null;S.plErr='';if(isNew){S.plOpen=k;if(isKid2(k))track('pl_kid2')}track(isNew?'pl_setup':'pl_edit');toast(isNew?'נוסף. אחרי משחק, לחצו "כמה נקודות?"':'נשמר');render();return}
   const p=f.querySelector('#pl-p').value.trim(),tv=(f.querySelector('#pl-t')||{}).value||'',P=+p,T=tv.trim()===''?0:+tv;
   const rv=f.querySelector('#pl-r').value.trim(),av=f.querySelector('#pl-a').value.trim(),mv=f.querySelector('#pl-m').value.trim().slice(0,60),draft={p,t:tv,r:rv,a:av,m:mv};
   if(!/^\d{1,3}$/.test(p)||P>150){S.plErr='כתבו מספר נקודות, מ־0 עד 150';S.plDraft=draft;render();return}
