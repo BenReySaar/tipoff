@@ -204,7 +204,8 @@ export function buildPack(raw, gen = new Date().toISOString()) {
     if (e[8] != null && e[9] != null) row.push(e[8], e[9]);
     return row;
   });
-  return { v: 2, gen, ages: AGES.map(([id, n, gg, , ad]) => ad ? [id, n, gg, 1] : [id, n, gg]), lg: lgRows, tm, vn, g };
+  const body = { ages: AGES.map(([id, n, gg, , ad]) => ad ? [id, n, gg, 1] : [id, n, gg]), lg: lgRows, tm, vn, g };
+  return { v: 2, gen, ver: fnv(JSON.stringify(body)), ...body };
 }
 
 /**
@@ -258,6 +259,8 @@ function mergeHistory(events, hist, venues, gen, ageOfLg) {
   }
   return out;
 }
+/** A short fingerprint of the schedule itself (not of when it was built): the app re-renders only when it changes. */
+const fnv = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); };
 const hashCode = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return h || 1; };
 
 const teamKey = (pack, ti) => pack.lg[pack.tm[ti][1]][1] + '|' + pack.tm[ti][0];

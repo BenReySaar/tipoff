@@ -83,6 +83,7 @@ export async function runSync(env, { raw = null, source = 'cron' } = {}) {
     if (guard) throw new Error('נעצר כדי לא לשמור נתונים חסרים: ' + guard);
     attachChangeLog(next, prev?.ch, changes, started);
     await env.KV.put('pack', JSON.stringify(next));
+    await env.KV.put('pack:gen', next.gen);
     if (changes.length) {
       const stmt = env.DB.prepare('INSERT INTO changes(ts,game,kind,info) VALUES(?,?,?,?)');
       await env.DB.batch(changes.slice(0, 500).map(c => stmt.bind(started, c.game.id, c.kind, JSON.stringify({ before: c.before, after: c.game }))));
@@ -507,9 +508,15 @@ export default {
     try {
       if (p.startsWith('/api/') || p.startsWith('/cal/') || p === '/stats') await ensureSchema(env);
       if (p === '/api/data' && req.method === 'GET') {
+        // a ready copy at Cloudflare's edge, replaced whenever the schedule is rebuilt (hourly), instead of reading 1MB from KV on every open
+        const gen = await env.KV.get('pack:gen');
+        const ck = gen && new Request(url.origin + '/__pack?g=' + encodeURIComponent(gen));
+        if (ck) { const hit = await caches.default.match(ck); if (hit) return hit; }
         const t = await env.KV.get('pack');
         if (!t) return json({ error: 'no data yet' }, 503);
-        return new Response(t, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300' } });
+        const res = new Response(t, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300, s-maxage=7200' } });
+        if (ck) ctx.waitUntil(caches.default.put(ck, res.clone()));
+        return res;
       }
       if (p === '/api/config') return json({ vapid: (await vapidOf(env)).publicKey });
       if (p === '/api/state' && req.method === 'POST') return saveState(env, await readJSON(req));

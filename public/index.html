@@ -495,13 +495,17 @@ window.__bip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();
 const appEl=document.getElementById('app');
 let DATA,STALE=false;const T0=performance.now();
 const fresh=fetch('/api/data',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
-try{DATA=await Promise.race([fresh,new Promise((_,j)=>setTimeout(()=>j(new Error('slow')),4000))])}
+// open at once from the copy saved on the phone (if it is from the last 3 days), and check for a newer schedule in the background
+let SAVED=false;try{const c=window.caches&&await caches.match('/api/data');if(c){const d=await c.json();if(d&&d.g&&Date.now()-Date.parse(d.gen)<3*864e5){DATA=d;STALE=true;SAVED=true}}}catch(x){}
+if(!DATA){try{DATA=await Promise.race([fresh,new Promise((_,j)=>setTimeout(()=>j(new Error('slow')),4000))])}
 catch(e){try{const c=window.caches&&await caches.match('/api/data');if(c){DATA=await c.json();STALE=true}}catch(x){}
-  if(!DATA)try{DATA=await fresh}catch(x){}}
+  if(!DATA)try{DATA=await fresh}catch(x){}}}
 if(STALE){fresh.then(async d=>{let last=0;try{last=+sessionStorage.getItem('tipoff.stalereloadAt')||0}catch(x){}
-  if(d&&d.gen!==DATA.gen&&Date.now()-last>60000){try{await (await caches.open('tipoff-v2')).put('/api/data',new Response(JSON.stringify(d),{headers:{'content-type':'application/json'}}));sessionStorage.setItem('tipoff.stalereload','1');sessionStorage.setItem('tipoff.stalereloadAt',String(Date.now()))}catch(x){}location.reload()}else if(d&&d.gen!==DATA.gen){const b=document.getElementById('upd');if(b){b.textContent='יש לו״ז עדכני · לרענון';b.onclick=()=>location.reload();b.style.cursor='pointer'}}else{window.__fresh=true;const b=document.getElementById('upd');if(b)b.remove()}}).catch(()=>{const b=document.getElementById('upd');if(b)b.textContent='אין חיבור לאינטרנט. מוצג הלו״ז האחרון שנשמר'})}
+  const same=d&&(d.ver&&d.ver===DATA.ver||d.gen===DATA.gen);
+  if(d&&!same&&Date.now()-last>60000){try{await (await caches.open('tipoff-v2')).put('/api/data',new Response(JSON.stringify(d),{headers:{'content-type':'application/json'}}));sessionStorage.setItem('tipoff.stalereload','1');sessionStorage.setItem('tipoff.stalereloadAt',String(Date.now()))}catch(x){}location.reload()}else if(d&&!same){const b=document.getElementById('upd');if(b){b.textContent='יש לו״ז עדכני · לרענון';b.onclick=()=>location.reload();b.style.cursor='pointer'}}else{window.__fresh=true;const b=document.getElementById('upd');if(b)b.remove()}}).catch(()=>{const b=document.getElementById('upd');if(b)b.textContent='אין חיבור לאינטרנט. מוצג הלו״ז האחרון שנשמר'})}
 if(!DATA){appEl.innerHTML='<div class="empty" style="margin-top:40px"><h2>לא הצלחנו לטעון את לוח המשחקים</h2><p class="sub">בדקו את החיבור לאינטרנט ונסו שוב.</p><button class="btn" onclick="location.reload()">לנסות שוב</button></div>';return}
-if(STALE&&!window.__fresh){const b=document.createElement('div');b.id='upd';b.className='upd';b.setAttribute('role','status');b.textContent='מתעדכן…';document.body.appendChild(b)}
+{const bar=()=>{if(STALE&&!window.__fresh&&!document.getElementById('upd')){const b=document.createElement('div');b.id='upd';b.className='upd';b.setAttribute('role','status');b.textContent='מתעדכן…';document.body.appendChild(b)}};
+ if(SAVED)setTimeout(bar,1500);else bar()} // from the phone's copy the check usually takes a second: show "מתעדכן…" only if it takes longer
 document.documentElement.setAttribute('dir','rtl');
 
 /* ---------- data model ---------- */
@@ -1912,7 +1916,7 @@ if(window.__adopted){try{const r=await fetch('/api/restore?device='+DEV).then(r=
     S.prac=r.practices||[];S.pskips=r.pskips||{};S.pmoves=r.pmoves||{};store.set('tipoff.practices',S.prac);store.set('tipoff.pskips',S.pskips);store.set('tipoff.pmoves',S.pmoves);const sn={};S.follows.forEach(k=>{if(pracOf(k).length)sn[k]=tpJSON(tpOf(k))});store.set('tipoff.psnap',sn);track('restore');render()}}catch(e){}}
 syncState('open').then(loadTeamPrac);loadReports(true);
 if(S.teamLink)track('team_link');
-{const ms=performance.now()-T0;if(STALE)track('stale_open');if(ms>15000)track('slow_open15');else if(ms>5000)track('slow_open5');
+{const ms=performance.now()-T0;if(STALE&&!SAVED)track('stale_open');else if(SAVED)track('saved_open');if(ms>15000)track('slow_open15');else if(ms>5000)track('slow_open5');
   try{if(sessionStorage.getItem('tipoff.stalereload')){sessionStorage.removeItem('tipoff.stalereload');track('stale_reload')}}catch(x){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-(S.repLoaded||0)>120000)loadReports()});
 if(!S.invite)syncURL();
