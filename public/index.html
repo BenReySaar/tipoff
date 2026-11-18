@@ -204,7 +204,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 
 /* find a team */
 .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--fill);border-radius:12px;padding:3px;gap:3px}
-.seg button{border:0;background:none;border-radius:9px;padding:9px;font-weight:600;color:var(--muted)}
+.seg button{border:0;background:none;border-radius:9px;padding:9px;font-weight:600;color:var(--muted)}.seg3{grid-template-columns:1fr 1fr 1fr}
 .seg button[aria-pressed="true"]{background:var(--bg);color:var(--ink);box-shadow:0 0 0 1px var(--line-2)}
 .ages-h{font-size:15px;font-weight:600;color:var(--muted);margin:18px 2px 8px}
 .ages{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -510,6 +510,7 @@ button.prow{width:100%;background:none;border:0;border-bottom:1px solid var(--li
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gtag{background:#1E3354;color:#C9DAF5}:root:not([data-theme="light"]) .gtag.f{background:#4A1F33;color:#F6C9DC}}
 :root[data-theme="dark"] .gtag{background:#1E3354;color:#C9DAF5}:root[data-theme="dark"] .gtag.f{background:#4A1F33;color:#F6C9DC}
 </style>
+<script>try{const t=JSON.parse(localStorage.getItem("tipoff.theme")||"null");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -1708,6 +1709,7 @@ function viewHelp(){
    ${diagBox()}
    <section class="sec"><h2>שאלות נפוצות</h2><div class="faqs">${faq}</div></section>
    <section class="sec"><h2>במה אפשר לעזור?</h2><div class="topics">${topics}</div></section>
+   <section class="sec"><h2>תצוגה</h2><div class="seg seg3" role="group" aria-label="תצוגה בהירה או כהה">${[['auto','לפי הטלפון'],['light','בהירה'],['dark','כהה']].map(([k,l])=>`<button data-theme-set="${k}" aria-pressed="${(store.get('tipoff.theme','auto')||'auto')===k}">${l}</button>`).join('')}</div></section>
    <section class="sec privacy-box"><h2>הפרטיות שלכם</h2><p class="sub">אין הרשמה. נשמרות רק הקבוצות וההגדרות, ואפשר למחוק הכול בלחיצה.</p>
      <button class="btn ghost danger-t" data-forget="ask">מחיקת המידע שלי</button>
      <p class="note"><a href="/privacy.html">מדיניות הפרטיות</a> · <a href="/terms.html">תנאי שימוש</a></p></section>
@@ -1860,6 +1862,7 @@ document.addEventListener('click',e=>{
   else if(d.more){S.showUp+=10;render()}
   else if(d.t)toggleFollow(d.t);
   else if(d.gender){S.gender=d.gender;render()}
+  else if(d.themeSet){const t=d.themeSet;store.set('tipoff.theme',t);if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;track('theme_'+t);render()}
   else if(d.age){if(!S.fT1&&S.findMode!=='res'){S.fT1=1;track('find_age')}S.age=d.age;S.league=null;render();scrollTo(0,0)}
   else if(d.lg!=null){if(!S.fT2&&S.findMode!=='res'){S.fT2=1;track('find_league')}S.league=+d.lg;render();scrollTo(0,0)}
   else if(d.back==='age'){S.age=null;S.league=null;render()}
