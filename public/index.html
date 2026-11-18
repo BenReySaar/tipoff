@@ -1158,7 +1158,7 @@ function resultsBlock(){
       <div class="sm">${r}</div>${nx?`<div class="sm">הבא: ${DAYS[nx.date.getDay()]} ${dm(nx.date)} ${hm(nx.date)}</div>`:''}</div>
       <button class="rm" data-rres="${esc(t.key)}">הסרה</button></div>`}).join('');
   return `<section class="sec"><div class="sec-h"><h2>מעקב תוצאות</h2></div>
-    <p class="sub" style="margin:0">רק תוצאה סופית, בלי לוח ובלי יומן. לסבא, לסבתא, או לקבוצה של חברים.</p>
+    <p class="sub" style="margin:0">רק התוצאה הסופית. לקבוצה של חברים או של הנכדים.</p>
     ${items?`<div class="list">${items}</div>`:''}
     <button class="resbox" data-addres="1"><span class="plus">+</span><span><b>קבוצה למעקב תוצאות</b><span class="sub">גיל, ליגה וקבוצה</span></span></button></section>`}
 
@@ -1219,7 +1219,7 @@ function syncURL(){if(S.team)return;try{const refs=(touched?S.follows:[]).map(k=
   if(location.pathname+location.search!==want)history.replaceState(null,'',want)}catch(e){}}
 function inviteBlock(ts){
   ts=ts.filter(t=>!S.invHidden.includes(t.key));if(!ts.length)return '';
-  return `<section class="sec invite"><button class="x" data-closeinv="1" aria-label="סגירת הזמנת ההורים">✕</button><h2>הזמינו הורים מהקבוצה</h2><p class="sub">הם יקבלו קישור שפותח ישר את הלוח של הקבוצה, עם כפתור הצטרפות אחד.</p>
+  return `<section class="sec invite"><button class="x" data-closeinv="1" aria-label="סגירת הזמנת ההורים">✕</button><h2>הזמינו הורים מהקבוצה</h2><p class="sub">קישור שפותח להם ישר את הלוח של הקבוצה.</p>
    <div class="inv-list">${ts.map(t=>`<div class="inv">${ts.length>1?dot(t.key):''}<span class="inv-n">${esc(t.name)}</span>
      <a class="inv-wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">${ic.share}וואטסאפ</a>
      <button class="inv-copy" data-copyteam="${esc(t.key)}">העתקה</button>${CAN_SHARE?`<button class="inv-copy" data-nshareteam="${esc(t.key)}" aria-label="שיתוף ${esc(t.name)} באפליקציה אחרת">עוד</button>`:''}</div>
@@ -1607,18 +1607,18 @@ function viewAlerts(){
     unsupported:`<div class="push"><div><b>הדפדפן הזה לא תומך בהתראות</b><div class="sub">נסו בכרום באנדרואיד או בספארי באייפון.</div></div></div>`,
     checking:`<div class="push"><div><b>בודקים…</b></div></div>`}[S.push];
   const mine=touched&&S.follows.length;
-  return `<section class="sec"><h1>התראות ויומן</h1><p class="sub">נשלח הודעה לטלפון כשמשהו משתנה במשחקים של הקבוצות שלכם.</p></section>
+  return `<section class="sec"><h1>התראות ויומן</h1><p class="sub">הודעה לטלפון כשמשחק משתנה.</p></section>
    ${box}${S.pushMsg?`<div class="banner">${esc(S.pushMsg)}</div>`:''}
-   <section class="sec"><h2>על מה להתריע</h2><div class="alert-card">${sw('change','שינוי מועד או אולם','ברגע שהאיגוד מעדכן את הלוח. בין 23:00 ל־08:00 נחכה לבוקר')}${sw('eve','תזכורת ערב לפני','בשעה 20:00, עם השעה, האולם ובית או חוץ')}${sw('result','תוצאה סופית','גם לקבוצות שב"מעקב תוצאות"')}</div></section>
+   <section class="sec"><h2>על מה להתריע</h2><div class="alert-card">${sw('change','שינוי מועד או אולם','מיד כשהאיגוד מעדכן.')}${sw('eve','תזכורת ערב לפני','בשעה 20:00, עם השעה, האולם ובית או חוץ')}${sw('result','תוצאה סופית','גם לקבוצות שב"מעקב תוצאות"')}</div></section>
    <section class="sec" id="cal"><h2>יומן שמתעדכן לבד</h2>
-     <p class="sub">מחברים פעם אחת, וכל המשחקים של הקבוצות שלכם נכנסים ליומן של הטלפון. כשמשחק זז, גם היומן מתעדכן.</p>
+     <p class="sub">מחברים פעם אחת, והמשחקים נכנסים ליומן ומתעדכנים לבד.</p>
      ${mine?`<div class="calbtns"><a class="btn" href="${CAL_WEBCAL}" data-ev="cal_sub">יומן אייפון</a><a class="btn ghost" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}" target="_blank" rel="noopener" data-ev="cal_sub">יומן גוגל</a></div>
        <button class="linkbtn" data-copycal="1">העתקת הקישור ליומן</button>${S.showCal?`<input class="calurl" readonly value="${esc(CAL_HTTP)}" onfocus="this.select()">`:''}
-       <p class="note">ביומן גוגל מוסיפים את הקישור פעם אחת מהמחשב, והוא מופיע גם בטלפון. גוגל מרעננת יומנים כאלה כמה פעמים ביום, אז על שינוי של הרגע האחרון ההתראה תגיע קודם.</p>`
+       <p class="note">יומן גוגל מתעדכן כמה פעמים ביום, אז על שינוי של הרגע האחרון ההתראה תגיע קודם.</p>`
       :'<div class="banner">קודם בוחרים קבוצה, ואז מחברים יומן.</div>'}
    </section>
    <section class="sec"><h2>הוספה למסך הבית</h2>
-     <p class="sub">${STANDALONE?'✓ פתחתם את טיפ-אוף מהאייקון במסך הבית.':IOS?'באייפון זה תנאי להתראות. המדריך מראה בדיוק את הצעדים לטלפון שלכם.':'לא חובה באנדרואיד, אבל נוח: טיפ-אוף נפתחת כמו אפליקציה.'}</p>
+     <p class="sub">${STANDALONE?'✓ פתחתם את טיפ-אוף מהאייקון במסך הבית.':IOS?'באייפון צריך את זה כדי לקבל התראות.':'לא חובה באנדרואיד, אבל נוח: טיפ-אוף נפתחת כמו אפליקציה.'}</p>
      ${STANDALONE?'':`<button class="season-btn" data-howto="1">${ic.addhome}<span>מדריך ההוספה למסך הבית</span>${ic.next}</button>`}
    </section>`}
 
@@ -1633,7 +1633,7 @@ const FAQ=[
  ['איך מוסיפים את טיפ-אוף למסך הבית?','בספארי באייפון: לוחצים על ⋯ ליד שורת הכתובת, בוחרים "שיתוף" ואז "הוספה למסך הבית", ומשאירים את המתג דולק. בגרסאות ישנות יותר כפתור השיתוף נמצא ישר בתחתית המסך. באנדרואיד: בתפריט של כרום (⋮) בוחרים "הוספה למסך הבית". <button class="linkbtn" data-howto="1">למדריך עם הצעדים לטלפון שלכם</button>'],
  ['איך מפעילים התראות באייפון?','אפל מאפשרת התראות רק לאפליקציה שנוספה למסך הבית. מוסיפים (ראו את השאלה הקודמת), פותחים את טיפ-אוף מהאייקון החדש ולוחצים "הפעלת התראות". נדרשת גרסת iOS 16.4 ומעלה.'],
  ['ההתראות לא מגיעות','בלשונית "התראות ויומן" לוחצים "שליחת התראת בדיקה". אם היא לא מגיעה, בודקים שמצב "ריכוז" או "נא לא להפריע" כבוי, ושבהגדרות הטלפון מותר לטיפ-אוף לשלוח התראות.'],
- ['היומן לא מתעדכן מיד','היומן של הטלפון בודק עדכונים בקצב שלו, ויומן גוגל עושה את זה כמה פעמים ביום. לכן על שינוי של הרגע האחרון ההתראה תגיע לפני היומן.'],
+ ['היומן לא מתעדכן מיד','היומן של הטלפון בודק עדכונים בקצב שלו, ויומן גוגל עושה את זה כמה פעמים ביום. לכן על שינוי של הרגע האחרון ההתראה תגיע לפני היומן. ביומן גוגל מוסיפים את הקישור פעם אחת מהמחשב, והוא מופיע גם בטלפון.'],
  ['איך יודעים איזה צבע גופייה ללבוש?','האיגוד מפרסם רק אם זה משחק בית או חוץ, לא את צבע הגופייה. טיפ-אוף מזכירה לבדוק, ואת הצבע עצמו כדאי לוודא מול המאמן.'],
  ['מה זה "מעקב תוצאות"?','קבוצה שרוצים לדעת רק איך גמרה, למשל של אחיין או של חבר. היא לא נכנסת ללוח וליומן. אם הפעלתם התראת תוצאות, תקבלו הודעה כשהתוצאה מתפרסמת.'],
  ['צריך להירשם? מה נשמר עליי?','לא צריך הרשמה. נשמרים רק מזהה אקראי של הטלפון, הקבוצות שבחרתם והגדרות ההתראות, בלי שם, טלפון או אימייל. אפשר למחוק הכול בלחיצה על "מחיקת המידע שלי" בתחתית העזרה. כל הפרטים ב<a href="/privacy.html">מדיניות הפרטיות</a>.'],
@@ -1708,7 +1708,7 @@ function viewHelp(){
    ${diagBox()}
    <section class="sec"><h2>שאלות נפוצות</h2><div class="faqs">${faq}</div></section>
    <section class="sec"><h2>במה אפשר לעזור?</h2><div class="topics">${topics}</div></section>
-   <section class="sec privacy-box"><h2>הפרטיות שלכם</h2><p class="sub">אין הרשמה. נשמרים רק מזהה אקראי של הטלפון, הקבוצות וההגדרות. אפשר למחוק הכול בלחיצה.</p>
+   <section class="sec privacy-box"><h2>הפרטיות שלכם</h2><p class="sub">אין הרשמה. נשמרות רק הקבוצות וההגדרות, ואפשר למחוק הכול בלחיצה.</p>
      <button class="btn ghost danger-t" data-forget="ask">מחיקת המידע שלי</button>
      <p class="note"><a href="/privacy.html">מדיניות הפרטיות</a> · <a href="/terms.html">תנאי שימוש</a></p></section>
    <p class="note">טיפ-אוף נבנתה כך שתהיה נוחה לשימוש גם לאנשים עם מוגבלות. <a href="/accessibility.html">הצהרת הנגישות</a></p>
@@ -1733,7 +1733,7 @@ function render(){
   const ovEl=document.getElementById('ov'),ovHTML=overlay();
   ovEl.innerHTML=ovHTML;
   app.innerHTML=header()+(S.team?teamView():S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():S.view==='season'?viewSeason():viewAlerts())+
-   `<p class="note">לוח המשחקים מתעדכן מאתר איגוד הכדורסל כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה, הקובע הוא פרסום האיגוד והודעת המאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/terms.html">תנאי שימוש</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
+   `<p class="note">מתעדכן מאתר האיגוד כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה קובעים האיגוד והמאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/terms.html">תנאי שימוש</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
   const tab=S.team?'':(S.view==='find'||S.view==='season')?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   const open=!!ovHTML;document.body.classList.toggle('locked',open);
   app.inert=open;document.querySelector('nav.tabs').inert=open;
