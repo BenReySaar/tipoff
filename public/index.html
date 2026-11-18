@@ -111,7 +111,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .op-row:last-child{border-bottom:0}.op-row.ours{font-weight:600}.op-d{color:var(--muted);font-variant-numeric:tabular-nums}.op-t{font-weight:600;font-variant-numeric:tabular-nums}.op-r{white-space:nowrap}
 .tp{border:1px solid var(--line-2);border-radius:var(--r);padding:16px 16px 12px;margin:14px 0;display:flex;flex-direction:column;gap:8px}
 .tp h2{font-size:16px;margin:0}.tp ul{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:2px}.tp-who{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-.tp-btns{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:4px}.tp-btns .btn{min-height:44px}
+.tp-btns{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:4px}.tp-btns .btn{min-height:44px}.ng .btn{text-decoration:none}.wa-btn{background:var(--wa);border-color:var(--wa);color:#fff}
 .rep-btn{background:none;border:1.5px solid var(--accent);color:var(--accent);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;font-weight:600;min-height:36px;white-space:nowrap}
 .rep-big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;background:var(--accent-soft);color:var(--accent);border:0;border-radius:12px;font:inherit;font-weight:600;margin-top:4px}
 .rep-tag{display:inline-block;font-size:11.5px;font-weight:600;color:var(--muted);background:var(--fill);border-radius:999px;padding:1px 8px;margin-inline-start:6px;white-space:nowrap}
@@ -1463,6 +1463,33 @@ function viewSeason(){
    ${groups.map(gr=>`<section class="sec month${gr.k<nowM?' past':''}" id="m-${gr.k}"><div class="sec-h"><h2>${MONTHS[gr.k%12]} ${Math.floor(gr.k/12)}</h2><span class="sub">${gr.items.length} ${gr.items.length===1?'משחק':'משחקים'}</span></div>
      <div class="list">${gr.items.map(x=>row(x.g,x.t,multi)).join('')}</div></section>`).join('')}`}
 
+
+/* ---------- one suggestion at a time (plan approved 18.11.2026) ----------
+   game moments first (just added a team, a moved game, practice offers from the team, a parent's report, the child's points),
+   then the one next step that helps most. One card per open; a step comes back after "לא עכשיו" only after 5 days, at most twice,
+   and two days pass between different steps. */
+const NG=store.get('tipoff.nudge',{opens:0,first:Date.now(),seen:{},cnt:{},no:{},last:0});const saveNg=()=>store.set('tipoff.nudge',NG);
+const firstSec=h=>{const i=h.indexOf('</section>');return i<0?h:h.slice(0,i+10)};
+const NG_STEPS=[
+  ['upd',()=>NG.opens>=3&&S.push!=='on'&&!store.get('tipoff.calOk',0)&&!(S.me&&S.me.calDay),()=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`;
+    return ['שלא תפספסו שינוי במשחק','כשמשחק זז, תדעו מיד.',`<a class="btn" href="${href}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="ng_upd_cal" data-ngdone="upd">לחבר ליומן</a>${PUSH_OK&&!IOS?'<button class="btn ghost" data-push="on" data-ngdone="upd">התראות</button>':''}`]}],
+  ['home',()=>IOS&&!STANDALONE&&(Date.now()-NG.first)>7*864e5,()=>['פתיחה בלחיצה אחת','הוסיפו את טיפ-אוף למסך הבית.','<button class="btn" data-howto="1" data-ngdone="home">איך מוסיפים</button>']],
+  ['inv',()=>(Date.now()-NG.first)>14*864e5&&!store.get('tipoff.growChg',0),()=>{const t=TEAMS[KEY[S.follows[0]]];return ['ההורים בקבוצה יודעים על טיפ-אוף?','שלחו להם קישור ללוח של הקבוצה.',`<a class="btn wa-btn" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="ng_inv_wa" data-ngdone="inv">שליחה בוואטסאפ</a>`]}],
+  ['pl',()=>{if(S.follows.some(k=>kidsOf(k).length))return false;let n=0;for(const k of S.follows){const t=TEAMS[KEY[k]];if(t)n+=t.games.filter(g=>isPast(g)&&g.date>=NG.first).length}return n>=3},
+    ()=>['השחקן שלי','כמה נקודות בכל משחק, ממוצע ושיא.',`<button class="btn" ${S.follows.length===1?`data-plsetup="${esc(S.follows[0])}"`:'data-plpick="1"'} data-ngdone="pl">להוסיף</button>`]],
+  ['prac',()=>(Date.now()-NG.first)>30*864e5&&!S.prac.some(p=>S.follows.includes(p.team)),()=>['גם האימונים בלוח?','תזכורת לפני כל אימון.','<button class="btn" data-paddtop="1" data-ngdone="prac">להוסיף אימון</button>']],
+];
+function nudgeCard(all,ts){if(!touched||!S.follows.length)return S.justAdded?shareCard():'';
+  if(!S.ngCounted){S.ngCounted=1;NG.opens++;saveNg();if(NG.opens>=3&&S.push!=='on'&&!S.me&&!store.get('tipoff.calOk',0))loadMe()}
+  const ev=(S.justAdded?shareCard():'')||growCard()||firstSec(tpCards(all))||firstSec(repCards(all))||firstSec(plCards(all));if(ev)return ev;
+  if(S.ngHide)return '';const now=Date.now();
+  let id=S.ngCur&&NG_STEPS.find(x=>x[0]===S.ngCur&&x[1]())?S.ngCur:null;
+  if(!id&&now-(NG.last||0)>2*864e5)for(const [k,ok] of NG_STEPS){if(NG.no[k]||(NG.cnt[k]||0)>=2||(NG.seen[k]&&now-NG.seen[k]<5*864e5))continue;if(ok()){id=k;break}}
+  if(!id)return '';
+  if(S.ngCur!==id){S.ngCur=id;NG.cnt[id]=(NG.cnt[id]||0)+1;NG.seen[id]=now;NG.last=now;saveNg();setTimeout(()=>track('ng_'+id+'_seen'))}
+  const [h,sub,btn]=NG_STEPS.find(x=>x[0]===id)[2]();
+  return `<section class="tp ng" aria-label="${esc(h)}"><h2>${esc(h)}</h2><p class="sub">${esc(sub)}</p><div class="tp-btns">${btn}<button class="linkbtn" data-ngno="${id}">לא עכשיו</button></div></section>`}
+
 function viewMy(){
   const title=`<div class="ptitle"><h1>הקבוצות שלי</h1><div class="pt-btns">${touched&&S.follows.length?'<button class="addbtn ghost" data-edit="1">עריכה</button><button class="addbtn ghost" data-paddtop="1">'+(S.prac.some(p=>S.follows.includes(p.team))?'אימונים':'+ אימון')+'</button>':''}${plBtns(S.follows.map(k=>TEAMS[KEY[k]]).filter(Boolean))}<button class="addbtn" data-go="find">+ קבוצה</button></div></div>`;
   if(!S.follows.length) return `${title}<div class="empty"><h2>עוד לא בחרתם קבוצה</h2><p class="sub">מחפשים את הקבוצה של הילד, והמשחק הבא מופיע כאן.</p><button class="btn" data-go="find">מציאת קבוצה</button></div>${resultsBlock()}${ideaBox()}${footer()}`;
@@ -1474,7 +1501,7 @@ function viewMy(){
      ${S.follows.map(k=>{const t=TEAMS[KEY[k]];return `<button class="chip" data-f="${esc(k)}" aria-pressed="${S.filter===k}">${dot(k)}${esc(t.name)}<small>${nickOf(k)?esc(nickOf(k)):ageLabel(t.lg)}</small></button>`}).join('')}</div>`:'';
   const up=upcomingOf(ts),past=[];ts.forEach(t=>t.games.forEach(g=>{if(isPast(g))past.push({g,t})}));past.sort((x,y)=>y.g.date-x.g.date);
   const demo=!touched?'<div class="banner">אלה שתי קבוצות לדוגמה מהלוח האמיתי. לחצו "+ קבוצה" כדי לבחור את שלכם.</div>':'';
-  const head=`${title}${plOpenBlock(ts)}<p class="summary">${summary(all)}</p>${demo}${checklist()}${S.justAdded?shareCard():''}${growCard()}${chips}${tpCards(all)}${repCards(all)}${plCards(all)}${weekStrip(ts)}`;
+  const head=`${title}${plOpenBlock(ts)}<p class="summary">${summary(all)}</p>${demo}${chips}${nudgeCard(all,ts)}${weekStrip(ts)}`;
   const pastBlock=past.length?`<section class="sec"><h2>תוצאות אחרונות</h2><div class="list">${past.slice(0,4).map(x=>row(x.g,x.t,multi)).join('')}</div></section>`:'';
   if(multi){
     const nexts=ts.map(t=>({t,g:t.games.find(g=>!isPast(g))})).filter(x=>x.g).sort((a,b)=>a.g.date-b.g.date);
@@ -1748,7 +1775,9 @@ function render(){
   if(q)q.addEventListener('input',e=>{S.q=e.target.value;if(!S.fT3&&S.q.trim().length>=2&&S.findMode!=='res'){S.fT3=1;track('find_search')}const pos=e.target.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)});
 }
 document.addEventListener('click',e=>{
-  const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.upddone){S.pushAsk=false;setTimeout(()=>{render();toast('המשחקים בדרך ליומן שלכם')},400)}if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
+  {const ng=e.target.closest('[data-ngdone]');if(ng){const id=ng.dataset.ngdone;NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_go')}}
+  {const ca=e.target.closest('a[data-ev="cal_sub"],a[data-ev="upd_cal"],a[data-ev="ng_upd_cal"]');if(ca)store.set('tipoff.calOk',1)}
+  const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.ngdone)setTimeout(render,300);if(a.dataset.upddone){S.pushAsk=false;setTimeout(()=>{render();toast('המשחקים בדרך ליומן שלכם')},400)}if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
   if(e.target.closest('.scrim')&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);track('ks_new_no');render();return}
   if(e.target.closest('.scrim')&&(S.newPop||S.plPick||S.plAsk||S.story||S.followAsk!=null||S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
   if(e.target.closest('.scrim')){if(S.invite)track('invite_dismiss');if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();render();return}
@@ -1861,6 +1890,7 @@ document.addEventListener('click',e=>{
   else if(d.f){S.filter=d.f;S.showUp=6;S.dayWeek=null;render()}
   else if(d.more){S.showUp+=10;render()}
   else if(d.t)toggleFollow(d.t);
+  else if(d.ngno){const id=d.ngno;if((NG.cnt[id]||0)>=2)NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_no');render()}
   else if(d.gender){S.gender=d.gender;render()}
   else if(d.themeSet){const t=d.themeSet;store.set('tipoff.theme',t);if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;track('theme_'+t);render()}
   else if(d.age){if(!S.fT1&&S.findMode!=='res'){S.fT1=1;track('find_age')}S.age=d.age;S.league=null;render();scrollTo(0,0)}
