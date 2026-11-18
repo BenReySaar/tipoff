@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="he" dir="rtl">
+<html lang="he" dir="rtl" class="v2">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -477,6 +477,38 @@ button.prow{width:100%;background:none;border:0;border-bottom:1px solid var(--li
 .privacy-box{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:380px){.h-time{font-size:54px}.ages{grid-template-columns:repeat(2,1fr)}.day .dn{width:34px;height:34px;font-size:16px}.actions{grid-template-columns:1fr 1fr 1fr}.act span{font-size:13px}}
+
+/* ===== v2: one design language — light grey page, a white card per topic, one filled button per card, navy headings ===== */
+:root.v2{--page:#F2F4F7;--card:#FFFFFF;--navy:#1C3358;--hero:#FFFFFF;--shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.04)}
+@media (prefers-color-scheme:dark){:root.v2:not([data-theme="light"]){--page:#0B1220;--card:#162033;--navy:#B7C9EE;--hero:linear-gradient(160deg,#22304D 0%,#182338 60%);--shadow:none}}
+:root.v2[data-theme="dark"]{--page:#0B1220;--card:#162033;--navy:#B7C9EE;--hero:linear-gradient(160deg,#22304D 0%,#182338 60%);--shadow:none}
+.v2 body{background:var(--page)}
+.v2 .app{gap:14px}
+.v2 .app>section,.v2 .app>details,.v2 .app>footer.foot,.v2 .pl-open,.v2 .tp{background:var(--card);border:0;border-radius:18px;padding:16px 16px;box-shadow:var(--shadow);margin:0}
+.v2 .app>section.hero{padding:20px}
+.v2 .app>.ptitle{margin-bottom:0}
+.v2 .app>p.summary{margin:-4px 0 0}
+.v2 .app>section.pl-top{background:none;box-shadow:none;padding:0}
+.v2 .pl-line{background:var(--card);border-color:transparent;box-shadow:var(--shadow)}
+.v2 .app>section h2,.v2 .app>details summary,.v2 .sec-h h2{color:var(--navy)}
+.v2 .app>section>h2:first-child,.v2 .app>section>.sec-h:first-child h2{font-size:17px}
+.v2 .list{border-top:0}
+.v2 .list>.row:last-child,.v2 .list>*:last-child .row:last-child{border-bottom:0}
+.v2 details.tbl{border:0}
+.v2 .idea,.v2 .foot{border-top:0;padding-top:16px}
+.v2 .diag{border:0;padding:0}
+.v2 .diag .btn,.v2 .app>section .btn+.btn{background:none;color:var(--accent);border:1.5px solid var(--accent)}
+.v2 .search.big{background:var(--card)}
+.v2 .tabs{background:color-mix(in srgb,var(--card) 94%,transparent)}
+.v2 .tabs button[aria-current="page"]{color:var(--navy);font-weight:700}
+.v2 .tabs button[aria-current="page"] svg{stroke-width:2.2}
+.v2 .app>section:has(>h1),.v2 .app>section.sec:has(>.ptitle){background:none;box-shadow:none;padding:0}
+.v2 .app>section .push,.v2 .app>.push{border:0;padding:0}
+.v2 .app>.push{background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.v2 .ages button,.v2 .ages>*{background:var(--card);border-color:transparent;box-shadow:var(--shadow)}
+.v2 .seg{background:var(--card)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gtag{background:#1E3354;color:#C9DAF5}:root:not([data-theme="light"]) .gtag.f{background:#4A1F33;color:#F6C9DC}}
+:root[data-theme="dark"] .gtag{background:#1E3354;color:#C9DAF5}:root[data-theme="dark"] .gtag.f{background:#4A1F33;color:#F6C9DC}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
 </head>
@@ -1448,16 +1480,14 @@ function viewMy(){
     return `${head}
      <section class="sec"><h2>המשחק הבא של כל קבוצה</h2>${nexts.map(x=>nextCard(x.g,x.t)).join('')||'<p class="sub">אין משחקים קרובים.</p>'}</section>
      ${plAddLine(ts)}
-     ${touched?inviteBlock(ts):''}
      ${comingMonth(ts,new Set(nexts.map(x=>x.g.i)))}
-     ${pastBlock}${resultsBlock()}${ideaBox()}${footer()}`}
+     ${pastBlock}${resultsBlock()}${touched?inviteBlock(ts):''}${ideaBox()}${footer()}`}
   const t=ts[0],next=up[0],rest=up.slice(1);
   return `${head}
    ${next?hero(next.g,next.t):`<div class="empty"><p>אין משחקים קרובים בלוח.</p>${touched?`<button class="linkbtn" data-menu-open="${esc(t.key)}">אפשרויות לקבוצה</button>`:''}</div>`}
    ${plAddLine(ts)}
-   ${touched?inviteBlock(ts):''}
    ${comingMonth(ts,new Set(next?[next.g.i]:[]))}
-   ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${ideaBox()}${footer()}`}
+   ${pastBlock}${standings(t.lg,t.i)}${resultsBlock()}${touched?inviteBlock(ts):''}${ideaBox()}${footer()}`}
 
 /* ---------- find a team: gender → age → league → team ---------- */
 // search that ignores spelling: נוה=נווה, קרית=קריית, quotes/dots/dashes, common abbreviations, any word order
