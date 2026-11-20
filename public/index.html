@@ -527,7 +527,7 @@ window.__bip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();
 (async function boot(){
 const appEl=document.getElementById('app');
 let DATA,STALE=false;const T0=performance.now();
-const fresh=fetch('/api/data',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+const fresh=fetch('/api/data',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);const c=+r.headers.get('x-checked');if(c)window.__checked=c;return r.json()});
 // open at once from the copy saved on the phone (if it is from the last 3 days), and check for a newer schedule in the background
 let SAVED=false;try{const c=window.caches&&await caches.match('/api/data');if(c){const d=await c.json();if(d&&d.g&&Date.now()-Date.parse(d.gen)<3*864e5){DATA=d;STALE=true;SAVED=true}}}catch(x){}
 if(!DATA){try{DATA=await Promise.race([fresh,new Promise((_,j)=>setTimeout(()=>j(new Error('slow')),4000))])}
@@ -554,7 +554,8 @@ const GAMES=DATA.g.map(([id,d,lg,h,a,v,hs,as],i)=>{
 LEAGUES.forEach(l=>l.teams=[]);TEAMS.forEach(t=>LEAGUES[t.lg].teams.push(t.i));
 LEAGUES.forEach(l=>l.teams.sort((x,y)=>TEAMS[x].name.localeCompare(TEAMS[y].name,'he')));
 const NOW=new Date();
-const GEN=new Date(DATA.gen);
+let GEN=new Date(DATA.gen);{const c=window.__checked;if(c&&c>GEN)GEN=new Date(c)}
+fresh.then(()=>{const c=window.__checked;if(c&&c>GEN){GEN=new Date(c)}}).catch(()=>{});
 const CH=new Map((DATA.ch||[]).map(c=>[c[1],c]));
 function chText(g){const c=CH.get(g.id);if(!c)return '';const d=c[3];const was=`${+d.slice(4,6)}.${+d.slice(2,4)} ${d.slice(6,8)}:${d.slice(8,10)}`;
   return c[2]==='venue'?'האולם הוחלף (היה '+String(c[4]).split(',')[0]+')':'המועד עודכן (היה '+was+')'}
@@ -1652,7 +1653,7 @@ function viewAlerts(){
 
 /* ---------- help: FAQ, "how can we help", ideas ---------- */
 const FAQ=[
- ['מאיפה מגיעים המשחקים?','מאתר איגוד הכדורסל. טיפ-אוף בודקת את הלוח כל שעה ומתעדכנת לבד. טיפ-אוף אינה מטעם האיגוד, ובכל סתירה הקובע הוא האיגוד והמאמן.'],
+ ['מאיפה מגיעים המשחקים?','מאתר איגוד הכדורסל. טיפ-אוף בודקת את הלוח כל חצי שעה ומתעדכנת לבד. טיפ-אוף אינה מטעם האיגוד, ובכל סתירה הקובע הוא האיגוד והמאמן.'],
  ['משחק זז. תוך כמה זמן אדע?','עד שעה מהרגע שהאיגוד מעדכן את האתר שלו. אם הפעלתם התראות, תקבלו הודעה לטלפון. בין 23:00 ל־08:00 לא שולחים התראות: מה שהשתנה בלילה מגיע בהודעה אחת בבוקר. שינוי שהמאמן הודיע עליו ועוד לא עודכן באתר האיגוד יופיע כאן רק אחרי העדכון שם.'],
  ['איך מוסיפים עוד ילד או עוד קבוצה?','ב"המשחקים שלי" לוחצים "+ קבוצה". אפשר לעקוב אחרי כמה קבוצות, ולכל אחת יש צבע משלה ברצועת השבוע.'],
  ['אפשר לקבל תזכורת לאימונים?','כן. לוחצים על ⋯ בכרטיס של הקבוצה ובוחרים "אימונים קבועים", או על "+ הוספת אימונים קבועים" בכרטיס. מוסיפים ימים, שעה ומקום, ובוחרים מתי לקבל תזכורת. האימונים נכנסים גם ליומן המתעדכן. הם לא מגיעים מהאיגוד, ולכן אם אימון בוטל, מסמנים "אין אימון השבוע" ברצועת השבוע.'],
@@ -1669,7 +1670,7 @@ const FAQ=[
 ];
 const TOPICS=[
  {id:'wrong',title:'פרט במשחק לא נכון',sub:'שעה, תאריך, אולם או יריבה',
-  tips:'הלוח מגיע מאתר האיגוד ומתעדכן כל שעה. אם המאמן הודיע על שינוי שעוד לא עודכן באיגוד, הוא יופיע כאן אחרי שהאיגוד יעדכן.',
+  tips:'הלוח מגיע מאתר האיגוד ומתעדכן כל חצי שעה. אם המאמן הודיע על שינוי שעוד לא עודכן באיגוד, הוא יופיע כאן אחרי שהאיגוד יעדכן.',
   ph:'איזה משחק, ומה לא נכון? למשל: מכבי רחובות ילדים א׳, 5.11, השעה הנכונה 18:30'},
  {id:'team',title:'לא מוצאים את הקבוצה',sub:'הקבוצה או הליגה לא מופיעות',
   tips:'נסו לחפש רק את שם העיר או המועדון. טיפ-אוף מציגה ליגות נוער בלבד, מקט-סל ועד נוער.',
@@ -1762,7 +1763,7 @@ function render(){
   const ovEl=document.getElementById('ov'),ovHTML=overlay();
   ovEl.innerHTML=ovHTML;
   app.innerHTML=header()+(S.team?teamView():S.view==='my'?viewMy():S.view==='find'?viewFind():S.view==='help'?viewHelp():S.view==='season'?viewSeason():viewAlerts())+
-   `<p class="note">מתעדכן מאתר האיגוד כל שעה (עדכון אחרון ${dm(GEN)} ${hm(GEN)}). בכל סתירה קובעים האיגוד והמאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/terms.html">תנאי שימוש</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
+   `<p class="note">מתעדכן מאתר האיגוד כל חצי שעה (בדיקה אחרונה ${dm(GEN)} ${hm(GEN)}). בכל סתירה קובעים האיגוד והמאמן. טיפ-אוף אינה מטעם האיגוד. <a href="/privacy.html">פרטיות</a> · <a href="/terms.html">תנאי שימוש</a> · <a href="/accessibility.html">הצהרת נגישות</a></p>`;
   const tab=S.team?'':(S.view==='find'||S.view==='season')?'my':S.view;document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.v===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   const open=!!ovHTML;document.body.classList.toggle('locked',open);
   app.inert=open;document.querySelector('nav.tabs').inert=open;

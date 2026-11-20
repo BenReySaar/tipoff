@@ -82,8 +82,10 @@ export async function runSync(env, { raw = null, source = 'cron' } = {}) {
     const { changes, guard } = diffPacks(prev, next);
     if (guard) throw new Error('נעצר כדי לא לשמור נתונים חסרים: ' + guard);
     attachChangeLog(next, prev?.ch, changes, started);
-    await env.KV.put('pack', JSON.stringify(next));
-    await env.KV.put('pack:gen', next.gen);
+    // save a new copy only when the schedule itself changed: the ready copy at the edge stays valid, and fewer large writes
+    const same = prev && prev.ver && prev.ver === next.ver && !changes.length;
+    if (!same) { await env.KV.put('pack', JSON.stringify(next)); await env.KV.put('pack:gen', next.gen); }
+    await env.KV.put('pack:checked', String(started));
     if (changes.length) {
       const stmt = env.DB.prepare('INSERT INTO changes(ts,game,kind,info) VALUES(?,?,?,?)');
       await env.DB.batch(changes.slice(0, 500).map(c => stmt.bind(started, c.game.id, c.kind, JSON.stringify({ before: c.before, after: c.game }))));
@@ -511,12 +513,14 @@ export default {
         // a ready copy at Cloudflare's edge, replaced whenever the schedule is rebuilt (hourly), instead of reading 1MB from KV on every open
         const gen = await env.KV.get('pack:gen');
         const ck = gen && new Request(url.origin + '/__pack?g=' + encodeURIComponent(gen));
-        if (ck) { const hit = await caches.default.match(ck); if (hit) return hit; }
+        const checked = await env.KV.get('pack:checked'); // the copy may be older than the last check when nothing changed
+        const withChecked = r => { if (!checked) return r; const o = new Response(r.body, r); o.headers.set('x-checked', checked); o.headers.set('access-control-expose-headers', 'x-checked'); return o; };
+        if (ck) { const hit = await caches.default.match(ck); if (hit) return withChecked(hit); }
         const t = await env.KV.get('pack');
         if (!t) return json({ error: 'no data yet' }, 503);
         const res = new Response(t, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300, s-maxage=7200' } });
         if (ck) ctx.waitUntil(caches.default.put(ck, res.clone()));
-        return res;
+        return withChecked(res);
       }
       if (p === '/api/config') return json({ vapid: (await vapidOf(env)).publicKey });
       if (p === '/api/state' && req.method === 'POST') return saveState(env, await readJSON(req));
@@ -588,6 +592,7 @@ export default {
         const id = Number(url.searchParams.get('id')), on = url.searchParams.get('on') === '1' ? Date.now() : null;
         if (!Number.isInteger(id)) return json({ error: 'id' }, 400);
         await env.DB.prepare('UPDATE feedback SET done=? WHERE rowid=?').bind(on, id).run();
+        ctx.waitUntil(caches.default.delete(new Request(url.origin + '/__stats')));
         return json({ ok: true });
       }
       if (p === '/api/ks-announce' && req.method === 'POST') {
@@ -624,17 +629,25 @@ export default {
       }
       const cal = p.match(/^\/cal\/([a-f0-9-]{36})\.ics$/);
       if (cal) {
+        const g = await env.KV.get('pack:gen'), cck = g && new Request(url.origin + '/__cal/' + cal[1] + '?g=' + encodeURIComponent(g));
+        if (cck) { const hit = await caches.default.match(cck); if (hit) { ctx.waitUntil(track(env, cal[1], 'cal_fetch').catch(() => {})); return hit; } }
         const [pack, follows, nicks, prac] = await Promise.all([getPack(env), env.DB.prepare("SELECT team FROM follows WHERE device=? AND kind='full'").bind(cal[1]).all(),
           env.DB.prepare('SELECT team, nick FROM nicks WHERE device=?').bind(cal[1]).all(), env.DB.prepare('SELECT data FROM practices WHERE device=?').bind(cal[1]).first()]);
         if (!pack) return new Response('no data', { status: 503 });
         ctx.waitUntil(track(env, cal[1], 'cal_fetch').catch(() => {}));
-        return new Response(icsFor(pack, follows.results.map(r => r.team), url.host, Object.fromEntries(nicks.results.map(r => [r.team, r.nick])), prac ? JSON.parse(prac.data) : null), {
-          headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'public, max-age=900', 'content-disposition': 'inline; filename="tipoff.ics"' },
+        const ics = new Response(icsFor(pack, follows.results.map(r => r.team), url.host, Object.fromEntries(nicks.results.map(r => [r.team, r.nick])), prac ? JSON.parse(prac.data) : null), {
+          headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'public, max-age=900, s-maxage=900', 'content-disposition': 'inline; filename="tipoff.ics"' },
         });
+        if (cck) ctx.waitUntil(caches.default.put(cck, ics.clone()));
+        return ics;
       }
       if (p === '/stats') {
         if (!keyAllowed(env, url)) return new Response('לא נמצא', { status: 404 });
-        return new Response(await statsPage(env, await getPack(env)), { headers: { 'content-type': 'text/html; charset=utf-8', 'x-robots-tag': 'noindex', 'cache-control': 'no-store' } });
+        const sck = new Request(url.origin + '/__stats');
+        if (!url.searchParams.has('fresh')) { const hit = await caches.default.match(sck); if (hit) { const o = new Response(hit.body, hit); o.headers.set('cache-control', 'no-store'); return o; } }
+        const html = await statsPage(env, await getPack(env));
+        ctx.waitUntil(caches.default.put(sck, new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, s-maxage=300' } })));
+        return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'x-robots-tag': 'noindex', 'cache-control': 'no-store' } });
       }
       if (p === '/api/sync' && req.method === 'POST') {
         if (!keyAllowed(env, url, req)) return json({ error: 'key' }, 403);
