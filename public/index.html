@@ -206,6 +206,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--fill);border-radius:12px;padding:3px;gap:3px}
 .seg button{border:0;background:none;border-radius:9px;padding:9px;font-weight:600;color:var(--muted)}.seg3{grid-template-columns:1fr 1fr 1fr}
 .seg button[aria-pressed="true"]{background:var(--bg);color:var(--ink);box-shadow:0 0 0 1px var(--line-2)}
+.sharecard a.btn{text-decoration:none;display:block;text-align:center;margin-top:8px}.sharecard .linkbtn{display:block;text-align:center;margin-top:6px}
 .qex{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}.qex-b{border:1px solid var(--line-2);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 11px;font-size:13px}
 .ages-h{font-size:15px;font-weight:600;color:var(--muted);margin:18px 2px 8px}
 .ages{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -1178,8 +1179,9 @@ const socialPills=()=>SOCIAL.map(([n,u])=>u?`<a class="soc" href="${u}" target="
 function shareCard(){
   const t=TEAMS[KEY[S.justAdded]];if(!t)return '';
   return `<div class="sharecard"><button class="x" data-closeshare="1" aria-label="סגירה">✕</button>
-    <b>${esc(t.name)} נוספה ✓</b><span class="sub">גם ההורים בקבוצה ירצו לדעת מתי ואיפה המשחק.</span>
-    <a class="wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">שתפו את הקבוצה בקבוצת ההורים</a></div>`}
+    <b>${esc(t.name)} נוספה ✓</b>${connected()?`<span class="sub">גם ההורים בקבוצה ירצו לדעת מתי ואיפה המשחק.</span>
+    <a class="wa" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">שתפו את הקבוצה בקבוצת ההורים</a>`:`<span class="sub">כל המשחקים ביומן של הטלפון, ומתעדכנים לבד כשמשחק זז.</span>
+    ${calLink('📅 להכניס את המשחקים ליומן','added_cal')}<a class="linkbtn" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="share_team">או: שתפו בקבוצת ההורים</a>`}</div>`}
 const APP_TEXT='🏀 טיפ-אוף: לוח משחקי הכדורסל של הילדים במקום אחד. המשחק הבא, ניווט לאולם, ויומן והתראות כשמשחק זז. חינם ובלי הרשמה.';
 const CAN_SHARE=typeof navigator.share==='function';
 function shareLinks(text,url,ev){
@@ -1472,20 +1474,30 @@ function viewSeason(){
    game moments first (just added a team, a moved game, practice offers from the team, a parent's report, the child's points),
    then the one next step that helps most. One card per open; a step comes back after "לא עכשיו" only after 5 days, at most twice,
    and two days pass between different steps. */
+const calLink=(label,ev,extra='')=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`;return `<a class="btn" href="${href}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="${ev}" ${extra}>${label}</a>`};
+const connected=()=>S.push==='on'||!!store.get('tipoff.calOk',0)||!!(S.me&&S.me.calDay);
+const gameLine=(g,t)=>{const d=new Date(g.date),o=TEAMS[g.h===t.i?g.a:g.h];return `יום ${DAYS[d.getDay()]} ${dm(d)}, ${hm(d)} נגד ${o.name}`};
 const NG=store.get('tipoff.nudge',{opens:0,first:Date.now(),seen:{},cnt:{},no:{},last:0});const saveNg=()=>store.set('tipoff.nudge',NG);
 const firstSec=h=>{const i=h.indexOf('</section>');return i<0?h:h.slice(0,i+10)};
 const NG_STEPS=[
-  ['upd',()=>NG.opens>=3&&S.push!=='on'&&!store.get('tipoff.calOk',0)&&!(S.me&&S.me.calDay),()=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`;
-    return ['שלא תפספסו שינוי במשחק','כשמשחק זז, תדעו מיד.',`<a class="btn" href="${href}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="ng_upd_cal" data-ngdone="upd">לחבר ליומן</a>${PUSH_OK&&!IOS?'<button class="btn ghost" data-push="on" data-ngdone="upd">התראות</button>':''}`]}],
+  ['upd',()=>NG.opens>=3&&!connected(),()=>{let nx=null;for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g));if(g&&(!nx||g.date<nx.g.date))nx={g,t}}
+    return [nx?'המשחק הבא: '+gameLine(nx.g,nx.t):'שלא תפספסו שינוי במשחק','להכניס את כל המשחקים ליומן? מתעדכן לבד כשמשחק זז.',calLink('📅 ליומן','ng_upd_cal','data-ngdone="upd"')+(PUSH_OK&&!IOS?'<button class="btn ghost" data-push="on" data-ngdone="upd">התראות</button>':'')]}],
   ['home',()=>IOS&&!STANDALONE&&(Date.now()-NG.first)>7*864e5,()=>['פתיחה בלחיצה אחת','הוסיפו את טיפ-אוף למסך הבית.','<button class="btn" data-howto="1" data-ngdone="home">איך מוסיפים</button>']],
   ['inv',()=>(Date.now()-NG.first)>14*864e5&&!store.get('tipoff.growChg',0),()=>{const t=TEAMS[KEY[S.follows[0]]];return ['ההורים בקבוצה יודעים על טיפ-אוף?','שלחו להם קישור ללוח של הקבוצה.',`<a class="btn wa-btn" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="ng_inv_wa" data-ngdone="inv">שליחה בוואטסאפ</a>`]}],
   ['pl',()=>{if(S.follows.some(k=>kidsOf(k).length))return false;let n=0;for(const k of S.follows){const t=TEAMS[KEY[k]];if(t)n+=t.games.filter(g=>isPast(g)&&g.date>=NG.first).length}return n>=3},
     ()=>['השחקן שלי','כמה נקודות בכל משחק, ממוצע ושיא.',`<button class="btn" ${S.follows.length===1?`data-plsetup="${esc(S.follows[0])}"`:'data-plpick="1"'} data-ngdone="pl">להוסיף</button>`]],
   ['prac',()=>(Date.now()-NG.first)>30*864e5&&!S.prac.some(p=>S.follows.includes(p.team)),()=>['גם האימונים בלוח?','תזכורת לפני כל אימון.','<button class="btn" data-paddtop="1" data-ngdone="prac">להוסיף אימון</button>']],
 ];
+/* a followed team's upcoming game moved and this family is not connected: the best moment to offer notifications (or the calendar on an iPhone browser) */
+function movedCard(){if(connected()||S.movedHide)return '';
+  if(S.movedSess===undefined){S.movedSess=null;const asked=store.get('tipoff.movedAsk',[]);if(asked.length<2)for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g)&&CH.has(g.id)&&!asked.includes(g.id));
+      if(g){S.movedSess={k,g:g.i};store.set('tipoff.movedAsk',[...asked,g.id]);setTimeout(()=>track('moved_ask_seen'));break}}}
+  if(!S.movedSess)return '';const t=TEAMS[KEY[S.movedSess.k]],g=GAMES[S.movedSess.g];if(!t||!g)return '';
+  const canPush=PUSH_OK&&(!IOS||STANDALONE);
+  return `<section class="tp ng" aria-label="המשחק זז"><h2>המשחק זז: ${esc(gameLine(g,t))}</h2><p class="sub">בפעם הבאה רוצים לדעת מיד?</p><div class="tp-btns">${canPush?'<button class="btn" data-push="on" data-movedgo="push">🔔 להפעיל התראות</button>':calLink('📅 ליומן, מתעדכן לבד','moved_cal','data-movedgo="cal"')}<button class="linkbtn" data-movedno="1">לא עכשיו</button></div></section>`}
 function nudgeCard(all,ts){if(!touched||!S.follows.length)return S.justAdded?shareCard():'';
   if(!S.ngCounted){S.ngCounted=1;NG.opens++;saveNg();if(NG.opens>=3&&S.push!=='on'&&!S.me&&!store.get('tipoff.calOk',0))loadMe()}
-  const ev=(S.justAdded?shareCard():'')||growCard()||firstSec(tpCards(all))||firstSec(repCards(all))||firstSec(plCards(all));if(ev)return ev;
+  const ev=(S.justAdded?shareCard():'')||movedCard()||growCard()||firstSec(tpCards(all))||firstSec(repCards(all))||firstSec(plCards(all));if(ev)return ev;
   if(S.ngHide)return '';const now=Date.now();
   let id=S.ngCur&&NG_STEPS.find(x=>x[0]===S.ngCur&&x[1]())?S.ngCur:null;
   if(!id&&now-(NG.last||0)>2*864e5)for(const [k,ok] of NG_STEPS){if(NG.no[k]||(NG.cnt[k]||0)>=2||(NG.seen[k]&&now-NG.seen[k]<5*864e5))continue;if(ok()){id=k;break}}
@@ -1574,7 +1586,7 @@ function viewFind(){
       S.smartOn=true;if(!S.smT){S.smT=1;setTimeout(()=>track('smart_search'))}}
     else{S.smartOn=false;const qs=normQ(q).split(' ').filter(Boolean);hits=TEAMS.filter(t=>qs.every(w=>tq(t).includes(w)))}
     hits.sort((x,y)=>AGES.findIndex(a=>a.id===LEAGUES[x.lg].age)-AGES.findIndex(a=>a.id===LEAGUES[y.lg].age));
-    return `${findHead()}${search}${sm?`<p class="smart">מחפשים: <b>${esc(sm.label)}</b>${near?' · גם גיל סמוך':''}</p>`:''}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
+    return `${findHead()}${S.findMode!=='res'&&S.justAdded?shareCard():''}${search}${sm?`<p class="smart">מחפשים: <b>${esc(sm.label)}</b>${near?' · גם גיל סמוך':''}</p>`:''}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
   const crumbs=S.age?`<div class="steps"><button data-back="age">כל הגילאים</button> ‹ ${S.league!=null?`<button data-back="league">${ageOf(S.age).name}</button> ‹ <span>${esc(LEAGUES[S.league].full)}</span>`:'<span>'+ageOf(S.age).name+'</span>'}</div>`:'';
   let body;
   if(!S.age){const ages=AGES.filter(a=>a.g===S.gender&&!a.adult),adults=AGES.filter(a=>a.g===S.gender&&a.adult&&LEAGUES.some(l=>l.age===a.id&&!l.cup&&l.teams.length));
@@ -1814,7 +1826,8 @@ function render(){
 }
 document.addEventListener('click',e=>{
   {const ng=e.target.closest('[data-ngdone]');if(ng){const id=ng.dataset.ngdone;NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_go')}}
-  {const ca=e.target.closest('a[data-ev="cal_sub"],a[data-ev="upd_cal"],a[data-ev="ng_upd_cal"]');if(ca)store.set('tipoff.calOk',1)}
+  {const ca=e.target.closest('a[data-ev="cal_sub"],a[data-ev="upd_cal"],a[data-ev="ng_upd_cal"],a[data-ev="added_cal"],a[data-ev="moved_cal"]');if(ca){store.set('tipoff.calOk',1);setTimeout(render,400)}}
+  {const mv=e.target.closest('[data-movedgo]');if(mv){S.movedHide=true;track('moved_ask_'+mv.dataset.movedgo)}}
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.ngdone)setTimeout(render,300);if(a.dataset.upddone){S.pushAsk=false;setTimeout(()=>{render();toast('המשחקים בדרך ליומן שלכם')},400)}if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
   if(e.target.closest('.scrim')&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);track('ks_new_no');render();return}
   if(e.target.closest('.scrim')&&(S.newPop||S.plPick||S.plAsk||S.story||S.followAsk!=null||S.opp||S.repG!=null||S.menu||S.forgetAsk||S.howto||S.installed||S.edit||S.pushAsk||S.pracTeam||S.pracPick||S.promo||S.pday)){closeSmall();render();return}
@@ -1928,6 +1941,7 @@ document.addEventListener('click',e=>{
   else if(d.f){S.filter=d.f;S.showUp=6;S.dayWeek=null;render()}
   else if(d.more){S.showUp+=10;render()}
   else if(d.t){if(S.smartOn&&S.view==='find')track('smart_pick');toggleFollow(d.t)}
+  else if(d.movedno){S.movedHide=true;track('moved_ask_no');render()}
   else if(d.ngno){const id=d.ngno;if((NG.cnt[id]||0)>=2)NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_no');render()}
   else if(d.gender){S.gender=d.gender;render()}
   else if(d.qfill){S.q=d.qfill;track('find_example');render();const i=document.getElementById('q');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
