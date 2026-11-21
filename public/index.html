@@ -1476,7 +1476,11 @@ function viewSeason(){
    and two days pass between different steps. */
 const calLink=(label,ev,extra='')=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`;return `<a class="btn" href="${href}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="${ev}" ${extra}>${label}</a>`};
 const heroCal=()=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`;return `<a href="${href}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="hero_cal">${ic.cal}ליומן</a>`};
-const connected=()=>S.push==='on'||!!store.get('tipoff.calOk',0)||!!(S.me&&S.me.calDay);
+/* calendar: a tap hides the calendar buttons for a day; after that only the server's 'this device's calendar really reads the schedule' keeps them hidden */
+if(store.get('tipoff.calOk',0)&&!store.get('tipoff.calTry',0))store.set('tipoff.calTry',1);// earlier taps: check once with the server
+const calRecent=()=>{const t=store.get('tipoff.calTry',0);return !!t&&Date.now()-t<864e5};
+const calConfirmed=()=>!!store.get('tipoff.calConf',0)||!!(S.me&&S.me.calDay);
+const connected=()=>S.push==='on'||calConfirmed()||calRecent();
 const gameLine=(g,t)=>{const d=new Date(g.date),o=TEAMS[g.h===t.i?g.a:g.h];return `יום ${DAYS[d.getDay()]} ${dm(d)}, ${hm(d)} נגד ${o.name}`};
 const NG0=store.get('tipoff.nudge',null),NG=NG0||{opens:0,first:Date.now(),seen:{},cnt:{},no:{},last:0};
 const saveNg=()=>store.set('tipoff.nudge',NG);
@@ -1496,7 +1500,7 @@ function movedCard(){if(connected()||S.movedHide)return '';
   const canPush=PUSH_OK&&(!IOS||STANDALONE);
   return `<section class="tp ng" aria-label="המשחק זז"><h2>המשחק זז: ${esc(gameLine(g,t))}</h2><p class="sub">בפעם הבאה רוצים לדעת מיד?</p><div class="tp-btns">${canPush?'<button class="btn" data-push="on" data-movedgo="push">🔔 להפעיל התראות</button>':calLink('📅 ליומן, מתעדכן לבד','moved_cal','data-movedgo="cal"')}<button class="linkbtn" data-movedno="1">לא עכשיו</button></div></section>`}
 function nudgeCard(all,ts){if(!touched||!S.follows.length)return S.justAdded?shareCard():'';
-  if(!S.ngCounted){S.ngCounted=1;NG.opens++;saveNg();if(NG.opens>=3&&S.push!=='on'&&!S.me&&!store.get('tipoff.calOk',0))loadMe()}
+  if(!S.ngCounted){S.ngCounted=1;NG.opens++;saveNg();if(S.push!=='on'&&!S.me&&!store.get('tipoff.calConf',0)&&!calRecent()&&(NG.opens>=3||store.get('tipoff.calTry',0)))loadMe()}
   const ev=(S.justAdded?shareCard():'')||movedCard()||growCard()||firstSec(tpCards(all))||firstSec(repCards(all))||firstSec(plCards(all));if(ev)return ev;
   if(S.ngHide)return '';const now=Date.now();
   let id=S.ngCur&&NG_STEPS.find(x=>x[0]===S.ngCur&&x[1]())?S.ngCur:null;
@@ -1739,7 +1743,7 @@ const TOPICS=[
 ];
 S.helpOpen=null;S.sent={};S.drafts={};
 S.me=null;
-function loadMe(){fetch('/api/me?device='+DEV).then(r=>r.ok?r.json():Promise.reject()).then(j=>{S.me=j}).catch(()=>{S.me={err:true}}).then(()=>{if(S.view==='help')render()})}
+function loadMe(){fetch('/api/me?device='+DEV).then(r=>r.ok?r.json():Promise.reject()).then(j=>{S.me=j;if(j.calDay&&!store.get('tipoff.calConf',0)){store.set('tipoff.calConf',1);if(S.view!=='help')render()}}).catch(()=>{S.me={err:true}}).then(()=>{if(S.view==='help')render()})}
 const diagInfo=()=>({os:OS,browser:BROWSER,home:STANDALONE?'כן':'לא',push:{on:'פעילות',off:'כבויות',denied:'חסומות',install:'צריך מסך הבית',unsupported:'לא נתמך',checking:'לא ידוע'}[S.push]||S.push,cal:S.me&&S.me.calDay?'מחובר':'לא מחובר',teams:String(touched?S.follows.length:0)});
 function diagBox(){
   const it=(cls,title,body='',act='')=>`<div class="dg ${cls}"><i aria-hidden="true">${cls==='ok'?'✓':cls==='warn'?'!':'i'}</i><div><b>${title}</b>${body?`<span class="sub">${body}</span>`:''}${act}</div></div>`;
@@ -1826,7 +1830,7 @@ function render(){
 }
 document.addEventListener('click',e=>{
   {const ng=e.target.closest('[data-ngdone]');if(ng){const id=ng.dataset.ngdone;NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_go')}}
-  {const ca=e.target.closest('a[data-ev="cal_sub"],a[data-ev="upd_cal"],a[data-ev="ng_upd_cal"],a[data-ev="added_cal"],a[data-ev="moved_cal"],a[data-ev="hero_cal"]');if(ca){store.set('tipoff.calOk',1);setTimeout(render,400)}}
+  {const ca=e.target.closest('a[data-ev="cal_sub"],a[data-ev="upd_cal"],a[data-ev="ng_upd_cal"],a[data-ev="added_cal"],a[data-ev="moved_cal"],a[data-ev="hero_cal"]');if(ca){store.set('tipoff.calTry',Date.now());setTimeout(render,400)}}
   {const mv=e.target.closest('[data-movedgo]');if(mv){S.movedHide=true;track('moved_ask_'+mv.dataset.movedgo)}}
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.ngdone)setTimeout(render,300);if(a.dataset.upddone){S.pushAsk=false;setTimeout(()=>{render();toast('המשחקים בדרך ליומן שלכם')},400)}if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
   if(e.target.closest('.scrim')&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);track('ks_new_no');render();return}
