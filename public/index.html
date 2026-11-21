@@ -206,6 +206,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--fill);border-radius:12px;padding:3px;gap:3px}
 .seg button{border:0;background:none;border-radius:9px;padding:9px;font-weight:600;color:var(--muted)}.seg3{grid-template-columns:1fr 1fr 1fr}
 .seg button[aria-pressed="true"]{background:var(--bg);color:var(--ink);box-shadow:0 0 0 1px var(--line-2)}
+.qex{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}.qex-b{border:1px solid var(--line-2);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 11px;font-size:13px}
 .ages-h{font-size:15px;font-weight:600;color:var(--muted);margin:18px 2px 8px}
 .ages{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .age{background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r);padding:16px 8px 14px;display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -500,7 +501,7 @@ button.prow{width:100%;background:none;border:0;border-bottom:1px solid var(--li
 .v2 .idea,.v2 .foot{border-top:0;padding-top:16px}
 .v2 .diag{border:0;padding:0}
 .v2 .diag .btn,.v2 .app>section .btn+.btn{background:none;color:var(--accent);border:1.5px solid var(--accent)}
-.v2 .search.big{background:var(--card)}
+.v2 .search.big{background:var(--card)}.v2 .app>.list{background:var(--card);border-radius:18px;padding:0 16px;box-shadow:var(--shadow)}.v2 .app>.smart+.sub,.v2 .app>.qbig+.sub{margin-top:-6px}
 .v2 .tabs{background:color-mix(in srgb,var(--card) 94%,transparent)}
 .v2 .tabs button[aria-current="page"]{color:var(--navy);font-weight:700}
 .v2 .tabs button[aria-current="page"] svg{stroke-width:2.2}
@@ -1541,7 +1542,12 @@ const GRADES={'ג':3,'ד':4,'ה':5,'ו':6,'ז':7,'ח':8,'ט':9,'י':10,'יא':11
 const GRADE_NAME=n=>Object.keys(GRADES).find(k=>GRADES[k]===n).replace(/^(.)(.)$/,'$1״$2').replace(/^(.)$/,'$1׳');
 const FEM=new Set(['בת','הבת','בנות','ילדה','הילדה','בתי','נכדתי','הנכדה']),MASC=new Set(['בן','הבן','בנים','ילד','הילד','בני','נכדי','הנכד']);
 const FILLER=new Set(['שלי','שלנו','משחק','משחקת','משחקים','משחקות','בכיתה','כיתה','גיל','בגיל','בקבוצה','קבוצה','של','את','עם','ב','מ','ו','ה','ל','כדורסל']);
-function smartQ(q){const w=normQ(q).split(' ').filter(Boolean);let grade=null,g=null;
+function smartQ(q){const w=normQ(q).replace(/(^| )קטסל(?= |$)/g,'$1קט סל').split(' ').filter(Boolean);let grade=null,g=null;
+  // an age group written the association's way: "ילדים ב׳", "קט-סל א׳ בנות", "נערות א"
+  {const j=' '+w.join(' ')+' ';const fem=/ (בנות|בת|ילדה|הבת) /.test(j);const hits=AGES.filter(a=>!a.adult).map(a=>[a,' '+normQ(a.name)+' ']).filter(([a,p])=>j.includes(p)).sort((x,y)=>y[1].length-x[1].length||((x[0].g==='F')===fem?-1:1));const hit=hits[0];
+   if(hit){let [a,p]=hit;
+     const rest=j.replace(p,' ').split(' ').filter(x=>x&&!FEM.has(x)&&!MASC.has(x)&&!FILLER.has(x)).map(x=>TEAMS.some(t=>tq(t).includes(x))?x:(/^[בוהמל]/.test(x)&&TEAMS.some(t=>tq(t).includes(x.slice(1)))?x.slice(1):x));
+     return {ids:[a.id],near:[],words:rest,label:[a.g==='F'?'בנות':'בנים',a.name,rest.join(' ')].filter(Boolean).join(' · ')}}}
   for(let i=0;i<w.length;i++){const x=w[i];
     if((x==='כיתה'||x==='בכיתה')&&GRADES[w[i+1]]){grade=GRADES[w[i+1]];w[i+1]='';continue}
     const m=x.match(/^(\d{1,2})$/);if(m&&['בן','בת','גיל','בגיל'].includes(w[i-1]||'')){const a=+m[1];if(a>=7&&a<=18)grade=Math.min(12,Math.max(3,a-5));w[i]='';continue}
@@ -1558,7 +1564,8 @@ function viewFind(){
   const q=S.q.trim();
   const root=!S.age&&q.length<2&&S.findMode!=='res';
   if(!S.fvT&&!(touched&&S.follows.length)&&S.findMode!=='res'){S.fvT=1;setTimeout(()=>track('find_view'))}
-  const search=root?`<div class="qbig"><label for="q" class="qbig-l">מה שם המועדון או העיר?</label><label class="search big">${ic.search}<input id="q" type="search" placeholder="למשל: טבעון, רמת השרון" value="${esc(S.q)}" autocomplete="off"></label><span class="qbig-h">אפשר גם לכתוב: הבן שלי בכיתה ז׳ ברמלה</span></div><h2 class="or-h">או לפי גיל וליגה</h2>`
+  const bigQ=!S.age&&S.findMode!=='res';
+  const search=bigQ?`<div class="qbig"><label for="q" class="qbig-l">מה שם המועדון או העיר?</label><label class="search big">${ic.search}<input id="q" type="search" placeholder="מועדון או עיר + גיל" value="${esc(S.q)}" autocomplete="off"></label>${root?`<div class="qex"><span>לדוגמה:</span>${['טבעון ילדים ב׳','רמלה קט-סל א׳ בנות','הבן שלי בכיתה ז׳ ברמלה'].map(x=>`<button class="qex-b" data-qfill="${esc(x)}">${esc(x)}</button>`).join('')}</div>`:''}</div>${root?'<h2 class="or-h">או לפי גיל וליגה</h2>':''}`
     :`<label class="search">${ic.search}<input id="q" type="search" aria-label="חיפוש קבוצה לפי שם או עיר" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(S.q)}" autocomplete="off"></label>`;
   if(q.length>=2){const sm=smartQ(q);let hits,near=false;
     if(sm){const tn=t=>t._qn||(t._qn=' '+normQ(t.name)+' ');
@@ -1567,13 +1574,13 @@ function viewFind(){
       S.smartOn=true;if(!S.smT){S.smT=1;setTimeout(()=>track('smart_search'))}}
     else{S.smartOn=false;const qs=normQ(q).split(' ').filter(Boolean);hits=TEAMS.filter(t=>qs.every(w=>tq(t).includes(w)))}
     hits.sort((x,y)=>AGES.findIndex(a=>a.id===LEAGUES[x.lg].age)-AGES.findIndex(a=>a.id===LEAGUES[y.lg].age));
-    return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}${sm?`<p class="smart">מחפשים: <b>${esc(sm.label)}</b>${near?' · גם גיל סמוך':''}</p>`:''}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
+    return `${findHead()}${search}${sm?`<p class="smart">מחפשים: <b>${esc(sm.label)}</b>${near?' · גם גיל סמוך':''}</p>`:''}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
   const crumbs=S.age?`<div class="steps"><button data-back="age">כל הגילאים</button> ‹ ${S.league!=null?`<button data-back="league">${ageOf(S.age).name}</button> ‹ <span>${esc(LEAGUES[S.league].full)}</span>`:'<span>'+ageOf(S.age).name+'</span>'}</div>`:'';
   let body;
-  if(!S.age){const has=a=>LEAGUES.some(l=>l.age===a.id&&!l.cup&&l.teams.length),boys=AGES.filter(a=>a.g==='M'&&!a.adult&&has(a)),girls=AGES.filter(a=>a.g==='F'&&!a.adult&&has(a)),adults=AGES.filter(a=>a.adult&&has(a));
+  if(!S.age){const ages=AGES.filter(a=>a.g===S.gender&&!a.adult),adults=AGES.filter(a=>a.g===S.gender&&a.adult&&LEAGUES.some(l=>l.age===a.id&&!l.cup&&l.teams.length));
     const ageBtn=a=>`<button class="age" data-age="${a.id}"><b>${a.name}</b><span>${LEAGUES.filter(l=>l.age===a.id&&!l.cup&&l.teams.length).length} ליגות</span></button>`;
-    body=`<h3 class="ages-h">בנים</h3><div class="ages">${boys.map(ageBtn).join('')}</div><h3 class="ages-h">בנות</h3><div class="ages">${girls.map(ageBtn).join('')}</div>
-    ${adults.length?(S.showAdults?`<h3 class="ages-h">בוגרים ובוגרות</h3><div class="ages">${adults.map(a=>ageBtn(a).replace('<b>',`<b>${a.g==='F'?'נשים · ':''}`)).join('')}</div>`:'<button class="linkbtn ages-more" data-showadults="1">ליגות בוגרים ובוגרות ›</button>'):''}`}
+    body=`<div class="seg" role="group" aria-label="בנים או בנות"><button data-gender="M" aria-pressed="${S.gender==='M'}">בנים</button><button data-gender="F" aria-pressed="${S.gender==='F'}">בנות</button></div>
+    <div class="ages">${ages.map(ageBtn).join('')}</div>${adults.length?`<h2 class="ages-h">${S.gender==='F'?'בוגרות':'בוגרים'}</h2><div class="ages">${adults.map(ageBtn).join('')}</div>`:''}`}
   else if(S.league==null){
     // from ילדים א׳ up: highest tier first (על, לאומית, ארצית, מחוזית, then regional), north to south inside a tier
     const TIERED=['ya','nb','na','nr','gya','gnb','gna'].includes(S.age);
@@ -1587,11 +1594,12 @@ function viewFind(){
     body=`<h2>באיזו ליגה?</h2><div class="list">${html}</div>`}
   else body=`<h2>איזו קבוצה?</h2><div class="list">${LEAGUES[S.league].teams.map(id=>teamPick(TEAMS[id],false)).join('')}</div>
     ${(S.findMode==='res'?S.res.length:touched&&S.follows.length)?'<button class="btn" data-go="my" style="align-self:center">למשחקים שלי</button>':''}`;
-  const RES=S.findMode==='res';
+  return `${findHead()}${S.findMode!=='res'&&S.justAdded?shareCard():''}${search}${crumbs}${body}`}
+function findHead(){const RES=S.findMode==='res';
   const top=RES?`<section class="sec"><h1>קבוצה למעקב תוצאות</h1><p class="sub">רק תוצאה סופית, בלי לוח ובלי יומן. <button class="linkbtn" data-mode="full">לחיפוש רגיל</button></p></section>`
     :(S.newcomer&&!(touched&&S.follows.length)&&!S.age?`<section class="sec"><h1>באיזו קבוצה הילד משחק?</h1><p class="sub">בוחרים את הקבוצה של הילד, והמשחקים מופיעים מיד.</p></section>`:`<section class="sec"><h1>מציאת קבוצה</h1></section>`);
   const back=S.newcomer&&!(touched&&S.follows.length)?(S.age?'':`<button class="linkbtn look-first" data-welcome="skip">רק להסתכל קודם ›</button>`):`<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button>`;
-  return `${back}${top}${!RES&&S.justAdded?shareCard():''}${search}${crumbs}${body}`}
+  return back+top}
 
 /* ---------- notifications ---------- */
 const UA=navigator.userAgent||'';
@@ -1922,7 +1930,7 @@ document.addEventListener('click',e=>{
   else if(d.t){if(S.smartOn&&S.view==='find')track('smart_pick');toggleFollow(d.t)}
   else if(d.ngno){const id=d.ngno;if((NG.cnt[id]||0)>=2)NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_no');render()}
   else if(d.gender){S.gender=d.gender;render()}
-  else if(d.showadults){S.showAdults=true;render()}
+  else if(d.qfill){S.q=d.qfill;track('find_example');render();const i=document.getElementById('q');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
   else if(d.themeSet){const t=d.themeSet;store.set('tipoff.theme',t);if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;track('theme_'+t);render()}
   else if(d.age){if(!S.fT1&&S.findMode!=='res'){S.fT1=1;track('find_age')}S.age=d.age;S.league=null;render();scrollTo(0,0)}
   else if(d.lg!=null){if(!S.fT2&&S.findMode!=='res'){S.fT2=1;track('find_league')}S.league=+d.lg;render();scrollTo(0,0)}
