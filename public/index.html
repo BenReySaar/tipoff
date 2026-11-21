@@ -1479,12 +1479,9 @@ const heroCal=()=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calend
 const connected=()=>S.push==='on'||!!store.get('tipoff.calOk',0)||!!(S.me&&S.me.calDay);
 const gameLine=(g,t)=>{const d=new Date(g.date),o=TEAMS[g.h===t.i?g.a:g.h];return `יום ${DAYS[d.getDay()]} ${dm(d)}, ${hm(d)} נגד ${o.name}`};
 const NG0=store.get('tipoff.nudge',null),NG=NG0||{opens:0,first:Date.now(),seen:{},cnt:{},no:{},last:0};
-// a parent who already had a team before 21.11 sees the next-game suggestion at the next open, not only from the third
-if(NG.old===undefined){NG.old=!!(touched&&S.follows.length&&(!NG0||NG0.first<Date.parse('2026-11-21T20:30:00+02:00')));store.set('tipoff.nudge',NG)}const saveNg=()=>store.set('tipoff.nudge',NG);
+const saveNg=()=>store.set('tipoff.nudge',NG);
 const firstSec=h=>{const i=h.indexOf('</section>');return i<0?h:h.slice(0,i+10)};
 const NG_STEPS=[
-  ['upd',()=>(NG.opens>=3||NG.old)&&!connected(),()=>{let nx=null;for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g));if(g&&(!nx||g.date<nx.g.date))nx={g,t}}
-    return [nx?'המשחק הבא: '+gameLine(nx.g,nx.t):'שלא תפספסו שינוי במשחק','להכניס את כל המשחקים ליומן? מתעדכן לבד כשמשחק זז.',calLink('📅 ליומן','ng_upd_cal','data-ngdone="upd"')+(PUSH_OK&&!IOS?'<button class="btn ghost" data-push="on" data-ngdone="upd">התראות</button>':'')]}],
   ['home',()=>IOS&&!STANDALONE&&(Date.now()-NG.first)>7*864e5,()=>['פתיחה בלחיצה אחת','הוסיפו את טיפ-אוף למסך הבית.','<button class="btn" data-howto="1" data-ngdone="home">איך מוסיפים</button>']],
   ['inv',()=>(Date.now()-NG.first)>14*864e5&&!store.get('tipoff.growChg',0),()=>{const t=TEAMS[KEY[S.follows[0]]];return ['ההורים בקבוצה יודעים על טיפ-אוף?','שלחו להם קישור ללוח של הקבוצה.',`<a class="btn wa-btn" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="ng_inv_wa" data-ngdone="inv">שליחה בוואטסאפ</a>`]}],
   ['pl',()=>{if(S.follows.some(k=>kidsOf(k).length))return false;let n=0;for(const k of S.follows){const t=TEAMS[KEY[k]];if(t)n+=t.games.filter(g=>isPast(g)&&g.date>=NG.first).length}return n>=3},
