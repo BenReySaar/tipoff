@@ -1565,7 +1565,7 @@ function viewFind(){
   const root=!S.age&&q.length<2&&S.findMode!=='res';
   if(!S.fvT&&!(touched&&S.follows.length)&&S.findMode!=='res'){S.fvT=1;setTimeout(()=>track('find_view'))}
   const bigQ=!S.age&&S.findMode!=='res';
-  const search=bigQ?`<div class="qbig"><label for="q" class="qbig-l">מה שם המועדון או העיר?</label><label class="search big">${ic.search}<input id="q" type="search" placeholder="מועדון או עיר + גיל" value="${esc(S.q)}" autocomplete="off"></label>${root?`<div class="qex"><span>לדוגמה:</span>${['טבעון ילדים ב׳','רמלה קט-סל א׳ בנות','הבן שלי בכיתה ז׳ ברמלה'].map(x=>`<button class="qex-b" data-qfill="${esc(x)}">${esc(x)}</button>`).join('')}</div>`:''}</div>${root?'<h2 class="or-h">או לפי גיל וליגה</h2>':''}`
+  const search=bigQ?`<div class="qbig"><label for="q" class="qbig-l">כתבו שם מועדון וגיל</label><label class="search big">${ic.search}<input id="q" type="search" placeholder="למשל: טבעון ילדים ב׳" value="${esc(S.q)}" autocomplete="off"></label></div>${root?'<h2 class="or-h">או לפי גיל וליגה</h2>':''}`
     :`<label class="search">${ic.search}<input id="q" type="search" aria-label="חיפוש קבוצה לפי שם או עיר" placeholder="חיפוש קבוצה, למשל: הפועל נס ציונה" value="${esc(S.q)}" autocomplete="off"></label>`;
   if(q.length>=2){const sm=smartQ(q);let hits,near=false;
     if(sm){const tn=t=>t._qn||(t._qn=' '+normQ(t.name)+' ');
