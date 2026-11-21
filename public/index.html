@@ -225,6 +225,7 @@ tr.me td{font-weight:700;background:var(--fill)}
 .search input::placeholder{color:var(--muted)}
 .search.big{background:var(--card);border:2px solid var(--accent);border-radius:14px;padding:0 16px}.search.big input{font-size:18px;padding:16px 0}.search.big svg{width:22px;height:22px;color:var(--accent)}
 .smart{font-size:14px;color:var(--muted);margin:2px 0 -4px}.smart b{color:var(--ink)}.qbig-h{font-size:13px;color:var(--muted)}
+.ages-h{font-size:15px;font-weight:800;color:var(--navy,var(--ink));margin:14px 0 6px}.ages-more{margin-top:12px;align-self:flex-start}.look-first{align-self:flex-end;font-size:14px}
 .qbig{display:flex;flex-direction:column;gap:8px;margin:2px 0 6px}.qbig-l{font-weight:800;font-size:18px}.or-h{font-size:15px;color:var(--muted);font-weight:700;margin:14px 0 2px}
 .gtag{display:inline-block;font-size:10.5px;font-weight:700;padding:0 5px;line-height:16px;border-radius:999px;background:#e3edf9;color:#1c3358;vertical-align:1px}.gtag.f{background:#fbe6ef;color:#8a1f4c}
 .search svg{width:18px;height:18px;color:var(--muted)}
@@ -1237,7 +1238,7 @@ S.invite=null;const inv=fromRef(params.get('t'));
 if(inv){if(touched&&S.follows.includes(inv.key))S.filter=inv.key;else S.invite=inv.key}
 S.onb=store.get('tipoff.onb',{});
 {const m=location.pathname.match(/^\/team\/(\d+)\/?$/);if(m){const t=TEAMS.find(x=>x.id===+m[1]);if(t){S.team={ti:t.i,from:null,all:false};S.teamDepth=0;try{history.replaceState({tp:1,ti:t.i,from:null},'',location.pathname)}catch(e){}S.teamLink=1}else{try{history.replaceState(null,'','/')}catch(e){}}}}
-S.welcome=!S.team&&!S.invite&&!touched&&!S.onb.welcomed;
+S.welcome=false;S.newcomer=!S.team&&!S.invite&&!touched&&!S.onb.welcomed;if(S.newcomer){S.view='find';S.onb.welcomed=true;store.set('tipoff.onb',S.onb)}
 S.bip=null;S.det=new Set();S.monthMode=store.get('tipoff.monthMode','team');S.seasonF='all';S.menu=null;S.menuConfirm=false;S.forgetAsk=false;
 const justDeleted=params.get('deleted')==='1';
 S.howto=false;S.installed=false;
@@ -1569,10 +1570,10 @@ function viewFind(){
     return `<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button><section class="sec"><h1>מציאת קבוצה</h1></section>${search}${sm?`<p class="smart">מחפשים: <b>${esc(sm.label)}</b>${near?' · גם גיל סמוך':''}</p>`:''}<p class="sub">${hits.length} קבוצות</p><div class="list">${hits.slice(0,60).map(t=>teamPick(t,true)).join('')||'<p class="note" style="padding:14px">לא נמצאה קבוצה. נסו רק את שם העיר או המועדון.</p>'}</div>`}
   const crumbs=S.age?`<div class="steps"><button data-back="age">כל הגילאים</button> ‹ ${S.league!=null?`<button data-back="league">${ageOf(S.age).name}</button> ‹ <span>${esc(LEAGUES[S.league].full)}</span>`:'<span>'+ageOf(S.age).name+'</span>'}</div>`:'';
   let body;
-  if(!S.age){const ages=AGES.filter(a=>a.g===S.gender&&!a.adult),adults=AGES.filter(a=>a.g===S.gender&&a.adult&&LEAGUES.some(l=>l.age===a.id&&!l.cup&&l.teams.length));
+  if(!S.age){const has=a=>LEAGUES.some(l=>l.age===a.id&&!l.cup&&l.teams.length),boys=AGES.filter(a=>a.g==='M'&&!a.adult&&has(a)),girls=AGES.filter(a=>a.g==='F'&&!a.adult&&has(a)),adults=AGES.filter(a=>a.adult&&has(a));
     const ageBtn=a=>`<button class="age" data-age="${a.id}"><b>${a.name}</b><span>${LEAGUES.filter(l=>l.age===a.id&&!l.cup&&l.teams.length).length} ליגות</span></button>`;
-    body=`<div class="seg" role="group" aria-label="בנים או בנות"><button data-gender="M" aria-pressed="${S.gender==='M'}">בנים</button><button data-gender="F" aria-pressed="${S.gender==='F'}">בנות</button></div>
-    <div class="ages">${ages.map(ageBtn).join('')}</div>${adults.length?`<h2 class="ages-h">${S.gender==='F'?'בוגרות':'בוגרים'}</h2><div class="ages">${adults.map(ageBtn).join('')}</div>`:''}`}
+    body=`<h3 class="ages-h">בנים</h3><div class="ages">${boys.map(ageBtn).join('')}</div><h3 class="ages-h">בנות</h3><div class="ages">${girls.map(ageBtn).join('')}</div>
+    ${adults.length?(S.showAdults?`<h3 class="ages-h">בוגרים ובוגרות</h3><div class="ages">${adults.map(a=>ageBtn(a).replace('<b>',`<b>${a.g==='F'?'נשים · ':''}`)).join('')}</div>`:'<button class="linkbtn ages-more" data-showadults="1">ליגות בוגרים ובוגרות ›</button>'):''}`}
   else if(S.league==null){
     // from ילדים א׳ up: highest tier first (על, לאומית, ארצית, מחוזית, then regional), north to south inside a tier
     const TIERED=['ya','nb','na','nr','gya','gnb','gna'].includes(S.age);
@@ -1588,8 +1589,8 @@ function viewFind(){
     ${(S.findMode==='res'?S.res.length:touched&&S.follows.length)?'<button class="btn" data-go="my" style="align-self:center">למשחקים שלי</button>':''}`;
   const RES=S.findMode==='res';
   const top=RES?`<section class="sec"><h1>קבוצה למעקב תוצאות</h1><p class="sub">רק תוצאה סופית, בלי לוח ובלי יומן. <button class="linkbtn" data-mode="full">לחיפוש רגיל</button></p></section>`
-    :`<section class="sec"><h1>מציאת קבוצה</h1></section>`;
-  const back=`<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button>`;
+    :(S.newcomer&&!(touched&&S.follows.length)&&!S.age?`<section class="sec"><h1>באיזו קבוצה הילד משחק?</h1><p class="sub">בוחרים את הקבוצה של הילד, והמשחקים מופיעים מיד.</p></section>`:`<section class="sec"><h1>מציאת קבוצה</h1></section>`);
+  const back=S.newcomer&&!(touched&&S.follows.length)?(S.age?'':`<button class="linkbtn look-first" data-welcome="skip">רק להסתכל קודם ›</button>`):`<button class="back" data-go="my">${ic.prev}<span>המשחקים שלי</span></button>`;
   return `${back}${top}${!RES&&S.justAdded?shareCard():''}${search}${crumbs}${body}`}
 
 /* ---------- notifications ---------- */
@@ -1921,6 +1922,7 @@ document.addEventListener('click',e=>{
   else if(d.t){if(S.smartOn&&S.view==='find')track('smart_pick');toggleFollow(d.t)}
   else if(d.ngno){const id=d.ngno;if((NG.cnt[id]||0)>=2)NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_no');render()}
   else if(d.gender){S.gender=d.gender;render()}
+  else if(d.showadults){S.showAdults=true;render()}
   else if(d.themeSet){const t=d.themeSet;store.set('tipoff.theme',t);if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;track('theme_'+t);render()}
   else if(d.age){if(!S.fT1&&S.findMode!=='res'){S.fT1=1;track('find_age')}S.age=d.age;S.league=null;render();scrollTo(0,0)}
   else if(d.lg!=null){if(!S.fT2&&S.findMode!=='res'){S.fT2=1;track('find_league')}S.league=+d.lg;render();scrollTo(0,0)}
@@ -1939,7 +1941,7 @@ document.addEventListener('click',e=>{
   else if(d.invite==='yes'){const k=S.invite;S.invite=null;track('invite_follow');setFollows(touched?(S.follows.includes(k)?S.follows:[...S.follows,k]):[k]);S.filter=S.follows.length>1?k:'all';S.dayWeek=null;S.justAdded=null;S.welcome=false;S.onb.welcomed=true;saveOnb();toast('הקבוצה נוספה ✓');afterFirstTeam();render();scrollTo(0,0)}
   else if(d.invite==='no'){S.invite=null;track('invite_skip');syncURL();render()}
   else if(d.welcome==='go'){track('welcome_go');S.welcome=false;S.onb.welcomed=true;saveOnb();S.view='find';render();scrollTo(0,0)}
-  else if(d.welcome==='skip'||d.closesheet){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();track('onboard_skip');render()}
+  else if(d.welcome==='skip'||d.closesheet){if(S.invite){S.invite=null;syncURL()}S.welcome=false;S.onb.welcomed=true;saveOnb();if(d.welcome==='skip'){S.newcomer=false;S.view='my'}track('onboard_skip');render();scrollTo(0,0)}
   else if(d.donelist){S.onb.doneList=true;saveOnb();render()}
   else if(d.install){const e=window.__bip;S.howto=false;if(e){e.prompt();e.userChoice.then(c=>{if(c.outcome==='accepted'){track('install');toast('טיפ-אוף נוספה ✓')}window.__bip=null;render()})}}
   else if(d.topic){S.helpOpen=S.helpOpen===d.topic?null:d.topic;render();if(S.helpOpen){const el=document.querySelector('.topic.open');if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'})}}

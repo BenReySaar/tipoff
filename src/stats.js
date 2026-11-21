@@ -82,7 +82,6 @@ export function insights({ today, newRows, openRows, evRows, follows, devices, p
   const pickSince = Date.parse('2026-11-17T18:10:00+02:00'), pb = devices.filter(d => d.created >= pickSince), has = t => pb.filter(d => evDevs(t).has(d.id)).length;
   const pick = [
     ['נכנסו לאפליקציה', pb.length],
-    ['לחצו "בחירת קבוצה" בחלון הפתיחה', has('welcome_go')],
     ['דילגו ("רק להסתכל קודם")', has('onboard_skip')],
     ['הגיעו למסך מציאת קבוצה', has('find_view')],
     ['חיפשו בשם', has('find_search')],
