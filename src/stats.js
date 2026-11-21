@@ -127,7 +127,21 @@ export function insights({ today, newRows, openRows, evRows, follows, devices, p
   const adultSlugs = new Set((pack?.lg || []).filter(l => (pack.ages.find(a => a[0] === l[2]) || [])[3]).map(l => l[1]));
   const adultDevs = new Set(follows.filter(f => adultSlugs.has(f.team.split('|')[0])).map(f => f.device)).size;
 
-  return { cohorts, retention: share(back, meas), retMeasured: meas, funnel, pick,
+  // the four numbers of the week (top card): pick a team, come back, connected to updates, came from a parent's link
+  const d7 = addD(today, -6), d14b = addD(today, -13), t7 = Date.parse(d7 + 'T00:00:00+02:00'), t14 = Date.parse(d14b + 'T00:00:00+02:00');
+  const new7 = devices.filter(d => d.created >= t7), newPrev = devices.filter(d => d.created >= t14 && d.created < t7);
+  const calRecent = new Set([...evDevs('cal_fetch')].filter(([, days]) => [...days].some(x => x >= d14b)).map(([dev]) => dev));
+  const teamDevs = devices.filter(d => withTeam.has(d.id));
+  const firstDay = new Map([...first]);
+  const linkShare = (from, to) => { const xs = [...firstDay].filter(([, f]) => f >= from && f <= to); return xs.length ? share(xs.filter(([dev, f]) => inv.get(dev)?.has(f)).length, xs.length) : null; };
+  const measured = cohorts.filter(c => c.measured > 0);
+  const kpi = {
+    pick: share(new7.filter(d => withTeam.has(d.id)).length, new7.length), pickPrev: share(newPrev.filter(d => withTeam.has(d.id)).length, newPrev.length), pickN: new7.length,
+    back: measured[0] ? share(measured[0].back, measured[0].measured) : null, backPrev: measured[1] ? share(measured[1].back, measured[1].measured) : null, backWeek: measured[0]?.w,
+    conn: share(teamDevs.filter(d => d.p || calRecent.has(d.id)).length, teamDevs.length),
+    link: linkShare(d7, today), linkPrev: linkShare(d14b, addD(d7, -1)),
+  };
+  return { kpi, cohorts, retention: share(back, meas), retMeasured: meas, funnel, pick,
     game: { days: pairs.size, open: share(gOpen, pairs.size), go: share(gGo, pairs.size) },
     push: { off, pct: share(off, pushNow + off) },
     source: { n: new30.length, link: viaLink, pct: share(viaLink, new30.length), joined },
@@ -198,6 +212,25 @@ function ksList(rows) {
 }
 const dur = m => m == null ? '—' : m < 120 ? `${m} דק׳` : m < 48 * 60 ? `${Math.round(m / 60)} שעות` : `${Math.round(m / 1440)} ימים`;
 
+/* the four numbers of the week, with the change from last week and what to do when one is low */
+function kpiCard(k, prev) {
+  const conn0 = prev ? prev.conn : null;
+  const items = [
+    ['בוחרים קבוצה', k.pick, k.pickPrev, 50, `מהמכשירים החדשים ב־7 ימים (${fmt(k.pickN)})`, 'מסך הבחירה, וקישור ישיר לקבוצה מהמועדונים'],
+    ['חוזרים אחרי שבוע', k.back, k.backPrev, 30, k.backWeek ? `מי שהצטרף בשבוע ${k.backWeek.slice(8, 10)}.${k.backWeek.slice(5, 7)}` : 'עוד מוקדם', 'יותר הורים מחוברים ליומן או להתראות'],
+    ['מחוברים לעדכונים', k.conn, conn0, 30, 'מבין מי שבחר קבוצה: התראות או יומן', 'נוסח ותזמון ההצעה לחבר יומן'],
+    ['הגיעו מקישור של הורה', k.link, k.linkPrev, 20, 'מהמכשירים החדשים ב־7 ימים', 'להבליט את "שלחו לקבוצת ההורים"'],
+  ];
+  const cell = ([label, v, p, goal, sub, fix]) => {
+    const d = v != null && p != null ? v - p : null;
+    const arrow = d == null || d === 0 ? '' : `<span class="kd ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}</span>`;
+    const ok = v != null && v >= goal;
+    return `<div class="kpi${ok ? ' ok' : ''}"><div class="kl">${label}</div><div class="kv">${v == null ? '—' : v + '%'} ${arrow}</div>
+<div class="ks">${sub}${p != null ? ` · לפני שבוע ${p}%` : ''}</div><div class="kg">יעד ${goal}%${!ok && v != null ? ` · אם נמוך: ${fix}` : ''}</div></div>`;
+  };
+  return `<h2 style="margin:6px 0 -6px">4 המספרים של השבוע</h2><div class="kpis">${items.map(cell).join('')}</div>`;
+}
+
 export async function statsPage(env, pack) {
   const DB = env.DB;
   const today = ilDay(), d7 = daysAgo(6), d30 = daysAgo(29);
@@ -225,12 +258,15 @@ export async function statsPage(env, pack) {
   const [newRows, openRows, evRows, followRows, devRows, pracRows] = await Promise.all([
     all("SELECT day, device FROM activity WHERE type='new' AND day>=?", daysAgo(55)),
     all("SELECT day, device FROM activity WHERE type='open' AND day>=?", daysAgo(55)),
-    all("SELECT day, device, type FROM activity WHERE day>=? AND type IN ('invite_open','invite_follow','push_off','nav','calendar','gmaps','clash_seen','welcome_go','onboard_skip','find_view','find_search','find_age','find_league')", d30),
+    all("SELECT day, device, type FROM activity WHERE day>=? AND type IN ('cal_fetch','invite_open','invite_follow','push_off','nav','calendar','gmaps','clash_seen','welcome_go','onboard_skip','find_view','find_search','find_age','find_league')", d30),
     all("SELECT device, team FROM follows WHERE kind='full'"),
     all('SELECT id, created, push IS NOT NULL p, standalone s FROM devices'),
     all('SELECT device FROM practices'),
   ]);
   const I = insights({ today, newRows, openRows, evRows, follows: followRows, devices: devRows, practiced: new Set(pracRows.map(r => r.device)), pack, pushNow: tot?.push || 0 });
+  // keep one snapshot a day, to compare "connected to updates" with a week ago
+  const kpiPrev = JSON.parse(await env.KV.get('kpi:' + addD(today, -7)) || 'null');
+  if (!(await env.KV.get('kpi:' + today))) await env.KV.put('kpi:' + today, JSON.stringify(I.kpi), { expirationTtl: 60 * 864e2 });
   const sync = JSON.parse(await env.KV.get('sync:status') || 'null');
   const lastOk = JSON.parse(await env.KV.get('sync:last-ok') || 'null');
 
@@ -276,6 +312,7 @@ body{margin:0;background:var(--bg);color:var(--i);font:15px/1.5 system-ui,"Segoe
 main{max-width:900px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-left)) 40px;display:flex;flex-direction:column;gap:18px}
 h1{margin:0;font-size:26px}h2{margin:0 0 8px;font-size:17px}
 .sub{color:var(--m);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.kpi{background:#fff;border:1px solid #e3e6ea;border-radius:14px;padding:14px;border-top:4px solid #d9822b}.kpi.ok{border-top-color:#2e9e5b}.kl{font-weight:700}.kv{font-size:30px;font-weight:800;margin:4px 0}.kd{font-size:14px;font-weight:700}.kd.up{color:#2e9e5b}.kd.down{color:#c0392b}.ks,.kg{font-size:13px;color:#667}.kg{margin-top:4px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .t{background:var(--s);border:1px solid var(--l);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column}
 .t b{font-size:28px;font-variant-numeric:tabular-nums}.t span{font-size:13px}.t small{color:var(--m);font-size:12px}
@@ -298,6 +335,8 @@ details summary{cursor:pointer;font-weight:600}
 ${tile(dau?.c, 'פעילים היום')}${tile(wau?.c, 'פעילים ב־7 ימים')}${tile(mau?.c, 'פעילים ב־30 ימים')}
 ${tile(fbCount?.c, 'הודעות מהורים', '30 ימים אחרונים. הרשימה למטה')}
 </div>
+
+${kpiCard(I.kpi, kpiPrev)}
 
 <h2 style="margin:6px 0 -6px">מה לשפר</h2>
 <div class="ins">
