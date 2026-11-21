@@ -782,11 +782,11 @@ function hero(g,t){
      ${repFact(g,t)}${plChip(g,t)}
      ${CH.has(g.id)?`<div class="fact warn">${ic.warn}<span>${chText(g)}</span></div>`:''}
    </div>
-   <div class="actions four">
-     <a class="act primary" href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav" aria-label="ניווט ב-Waze">${ic.go}<span>Waze</span></a>
-     <a class="act" href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="gmaps">${ic.pin}<span>גוגל מפות</span></a>
-     <button class="act" data-gocal="1">${ic.cal}<span>ליומן</span></button>
-     <a class="act" href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="share_game">${ic.share}<span>שיתוף</span></a>
+   <div class="actions ${connected()?'three':'four'}">
+     <a class="act primary" href="${waze(g)}" target="_blank" rel="noopener" data-ev="hero_waze" aria-label="ניווט ב-Waze">${ic.go}<span>Waze</span></a>
+     <a class="act" href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="hero_gmaps">${ic.pin}<span>גוגל מפות</span></a>
+     ${connected()?'':`<a class="act" href="${IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="hero_cal">${ic.cal}<span>ליומן</span></a>`}
+     <a class="act" href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="hero_share">${ic.share}<span>שיתוף</span></a>
    </div>
    ${moreRow(g,t)}
    <div class="h-league">${esc(LEAGUES[g.lg].full)}</div></section>`}
@@ -1094,7 +1094,7 @@ function nextCard(g,t){
      <div><b>יום ${DAYS[g.date.getDay()]}, ${dm(g.date)}</b>. נגד <button class="opp-link sm" data-opp="${o.i}" data-oppf="${t.i}" aria-label="הלו״ז של ${esc(o.name)}">${esc(o.name)}${ic.prev}</button>${isCup(g)?'<span class="cup">גביע</span>':''}</div>
      <div class="sub">${esc(V.name)}${V.addr?', '+esc(V.addr):''}</div>
      <div class="nx-kit">${ic.shirt}${kitText(g,t)}. שימו לב לצבע הגופייה</div>${pracKit(t)}${repFact(g,t)}${CH.has(g.id)?`<div class="nx-kit warn">${ic.warn}${chText(g)}</div>`:''}</div></div>
-   <div class="nx-a four"><a href="${waze(g)}" target="_blank" rel="noopener" data-ev="nav" aria-label="ניווט ב-Waze">${ic.go}Waze</a><a href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="gmaps">גוגל מפות</a><button data-gocal="1">${ic.cal}ליומן</button><a href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="share_game">${ic.share}שיתוף</a></div>
+   <div class="nx-a ${connected()?'three':'four'}"><a href="${waze(g)}" target="_blank" rel="noopener" data-ev="hero_waze" aria-label="ניווט ב-Waze">${ic.go}Waze</a><a href="${gmaps(g)}" target="_blank" rel="noopener" data-ev="hero_gmaps">גוגל מפות</a>${connected()?'':heroCal()}<a href="${wa(g,t)}" target="_blank" rel="noopener" data-ev="hero_share">${ic.share}שיתוף</a></div>
    ${moreRow(g,t)}
   </div>`}
 
@@ -1475,12 +1475,15 @@ function viewSeason(){
    then the one next step that helps most. One card per open; a step comes back after "לא עכשיו" only after 5 days, at most twice,
    and two days pass between different steps. */
 const calLink=(label,ev,extra='')=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`;return `<a class="btn" href="${href}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="${ev}" ${extra}>${label}</a>`};
+const heroCal=()=>{const href=IOS?CAL_WEBCAL:`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(CAL_WEBCAL)}`;return `<a href="${href}"${IOS?'':' target="_blank" rel="noopener"'} data-ev="hero_cal">${ic.cal}ליומן</a>`};
 const connected=()=>S.push==='on'||!!store.get('tipoff.calOk',0)||!!(S.me&&S.me.calDay);
 const gameLine=(g,t)=>{const d=new Date(g.date),o=TEAMS[g.h===t.i?g.a:g.h];return `יום ${DAYS[d.getDay()]} ${dm(d)}, ${hm(d)} נגד ${o.name}`};
-const NG=store.get('tipoff.nudge',{opens:0,first:Date.now(),seen:{},cnt:{},no:{},last:0});const saveNg=()=>store.set('tipoff.nudge',NG);
+const NG0=store.get('tipoff.nudge',null),NG=NG0||{opens:0,first:Date.now(),seen:{},cnt:{},no:{},last:0};
+// a parent who already had a team before 21.11 sees the next-game suggestion at the next open, not only from the third
+if(NG.old===undefined){NG.old=!!(touched&&S.follows.length&&(!NG0||NG0.first<Date.parse('2026-11-21T20:30:00+02:00')));store.set('tipoff.nudge',NG)}const saveNg=()=>store.set('tipoff.nudge',NG);
 const firstSec=h=>{const i=h.indexOf('</section>');return i<0?h:h.slice(0,i+10)};
 const NG_STEPS=[
-  ['upd',()=>NG.opens>=3&&!connected(),()=>{let nx=null;for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g));if(g&&(!nx||g.date<nx.g.date))nx={g,t}}
+  ['upd',()=>(NG.opens>=3||NG.old)&&!connected(),()=>{let nx=null;for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g));if(g&&(!nx||g.date<nx.g.date))nx={g,t}}
     return [nx?'המשחק הבא: '+gameLine(nx.g,nx.t):'שלא תפספסו שינוי במשחק','להכניס את כל המשחקים ליומן? מתעדכן לבד כשמשחק זז.',calLink('📅 ליומן','ng_upd_cal','data-ngdone="upd"')+(PUSH_OK&&!IOS?'<button class="btn ghost" data-push="on" data-ngdone="upd">התראות</button>':'')]}],
   ['home',()=>IOS&&!STANDALONE&&(Date.now()-NG.first)>7*864e5,()=>['פתיחה בלחיצה אחת','הוסיפו את טיפ-אוף למסך הבית.','<button class="btn" data-howto="1" data-ngdone="home">איך מוסיפים</button>']],
   ['inv',()=>(Date.now()-NG.first)>14*864e5&&!store.get('tipoff.growChg',0),()=>{const t=TEAMS[KEY[S.follows[0]]];return ['ההורים בקבוצה יודעים על טיפ-אוף?','שלחו להם קישור ללוח של הקבוצה.',`<a class="btn wa-btn" href="${waTeam(t)}" target="_blank" rel="noopener" data-ev="ng_inv_wa" data-ngdone="inv">שליחה בוואטסאפ</a>`]}],
@@ -1826,7 +1829,7 @@ function render(){
 }
 document.addEventListener('click',e=>{
   {const ng=e.target.closest('[data-ngdone]');if(ng){const id=ng.dataset.ngdone;NG.no[id]=true;saveNg();S.ngCur=null;S.ngHide=true;track('ng_'+id+'_go')}}
-  {const ca=e.target.closest('a[data-ev="cal_sub"],a[data-ev="upd_cal"],a[data-ev="ng_upd_cal"],a[data-ev="added_cal"],a[data-ev="moved_cal"]');if(ca){store.set('tipoff.calOk',1);setTimeout(render,400)}}
+  {const ca=e.target.closest('a[data-ev="cal_sub"],a[data-ev="upd_cal"],a[data-ev="ng_upd_cal"],a[data-ev="added_cal"],a[data-ev="moved_cal"],a[data-ev="hero_cal"]');if(ca){store.set('tipoff.calOk',1);setTimeout(render,400)}}
   {const mv=e.target.closest('[data-movedgo]');if(mv){S.movedHide=true;track('moved_ask_'+mv.dataset.movedgo)}}
   const a=e.target.closest('a[data-ev]');if(a){track(a.dataset.ev);if(a.dataset.ngdone)setTimeout(render,300);if(a.dataset.upddone){S.pushAsk=false;setTimeout(()=>{render();toast('המשחקים בדרך ליומן שלכם')},400)}if(a.dataset.growdone){if(a.dataset.growdone==='prac')S.pshare=null;else S.chgSess=null;setTimeout(render,300)}return}
   if(e.target.closest('.scrim')&&S.ksPop){S.ksPop=false;store.set('tipoff.kspop',true);track('ks_new_no');render();return}
