@@ -1204,18 +1204,25 @@ function teamMsg(t){return `🏀 כל המשחקים של ${t.name} (${ageLabel(
 const waTeam=t=>'https://wa.me/?text='+encodeURIComponent(teamMsg(t));
 /* ---------- asking to share at the two moments the app just helped: a game moved, practices were entered. Each shows once ---------- */
 const waText=txt=>'https://wa.me/?text='+encodeURIComponent(txt);
+/* a moved game, as an update a parent would want to post in the parents' group (the link comes last, as the source) */
+function chgMsg(t,g){const c=CH.get(g.id),o=TEAMS[g.h===t.i?g.a:g.h],d=c[3],was=new Date(2000+ +d.slice(0,2),+d.slice(2,4)-1,+d.slice(4,6),+d.slice(6,8),+d.slice(8,10));
+  const slot=x=>`יום ${DAYS[x.getDay()]} ${dm(x)}, ${hm(x)}`,venue=c[2]==='venue',sameDay=dm(was)===dm(g.date);
+  const head=venue?`אולם חדש למשחק נגד ${o.name}`:sameDay?`המשחק נגד ${o.name} בשעה חדשה: ${hm(g.date)}`:`המשחק זז ל${slot(g.date)}`;
+  const lines=venue?[`📍 אולם חדש למשחק של ${t.name} מול ${o.name}`,`${slot(g.date)}`,`📍 ${VEN[g.v].full}`,`היה: ${String(c[4]).split(',')[0]}`]
+    :[`⚠️ המשחק של ${t.name} מול ${o.name} זז`,sameDay?`🕒 שעה חדשה: ${hm(g.date)} (יום ${DAYS[g.date.getDay()]} ${dm(g.date)})`:`🗓️ מועד חדש: ${slot(g.date)}`,`היה: ${sameDay?hm(was):slot(was)}`,`📍 ${VEN[g.v].full}`];
+  return {head,text:lines.join('\n')+`\n\nכל המשחקים מתעדכנים כאן:\n${teamURL(t)}`}}
 function growCard(){if(!touched||S.justAdded)return '';
   if(S.pshare){const t=TEAMS[KEY[S.pshare]];if(t)return `<div class="sharecard"><button class="x" data-growx="prac" aria-label="סגירה">✕</button>
     <b>האימונים נשמרו ✓</b><span class="sub">שלחו להורים בקבוצה, והם יוכלו להוסיף אותם אצלם בלחיצה אחת.</span>
     <a class="wa" href="${waText(`🏀 הזנתי את האימונים של ${t.name} בטיפ-אוף. נכנסים ומוסיפים אותם אצלכם בלחיצה אחת, עם תזכורת לפני כל אימון:\n${teamURL(t)}`)}" target="_blank" rel="noopener" data-ev="grow_prac_wa" data-growdone="prac">שליחה בוואטסאפ</a>
     <button class="linkbtn" data-growx="prac">לא עכשיו</button></div>`}
-  if(S.chgSess===undefined){S.chgSess=null; // decided once per open: a followed team's upcoming game that moved, and this family was never asked
-    if(!store.get('tipoff.growChg',0))for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g)&&CH.has(g.id));
-      if(g){S.chgSess={k,g:g.i};store.set('tipoff.growChg',1);setTimeout(()=>track('grow_chg_seen'));break}}}
-  if(S.chgSess){const t=TEAMS[KEY[S.chgSess.k]],g=GAMES[S.chgSess.g];if(t&&g)return `<div class="sharecard"><button class="x" data-growx="chg" aria-label="סגירה">✕</button>
-    <b>המשחק זז. ההורים בקבוצה יודעים?</b><span class="sub">שלחו להם את טיפ-אוף, ומעכשיו גם הם יקבלו התראה.</span>
-    <a class="wa" href="${waText(`🏀 המשחק של ${t.name} זז: עכשיו ביום ${DAYS[g.date.getDay()]} ${dm(g.date)} בשעה ${hm(g.date)}.\nבטיפ-אוף מקבלים התראה לטלפון כשמשחק זז, וכל המשחקים במקום אחד:\n${teamURL(t)}`)}" target="_blank" rel="noopener" data-ev="grow_chg_wa" data-growdone="chg">שליחה בוואטסאפ</a>
-    <button class="linkbtn" data-growx="chg">לא עכשיו</button></div>`}
+  if(S.chgSess===undefined){S.chgSess=null; // a followed team's upcoming game moved: offer to update the parents' group, once per game, until 'not now' twice
+    const asked=store.get('tipoff.chgAsk',[]);if(store.get('tipoff.chgNo',0)<2)for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g)&&CH.has(g.id)&&!asked.includes(g.id));
+      if(g){S.chgSess={k,g:g.i};store.set('tipoff.chgAsk',[...asked,g.id].slice(-30));setTimeout(()=>track('grow_chg_seen'));break}}}
+  if(S.chgSess){const t=TEAMS[KEY[S.chgSess.k]],g=GAMES[S.chgSess.g];if(t&&g){const m=chgMsg(t,g);return `<div class="sharecard"><button class="x" data-growx="chg" aria-label="סגירה">✕</button>
+    <b>${esc(m.head)}</b><span class="sub">רוצים לעדכן את קבוצת ההורים?</span>
+    <a class="wa" href="${waText(m.text)}" target="_blank" rel="noopener" data-ev="grow_chg_wa" data-growdone="chg">לשלוח לקבוצת ההורים</a>
+    <button class="linkbtn" data-growx="chg">לא עכשיו</button></div>`}}
   return ''}
 function copyTeam(key){const t=TEAMS[KEY[key]];if(!t)return;track('share_team');
   if(navigator.clipboard)navigator.clipboard.writeText(teamURL(t)).then(()=>toast('הקישור הועתק')).catch(()=>{S.showLink=key;render()});else{S.showLink=key;render()}}
@@ -1842,7 +1849,7 @@ document.addEventListener('click',e=>{
   if(b.closest('nav.tabs')){if(S.team){S.team=null;S.teamDepth=0;try{history.replaceState(null,'','/')}catch(e){}}S.view=b.dataset.v;S.findMode='full';if(S.view==='help')S.me=null;if(S.view==='my')afterFirstTeam();render();scrollTo(0,0);return}
   const d=b.dataset;
   if(d.fix)track('diag_fix');
-  if(d.growx){if(d.growx==='prac')S.pshare=null;else S.chgSess=null;track('grow_'+d.growx+'_no');render();return}
+  if(d.growx){if(d.growx==='prac')S.pshare=null;else{S.chgSess=null;store.set('tipoff.chgNo',store.get('tipoff.chgNo',0)+1)}track('grow_'+d.growx+'_no');render();return}
   if(d.opp){openTeam(+d.opp,d.oppf!=null?+d.oppf:null);return}
   if(d.ksmiss){S.ksOpen=+d.ksmiss;S.ksMiss=S.ksMiss===+d.ksmiss?null:+d.ksmiss;track('ks_miss');render();return}
   if(d.story){const g=GAMES[+d.story];if(!g||!scoreOf(g))return;{const x=scoreOf(g),hm2=g.h===+d.st,w=(hm2?x.hs:x.as)>(hm2?x.as:x.hs);const kk=kidsOf(TEAMS[+d.st].key).filter(pk=>plGame(pk,g.id)),key=kk[0]||TEAMS[+d.st].key,pe=plGame(key,g.id);S.story={gi:+d.story,ti:+d.st,key,title:'',line:pe&&pe.m?pe.m:w?'':STORY_LINES.l[0]}}S.storyFiles=[];track('story_open');render();storyPaint();return}
