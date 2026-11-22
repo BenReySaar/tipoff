@@ -1234,6 +1234,8 @@ function inviteBlock(ts){
 
 /* ---------- first visit, invites, setup checklist ---------- */
 const params=new URLSearchParams(location.search);
+// opened from a notification: count it per kind, then drop the mark from the address
+{const n=params.get('n');if(n&&/^[a-z_]{2,12}$/.test(n)){setTimeout(()=>track('push_open_'+n),0);try{const u=new URL(location.href);u.searchParams.delete('n');history.replaceState(null,'',u.pathname+u.search+u.hash)}catch(e){}}}
 // arriving from a home-screen icon or a saved link: restore its teams
 const myRefs=(params.get('my')||'').split(',').map(fromRef).filter(Boolean);
 if(myRefs.length&&!touched){touched=true;store.set('tipoff.touched',true);S.follows=myRefs.map(t=>t.key);store.set('tipoff.follows',S.follows)}

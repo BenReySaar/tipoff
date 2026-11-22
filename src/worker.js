@@ -152,8 +152,8 @@ async function deliver(env, perDevice, kind) {
   for (let i = 0; i < list.length; i += 20) {
     await Promise.all(list.slice(i, i + 20).map(async ({ device, push, msgs }) => {
       const payload = msgs.length === 1
-        ? { ...msgs[0], url: '/', tag: kind }
-        : { title: `${msgs.length} עדכונים במשחקים שלכם`, body: msgs.slice(0, 3).map(m => m.title.replace(/^\S+\s/, '')).join('\n'), url: '/', tag: kind };
+        ? { ...msgs[0], url: '/?n=' + kind, tag: kind }
+        : { title: `${msgs.length} עדכונים במשחקים שלכם`, body: msgs.slice(0, 3).map(m => m.title.replace(/^\S+\s/, '')).join('\n'), url: '/?n=' + kind, tag: kind };
       const r = await sendPush(JSON.parse(push), payload, vapid);
       if (r.ok) sent++; else failed++;
       if (r.gone) await env.DB.prepare('UPDATE devices SET push=NULL WHERE id=?').bind(device).run();
@@ -627,7 +627,7 @@ export default {
         const row = await env.DB.prepare('SELECT push FROM devices WHERE id=?').bind(b.device).first();
         const vapid = await vapidOf(env);
         if (!row?.push) return json({ error: 'push not enabled' }, 400);
-        const r = await sendPush(JSON.parse(row.push), { title: 'טיפ-אוף ✓', body: 'ההתראות עובדות. נעדכן כשמשהו משתנה במשחקים שלכם.', url: '/', tag: 'test' }, vapid);
+        const r = await sendPush(JSON.parse(row.push), { title: 'טיפ-אוף ✓', body: 'ההתראות עובדות. נעדכן כשמשהו משתנה במשחקים שלכם.', url: '/?n=test', tag: 'test' }, vapid);
         await logPush(env, 'test', r.ok ? 1 : 0, r.ok ? 0 : 1);
         if (r.gone) await env.DB.prepare('UPDATE devices SET push=NULL WHERE id=?').bind(b.device).run();
         return json({ ok: r.ok, status: r.status });
