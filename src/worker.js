@@ -108,6 +108,8 @@ export async function runSync(env, { raw = null, source = 'cron' } = {}) {
 const fromD = d => ({ y: 2000 + +d.slice(0, 2), m: +d.slice(2, 4), day: +d.slice(4, 6), hm: d.slice(6, 8) + ':' + d.slice(8, 10) });
 const dayName = d => { const x = fromD(d); return DAYS[new Date(Date.UTC(x.y, x.m - 1, x.day)).getUTCDay()]; };
 const whenText = d => { const x = fromD(d); return `${dayName(d)} ${x.day}.${x.m} ב־${x.hm}`; };
+const dayDate = d => { const x = fromD(d); return `${dayName(d)} ${x.day}.${x.m}`; };
+const slot = d => `יום ${dayDate(d)}, ${fromD(d).hm}`;
 const hallShort = v => String(v).split(',')[0].trim();
 
 const withNick = (team, nick) => nick ? `${team} (${nick})` : team;
@@ -116,9 +118,12 @@ function messageFor(change, teamKey, nick) {
   const mineHome = g.homeKey === teamKey;
   const team = withNick(mineHome ? g.home : g.away, nick), opp = mineHome ? g.away : g.home;
   switch (change.kind) {
-    case 'moved': return { title: `⚠️ המשחק זז: ${team}`, body: `נגד ${opp}: עכשיו ${whenText(g.d)} (היה ${whenText(b.d)})` };
-    case 'venue': return { title: `📍 החלפת אולם: ${team}`, body: `נגד ${opp}, ${whenText(g.d)}\n${g.venue}` };
-    case 'moved+venue': return { title: `⚠️ שינוי במשחק: ${team}`, body: `נגד ${opp}: עכשיו ${whenText(g.d)} (היה ${whenText(b.d)})\n${g.venue}` };
+    case 'moved': {
+      if (g.d.slice(0, 6) === b.d.slice(0, 6)) return { title: `⚠️ שעה חדשה · ${team}`, body: `נגד ${opp}, יום ${dayDate(g.d)}\n🕒 שעה חדשה: ${fromD(g.d).hm}\nהיה: ${fromD(b.d).hm}` };
+      return { title: `⚠️ המשחק זז · ${team}`, body: `נגד ${opp}\n🗓️ מועד חדש: ${slot(g.d)}\nהיה: ${slot(b.d)}` };
+    }
+    case 'venue': return { title: `📍 אולם חדש · ${team}`, body: `נגד ${opp}, ${slot(g.d)}\n📍 אולם חדש: ${g.venue}` };
+    case 'moved+venue': return { title: `⚠️ שינוי במשחק · ${team}`, body: `נגד ${opp}\n🗓️ מועד חדש: ${slot(g.d)}, ${hallShort(g.venue)}\nהיה: ${slot(b.d)}` };
     case 'removed': return { title: `❌ המשחק ירד מהלוח: ${team}`, body: `נגד ${opp}, ${whenText(b.d)}. כדאי לבדוק מול המאמן.` };
     case 'result': {
       const my = mineHome ? g.hs : g.as, op = mineHome ? g.as : g.hs;
