@@ -297,7 +297,7 @@ export async function statsPage(env, pack) {
   }).join('');
 
   // who among the new devices (since 17.11) never reached the find screen, and why
-  const nf = await DB.prepare(`SELECT d.id, d.platform p, d.standalone st,
+  const nf = await DB.prepare(`SELECT d.id, d.created c, d.platform p, d.standalone st,
       EXISTS(SELECT 1 FROM follows f WHERE f.device=d.id) tm,
       EXISTS(SELECT 1 FROM activity a WHERE a.device=d.id AND a.type IN ('invite_open','team_link','team_open')) inv,
       (SELECT GROUP_CONCAT(DISTINCT a.type) FROM activity a WHERE a.device=d.id AND a.type NOT IN ('new','open')) ty,
@@ -311,7 +311,7 @@ export async function statsPage(env, pack) {
     const top = a => { const c = {}; for (const d of a) for (const t of (d.ty || '').split(',').filter(Boolean)) c[t] = (c[t] || 0) + 1; return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${esc(ACTIONS[k] || k)} (${v})`).join(' · '); };
     const rows = [['הגיעו מקישור לקבוצה', g.link], ['יש להם קבוצה (בלי קישור)', g.team], ['פתחו ועשו משהו, בלי קבוצה', g.acted], ['פתחו ולא עשו כלום', g.none]];
     return `<h3 style="margin-top:16px">מי לא הגיע למסך מציאת קבוצה (${fmt(nf.length)})</h3><p class="sub">מכשירים חדשים מאז 17.11 שלא נספר להם המסך.</p>`
-      + rows.map(([l, a]) => `<div class="nf"><b>${l}: ${fmt(a.length)}</b><span class="sub">${a.length ? plat(a) + ' · חזרו ביום אחר: ' + a.filter(d => d.days > 1).length : ''}</span>${a.length && l !== 'פתחו ולא עשו כלום' ? `<span class="sub">${top(a)}</span>` : ''}</div>`).join('');
+      + rows.map(([l, a]) => `<div class="nf"><b>${l}: ${fmt(a.length)}</b><span class="sub">${a.length ? plat(a) + ' · חזרו ביום אחר: ' + a.filter(d => d.days > 1).length + ' · מאז 21.11 בערב: ' + a.filter(d => d.c >= Date.parse('2026-11-21T19:20:00+02:00')).length : ''}</span>${a.length && l !== 'פתחו ולא עשו כלום' ? `<span class="sub">${top(a)}</span>` : ''}</div>`).join('');
   })();
   const K = await ksStats(DB, pack).catch(() => null);
   const slow = await DB.prepare(`SELECT day, type, COUNT(DISTINCT device) d, SUM(n) n FROM activity WHERE type IN ('slow_open5','slow_open15','stale_open','stale_reload') AND day >= ? GROUP BY day, type ORDER BY day DESC`)
