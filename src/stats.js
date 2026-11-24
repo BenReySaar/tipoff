@@ -296,6 +296,23 @@ export async function statsPage(env, pack) {
       + ((29 - i) % 7 === 0 ? `<text x="${W - (i + 0.5) * bw}" y="${H - 4}" font-size="10" text-anchor="middle" fill="var(--m)">${+d.slice(8)}.${+d.slice(5, 7)}</text>` : '') + '</g>';
   }).join('');
 
+  // who among the new devices (since 17.11) never reached the find screen, and why
+  const nf = await DB.prepare(`SELECT d.id, d.platform p, d.standalone st,
+      EXISTS(SELECT 1 FROM follows f WHERE f.device=d.id) tm,
+      EXISTS(SELECT 1 FROM activity a WHERE a.device=d.id AND a.type IN ('invite_open','team_link','team_open')) inv,
+      (SELECT GROUP_CONCAT(DISTINCT a.type) FROM activity a WHERE a.device=d.id AND a.type NOT IN ('new','open')) ty,
+      (SELECT COUNT(DISTINCT a.day) FROM activity a WHERE a.device=d.id AND a.type='open') days
+    FROM devices d WHERE d.created>=? AND NOT EXISTS(SELECT 1 FROM activity a WHERE a.device=d.id AND a.type='find_view')`)
+    .bind(Date.parse('2026-11-17T18:10:00+02:00')).all().then(r => r.results).catch(() => null);
+  const NF = nf && (() => {
+    const g = { link: [], team: [], acted: [], none: [] };
+    for (const d of nf) (d.inv ? g.link : d.tm ? g.team : d.ty ? g.acted : g.none).push(d);
+    const plat = a => { const c = {}; for (const d of a) { const k = /ios/i.test(d.p || '') ? 'אייפון' : /android/i.test(d.p || '') ? 'אנדרואיד' : 'מחשב/אחר'; c[k] = (c[k] || 0) + 1; } return Object.entries(c).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' · '); };
+    const top = a => { const c = {}; for (const d of a) for (const t of (d.ty || '').split(',').filter(Boolean)) c[t] = (c[t] || 0) + 1; return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${esc(ACTIONS[k] || k)} (${v})`).join(' · '); };
+    const rows = [['הגיעו מקישור לקבוצה', g.link], ['יש להם קבוצה (בלי קישור)', g.team], ['פתחו ועשו משהו, בלי קבוצה', g.acted], ['פתחו ולא עשו כלום', g.none]];
+    return `<h3 style="margin-top:16px">מי לא הגיע למסך מציאת קבוצה (${fmt(nf.length)})</h3><p class="sub">מכשירים חדשים מאז 17.11 שלא נספר להם המסך.</p>`
+      + rows.map(([l, a]) => `<div class="nf"><b>${l}: ${fmt(a.length)}</b><span class="sub">${a.length ? plat(a) + ' · חזרו ביום אחר: ' + a.filter(d => d.days > 1).length : ''}</span>${a.length && l !== 'פתחו ולא עשו כלום' ? `<span class="sub">${top(a)}</span>` : ''}</div>`).join('');
+  })();
   const K = await ksStats(DB, pack).catch(() => null);
   const slow = await DB.prepare(`SELECT day, type, COUNT(DISTINCT device) d, SUM(n) n FROM activity WHERE type IN ('slow_open5','slow_open15','stale_open','stale_reload') AND day >= ? GROUP BY day, type ORDER BY day DESC`)
     .bind(new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10)).all().then(r => r.results).catch(() => []);
@@ -312,7 +329,7 @@ export async function statsPage(env, pack) {
 body{margin:0;background:var(--bg);color:var(--i);font:15px/1.5 system-ui,"Segoe UI",Arial,sans-serif}
 main{max-width:900px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-left)) 40px;display:flex;flex-direction:column;gap:18px}
 h1{margin:0;font-size:26px}h2{margin:0 0 8px;font-size:17px}
-.sub{color:var(--m);font-size:13px}
+.sub{color:var(--m);font-size:13px}.nf{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--l,#e5e7eb)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.kpi{background:#fff;border:1px solid #e3e6ea;border-radius:14px;padding:14px;border-top:4px solid #d9822b}.kpi.ok{border-top-color:#2e9e5b}.kl{font-weight:700}.kv{font-size:30px;font-weight:800;margin:4px 0}.kd{font-size:14px;font-weight:700}.kd.up{color:#2e9e5b}.kd.down{color:#c0392b}.ks,.kg{font-size:13px;color:#667}.kg{margin-top:4px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .t{background:var(--s);border:1px solid var(--l);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column}
@@ -352,7 +369,7 @@ ${table(I.cohorts, [c => 'שבוע ' + dmy(c.w), c => fmt(c.n) + ' חדשים', 
 <div class="fn">${I.funnel.map(([l, n]) => `<div><span>${l}</span><i style="width:${I.funnel[0][1] ? Math.max(1, n / I.funnel[0][1] * 100) : 0}%"></i><em>${fmt(n)}${I.funnel[0][1] && n !== I.funnel[0][1] ? ` (${share(n, I.funnel[0][1])}%)` : ''}</em></div>`).join('')}</div>
 <h3 style="margin-top:16px">בחירת קבוצה, שלב אחרי שלב</h3><p class="sub">מכשירים חדשים מאז 17.11. מי שחיפש בשם לא חייב לבחור גיל וליגה.</p>
 <div class="fn">${I.pick.map(([l, n]) => `<div><span>${l}</span><i style="width:${I.pick[0][1] ? Math.max(1, n / I.pick[0][1] * 100) : 0}%"></i><em>${fmt(n)}${I.pick[0][1] && n !== I.pick[0][1] ? ` (${share(n, I.pick[0][1])}%)` : ''}</em></div>`).join('')}</div>
-<div class="fix">הירידה הגדולה ביותר בין שני שלבים היא המקום הראשון לשפר.</div></div>
+${NF || ''}<div class="fix">הירידה הגדולה ביותר בין שני שלבים היא המקום הראשון לשפר.</div></div>
 
 <div class="card in"><h2>3. ימי משחק</h2>
 <b class="big">${I.game.open == null ? '—' : I.game.open + '%'}</b>
