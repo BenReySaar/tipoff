@@ -619,7 +619,7 @@ const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>'};
 
 function toast(msg){document.querySelectorAll('.toast').forEach(x=>x.remove());const t=document.createElement('div');t.className='toast';t.dir='rtl';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
-function setFollows(f){if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL();loadReports()}
+function setFollows(f){const ksBefore=ksTeams().length;if(!touched){touched=true;store.set('tipoff.touched',true)}S.follows=f;store.set('tipoff.follows',f);syncState('follow').then(loadTeamPrac);syncURL();loadReports();if(!ksBefore&&ksTeams().length&&!store.get('tipoff.kspop',false))S.ksWant=true}
 S.nicks=store.get('tipoff.nicks',{});S.prac=store.get('tipoff.practices',[]);S.pskips=store.get('tipoff.pskips',{});S.pmoves=store.get('tipoff.pmoves',{});S.invHidden=store.get('tipoff.invHidden',[]);
 S.pshare=null;S.opp=null;S.team=null;S.teamDepth=0;S.followAsk=null;S.tprac={};S.rep={};S.ktab={};S.repSeen=store.get('tipoff.repseen',{});S.repAsked=store.get('tipoff.repasked',{});S.ksPop=false;S.repG=null;S.repMode='form';S.repDraft={};S.tpseen=store.get('tipoff.tpseen',{});
 const nickOf=k=>S.nicks[k]||'';
@@ -709,10 +709,10 @@ function repCards(ts){if(!touched)return '';const multi=S.follows.length>1,seen=
 const ksTeams=()=>[...S.follows,...S.res].map(k=>TEAMS[KEY[k]]).filter(t=>t&&KS.has(LEAGUES[t.lg].age));
 const ksLast=()=>ksTeams().flatMap(t=>t.games).filter(g=>!played(g)&&!S.rep[g.id]&&repTime(g)).sort((a,b)=>b.date-a.date)[0];
 function ksPopSheet(){const last=ksLast();
-  return sheet(`<h2 tabindex="-1" data-autofocus>חדש: התוצאות בקט-סל אצלכם</h2>
-    <p>האיגוד לא מפרסם תוצאות בקט-סל, אז ההורים מדווחים. לוחצים "איך נגמר?" ליד המשחק, וכל ההורים בשתי הקבוצות רואים את התוצאה.</p>
-    <p class="sub">אפשר לדווח גם על משחקים שכבר היו.</p>
-    ${last?`<button class="btn wide" data-kspop="${last.i}">לדווח על המשחק האחרון</button><button class="linkbtn sh-skip" data-kspop="0">הבנתי</button>`:'<button class="btn wide" data-kspop="0">הבנתי</button>'}`,'חדש: התוצאות בקט-סל')}
+  return sheet(`<h2 tabindex="-1" data-autofocus>בקט-סל, ההורים מדווחים את התוצאה</h2>
+    <p>האיגוד לא מפרסם תוצאות בקט-סל. בסוף המשחק לוחצים "איך נגמר?" ליד המשחק, וכל ההורים בשתי הקבוצות רואים את התוצאה.</p>
+    <p class="sub">אחרי המשחק נשאל אתכם איך נגמר.</p>
+    ${last?`<button class="btn wide" data-kspop="${last.i}">לדווח על המשחק האחרון</button><button class="linkbtn sh-skip" data-kspop="0">הבנתי</button>`:'<button class="btn wide" data-kspop="0">הבנתי</button>'}`,'בקט-סל, ההורים מדווחים את התוצאה')}
 /* קט-סל: opening the app an hour or more after a game nobody reported asks for the score, once per game */
 const overlayOpen=()=>!!overlay()||S.welcome;
 function repPrompt(){if(S.ksPop||S.repG!=null||overlayOpen())return;
@@ -1820,6 +1820,7 @@ async function sendFeedback(form){
   render()}
 
 function render(){
+  if(S.ksWant&&!S.ksPop&&!overlayOpen()&&!S.view.startsWith('find')){S.ksWant=false;setTimeout(()=>{if(!overlayOpen()&&!store.get('tipoff.kspop',false)){S.ksPop=true;track('ks_pop');render()}},600)}
   const app=document.getElementById('app');
   const ae=document.activeElement,aid=ae&&ae.id&&(app.contains(ae)||/^(pf|of|rp)-/.test(ae.id))&&/^(fb|fbc|nick|pf|of|rp)-/.test(ae.id)?ae.id:null,sel=aid&&ae.selectionStart!=null?[ae.selectionStart,ae.selectionEnd]:null;
   const ovEl=document.getElementById('ov'),ovHTML=overlay();
