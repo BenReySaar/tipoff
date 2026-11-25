@@ -296,6 +296,14 @@ export async function statsPage(env, pack) {
       + ((29 - i) % 7 === 0 ? `<text x="${W - (i + 0.5) * bw}" y="${H - 4}" font-size="10" text-anchor="middle" fill="var(--m)">${+d.slice(8)}.${+d.slice(5, 7)}</text>` : '') + '</g>';
   }).join('');
 
+  // where new phones came from (counted from 25.11): which parent share, or Instagram/Facebook/Google
+  const srcRows = await DB.prepare(`SELECT a.type src, COUNT(*) n,
+      SUM(EXISTS(SELECT 1 FROM follows f WHERE f.device=a.device)) team,
+      SUM(EXISTS(SELECT 1 FROM devices d WHERE d.id=a.device AND d.push IS NOT NULL) OR EXISTS(SELECT 1 FROM activity c WHERE c.device=a.device AND c.type='cal_fetch')) conn,
+      SUM((SELECT COUNT(DISTINCT o.day) FROM activity o WHERE o.device=a.device AND o.type='open')>1) back
+    FROM (SELECT DISTINCT device, type FROM activity WHERE type LIKE 'src!_%' ESCAPE '!') a GROUP BY a.type ORDER BY n DESC`).all().then(r => r.results).catch(() => []);
+  const SRC = { sh_team: 'קישור לקבוצה', sh_chg: 'עדכון על משחק שזז', sh_game: 'פרטי משחק', sh_story: 'כרטיס סטורי', sh_prac: 'לוח האימונים', sh_page: 'עמוד של קבוצה', sh_app: 'קישור לאפליקציה', sh_old: 'קישור של הורה (ישן, בלי סוג)', ig: 'אינסטגרם', fb: 'פייסבוק', google: 'גוגל', web: 'אתר אחר', none: 'ללא מקור (כניסה ישירה או וואטסאפ)' };
+  const SHARED = { sh_team: ['share_team', 'share_team_native', 'ng_inv_wa'], sh_chg: ['grow_chg_wa'], sh_game: ['share_game', 'hero_share'], sh_story: ['story_orange', 'story_dark', 'story_season'], sh_prac: ['grow_prac_wa'], sh_page: ['team_share'], sh_app: ['share_app', 'share_app_wa', 'share_app_fb', 'share_app_tg', 'share_app_native', 'share_app_copy'] };
   const K = await ksStats(DB, pack).catch(() => null);
   const slow = await DB.prepare(`SELECT day, type, COUNT(DISTINCT device) d, SUM(n) n FROM activity WHERE type IN ('slow_open5','slow_open15','stale_open','stale_reload') AND day >= ? GROUP BY day, type ORDER BY day DESC`)
     .bind(new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10)).all().then(r => r.results).catch(() => []);
@@ -369,6 +377,8 @@ ${table(I.cohorts, [c => 'שבוע ' + dmy(c.w), c => fmt(c.n) + ' חדשים', 
 <b class="big">${I.source.pct == null ? '—' : I.source.pct + '%'}</b>
 <p>מהמכשירים החדשים ב־30 ימים (${fmt(I.source.n)}) הגיעו מקישור שהורה אחר שלח</p>
 <p class="sub">הצטרפו לקבוצה דרך קישור: ${fmt(I.source.joined)} מכשירים</p>
+<h3 style="margin-top:16px">לפי סוג השיתוף (מ־25.11)</h3><p class="sub">כל מכשיר חדש נספר פעם אחת, לפי הקישור שדרכו נכנס. "שיתפו" = כמה פעמים הורים שלחו את סוג השיתוף הזה (30 ימים).</p>
+${srcRows.length ? table(srcRows, [r => esc(SRC[r.src.slice(4)] || r.src.slice(4)), r => { const ev = SHARED[r.src.slice(4)]; return ev ? fmt(ev.reduce((a, t) => a + ((actions.find(x => x.type === t) || {}).times || 0), 0)) + ' שיתפו' : ''; }, r => fmt(r.n) + ' נכנסו', r => `${share(r.team, r.n)}% בחרו קבוצה`, r => `${share(r.conn, r.n)}% חיברו עדכונים`, r => `${share(r.back, r.n)}% חזרו ביום אחר`]) : '<p class="sub">עוד אין נתונים. יופיעו כשייכנסו מכשירים חדשים.</p>'}
 <div class="fix">אם נמוך: הורים לא מעבירים את האפליקציה הלאה. ההזמנה צריכה להיות בולטת יותר, או שהשיווק עושה את רוב העבודה.</div></div>
 
 <div class="card in"><h2>פיצ'רים חדשים</h2>

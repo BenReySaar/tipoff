@@ -598,7 +598,7 @@ const isCup=g=>LEAGUES[g.lg].cup;
 const waze=g=>'https://waze.com/ul?q='+encodeURIComponent(VEN[g.v].full)+'&navigate=yes';
 const gmaps=g=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(VEN[g.v].full);
 function wa(g,t){const o=TEAMS[g.h===t.i?g.a:g.h];
-  return 'https://wa.me/?text='+encodeURIComponent(`🏀 ${t.name} נגד ${o.name}\n${LEAGUES[g.lg].full}\nיום ${DAYS[g.date.getDay()]} ${dm(g.date)} בשעה ${hm(g.date)}\n👕 ${kitText(g,t)} – לבדוק צבע גופייה\n📍 ${VEN[g.v].full}\nניווט: ${waze(g)}\n\nכל המשחקים של הקבוצה, עם התראות כשמשחק זז:\n${teamURL(t)}`)}
+  return 'https://wa.me/?text='+encodeURIComponent(`🏀 ${t.name} נגד ${o.name}\n${LEAGUES[g.lg].full}\nיום ${DAYS[g.date.getDay()]} ${dm(g.date)} בשעה ${hm(g.date)}\n👕 ${kitText(g,t)} – לבדוק צבע גופייה\n📍 ${VEN[g.v].full}\nניווט: ${waze(g)}\n\nכל המשחקים של הקבוצה, עם התראות כשמשחק זז:\n${teamURL(t,'game')}`)}
 const ic={ball:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M6 5.5c3 3.5 3 9.5 0 13M18 5.5c-3 3.5-3 9.5 0 13"/></svg>',nav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4"/></svg>',
  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.2 10.8l7.6-4M8.2 13.2l7.6 4"/></svg>',
@@ -889,7 +889,7 @@ let storyTimer=0;S.storyFiles=[];
 async function storyPaint(){if(!S.story)return;try{await Promise.all(['400','600','700'].map(w=>document.fonts.load(`${w} 40px "IBM Plex Sans Hebrew"`)))}catch(e){}
   [0,1].forEach(i=>{const cv=document.getElementById('st'+i);if(!cv)return;storyDraw(cv,!!i);cv.toBlob(b=>{if(b)S.storyFiles[i]=new File([b],'tipoff.png',{type:'image/png'})},'image/png')})}
 function storyShare(i){const f=S.storyFiles[i],d=storyData();track(i?'story_dark':'story_orange');if(!f)return;
-  const text=`${(S.story.title||'').trim()||storyHead(d)} · ${d.t.name}\n${location.origin}/team/${d.t.id}`;if(d.season)track('story_season');
+  const text=`${(S.story.title||'').trim()||storyHead(d)} · ${d.t.name}\n${location.origin}/team/${d.t.id}?s=story`;if(d.season)track('story_season');
   if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],text}).catch(()=>{})}
   else{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download='tipoff.png';document.body.appendChild(a);a.click();a.remove();toast('התמונה נשמרה')}}
 /* "the season of my child": points the parent enters after a game. Kept only on this phone (tipoff.players); no one else sees them */
@@ -1169,7 +1169,7 @@ function resultsBlock(){
     <button class="resbox" data-addres="1"><span class="plus">+</span><span><b>קבוצה למעקב תוצאות</b><span class="sub">גיל, ליגה וקבוצה</span></span></button></section>`}
 
 /* ---------- sharing + social ---------- */
-const APP_URL=location.origin;
+const APP_URL=location.origin+'/?s=app';
 const SOCIAL=[['אינסטגרם',''],['טיקטוק',''],['פייסבוק','']]; // account links, once they exist
 function shareAppURL(t){
   const txt=t?`🏀 מצאתי אפליקציה שמראה את לוח המשחקים של ${t.name} (${ageLabel(t.lg)}): המשחק הבא, ניווט לאולם והתראות כשמשהו משתנה. בלי הרשמה.`
@@ -1199,7 +1199,7 @@ const BYID={};TEAMS.forEach(t=>{if(t.id)BYID[t.id]=t.i});
 const tref=t=>t.id?String(t.id):'k'+encodeURIComponent(t.key);
 function fromRef(r){if(!r)return null;if(/^\d+$/.test(r))return BYID[r]!=null?TEAMS[BYID[r]]:null;
   if(r[0]==='k'){try{const k=decodeURIComponent(r.slice(1));return k in KEY?TEAMS[KEY[k]]:null}catch(e){return null}}return null}
-const teamURL=t=>`${location.origin}/?t=${tref(t)}`;
+const teamURL=(t,k='team')=>`${location.origin}/?t=${tref(t)}&s=${k}`; // s = which share it came from (counted when a new phone opens it)
 function teamMsg(t){return `🏀 כל המשחקים של ${t.name} (${ageLabel(t.lg)}) במקום אחד: המשחק הבא, ניווט לאולם, ויומן והתראות כשמשחק זז.\nנכנסים ומצטרפים בלחיצה אחת:\n${teamURL(t)}`}
 const waTeam=t=>'https://wa.me/?text='+encodeURIComponent(teamMsg(t));
 /* ---------- asking to share at the two moments the app just helped: a game moved, practices were entered. Each shows once ---------- */
@@ -1210,11 +1210,11 @@ function chgMsg(t,g){const c=CH.get(g.id),o=TEAMS[g.h===t.i?g.a:g.h],d=c[3],was=
   const head=venue?`אולם חדש למשחק נגד ${o.name}`:sameDay?`המשחק נגד ${o.name} בשעה חדשה: ${hm(g.date)}`:`המשחק זז ל${slot(g.date)}`;
   const lines=venue?[`📍 אולם חדש למשחק של ${t.name} מול ${o.name}`,`${slot(g.date)}`,`📍 ${VEN[g.v].full}`,`היה: ${String(c[4]).split(',')[0]}`]
     :[`⚠️ המשחק של ${t.name} מול ${o.name} זז`,sameDay?`🕒 שעה חדשה: ${hm(g.date)} (יום ${DAYS[g.date.getDay()]} ${dm(g.date)})`:`🗓️ מועד חדש: ${slot(g.date)}`,`היה: ${sameDay?hm(was):slot(was)}`,`📍 ${VEN[g.v].full}`];
-  return {head,text:lines.join('\n')+`\n\nכל המשחקים מתעדכנים כאן:\n${teamURL(t)}`}}
+  return {head,text:lines.join('\n')+`\n\nכל המשחקים מתעדכנים כאן:\n${teamURL(t,'chg')}`}}
 function growCard(){if(!touched||S.justAdded)return '';
   if(S.pshare){const t=TEAMS[KEY[S.pshare]];if(t)return `<div class="sharecard"><button class="x" data-growx="prac" aria-label="סגירה">✕</button>
     <b>האימונים נשמרו ✓</b><span class="sub">שלחו להורים בקבוצה, והם יוכלו להוסיף אותם אצלם בלחיצה אחת.</span>
-    <a class="wa" href="${waText(`🏀 הזנתי את האימונים של ${t.name} בטיפ-אוף. נכנסים ומוסיפים אותם אצלכם בלחיצה אחת, עם תזכורת לפני כל אימון:\n${teamURL(t)}`)}" target="_blank" rel="noopener" data-ev="grow_prac_wa" data-growdone="prac">שליחה בוואטסאפ</a>
+    <a class="wa" href="${waText(`🏀 הזנתי את האימונים של ${t.name} בטיפ-אוף. נכנסים ומוסיפים אותם אצלכם בלחיצה אחת, עם תזכורת לפני כל אימון:\n${teamURL(t,'prac')}`)}" target="_blank" rel="noopener" data-ev="grow_prac_wa" data-growdone="prac">שליחה בוואטסאפ</a>
     <button class="linkbtn" data-growx="prac">לא עכשיו</button></div>`}
   if(S.chgSess===undefined){S.chgSess=null; // a followed team's upcoming game moved: offer to update the parents' group, once per game, until 'not now' twice
     const asked=store.get('tipoff.chgAsk',[]);if(store.get('tipoff.chgNo',0)<2)for(const k of S.follows){const t=TEAMS[KEY[k]];const g=t&&t.games.find(g=>!isPast(g)&&CH.has(g.id)&&!asked.includes(g.id));
@@ -1244,6 +1244,10 @@ const params=new URLSearchParams(location.search);
 // opened from a notification: count it per kind, then drop the mark from the address
 {const n=params.get('n');if(n&&/^[a-z_]{2,12}$/.test(n)){setTimeout(()=>track('push_open_'+n),0);try{const u=new URL(location.href);u.searchParams.delete('n');history.replaceState(null,'',u.pathname+u.search+u.hash)}catch(e){}}}
 // arriving from a home-screen icon or a saved link: restore its teams
+/* a new phone: where it came from, once (which parent share, or Instagram/Facebook/Google) */
+S.src=(()=>{const k=params.get('s');if(/^[a-z]{2,8}$/.test(k||''))return 'sh_'+k;if(params.get('t')||/^\/team\/\d/.test(location.pathname))return 'sh_old';
+  const ua=navigator.userAgent,ref=document.referrer||'';if(/Instagram/i.test(ua))return 'ig';if(/FBAN|FBAV|FB_IAB|FB4A/i.test(ua))return 'fb';
+  if(/\bgoogle\./i.test(ref))return 'google';if(ref&&!ref.startsWith(location.origin))return 'web';return 'none'})();
 const myRefs=(params.get('my')||'').split(',').map(fromRef).filter(Boolean);
 if(myRefs.length&&!touched){touched=true;store.set('tipoff.touched',true);S.follows=myRefs.map(t=>t.key);store.set('tipoff.follows',S.follows)}
 S.invite=null;const inv=fromRef(params.get('t'));
@@ -1634,7 +1638,7 @@ const DEV=(()=>{let d=store.get('tipoff.device',null);
   // added to the home screen from Safari: the new app starts with empty storage, so it takes over the id passed in the address
   const pass=new URLSearchParams(location.search).get('d'),home=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
   if(!d&&home&&pass&&/^[a-f0-9-]{36}$/.test(pass)){d=pass;store.set('tipoff.device',d);window.__adopted=true}
-  if(!d||!/^[a-f0-9-]{36}$/.test(d)){d=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});store.set('tipoff.device',d)}
+  if(!d||!/^[a-f0-9-]{36}$/.test(d)){d=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});store.set('tipoff.device',d);window.__newDev=true}
   return d})();
 const PLATFORM=IOS?'ios':/Android/i.test(UA)?'android':'other';
 const STANDALONE=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
@@ -1650,6 +1654,7 @@ function syncState(type){const full=touched?S.follows:[];
     practices:pr,pskips:Object.fromEntries(Object.entries(S.pskips).filter(([id])=>pr.some(p=>p.id===id))),pmoves:Object.fromEntries(Object.entries(S.pmoves).filter(([id])=>pr.some(p=>p.id===id))),pteams})
     .then(r=>{if(r&&r.ok&&pteams.length){const sn=store.get('tipoff.psnap',{});pteams.forEach(k=>sn[k]=tpJSON(tpOf(k)));store.set('tipoff.psnap',sn)}return r})}
 const track=type=>post('/api/event',{device:DEV,type});
+if(window.__newDev&&S.src)setTimeout(()=>track('src_'+S.src));
 
 const PUSH_OK='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
 S.push='checking';S.pushMsg='';
@@ -1873,7 +1878,7 @@ document.addEventListener('click',e=>{
   if(d.teamback){leaveTeam();return}
   if(d.teamfollow){S.followAsk=+d.teamfollow;track('team_follow_ask');render();return}
   if(d.followno){S.followAsk=null;render();return}
-  if(d.teamshare){const t=TEAMS[+d.teamshare],url=pageURL(t),text=`הלו״ז והתוצאות של ${t.name}, ${ageLabel(t.lg)}`;track('team_share');
+  if(d.teamshare){const t=TEAMS[+d.teamshare],url=pageURL(t)+'?s=page',text=`הלו״ז והתוצאות של ${t.name}, ${ageLabel(t.lg)}`;track('team_share');
     if(navigator.share)navigator.share({title:t.name,text,url}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(text+'\n'+url),'_blank','noopener');return}
   if(d.teammine){const t=TEAMS[+d.teammine];if(S.res.includes(t.key)){S.res=S.res.filter(k=>k!==t.key);store.set('tipoff.res',S.res)}
     S.followAsk=null;setFollows(touched?(S.follows.includes(t.key)?S.follows:[...S.follows,t.key]):[t.key]);track('team_follow');toast('נוספה ל"המשחקים שלי"');render();return}
